@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../services/api.js';
 import { DocumentItem, DocumentCategory, Project } from '../../../../shared/types.js';
+import { useFeedback } from '../../components/common/FeedbackContext.js';
 
 interface DocumentsModalProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ interface DocumentsModalProps {
 const CATEGORIES: DocumentCategory[] = ['SOP', 'SPEC', 'PROMPT_TEMPLATE', 'ARCHITECTURE', 'NOTE'];
 
 export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose, projects = [] }) => {
+  const { toast, confirm } = useFeedback();
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [selectedDoc, setSelectedDoc] = useState<DocumentItem | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
@@ -139,7 +141,14 @@ export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose,
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus dokumen ini?')) return;
+    const isConfirmed = await confirm({
+      title: 'Hapus Dokumen',
+      message: 'Apakah Anda yakin ingin menghapus dokumen ini secara permanen dari Knowledge Base?',
+      confirmText: 'Ya, Hapus Dokumen',
+      variant: 'danger'
+    });
+    if (!isConfirmed) return;
+
     try {
       setLoading(true);
       await api.deleteDocument(id);
@@ -149,8 +158,10 @@ export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose,
       setIsEditing(false);
       setIsCreating(false);
       setStatusMessage({ type: 'success', text: 'Dokumen berhasil dihapus.' });
+      toast.success('Dokumen berhasil dihapus dari Knowledge Base.');
     } catch (err: any) {
       setStatusMessage({ type: 'error', text: err.message || 'Gagal menghapus dokumen.' });
+      toast.error(err.message || 'Gagal menghapus dokumen.', 'Penghapusan Gagal');
     } finally {
       setLoading(false);
     }

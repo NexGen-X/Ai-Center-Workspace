@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Project, Task } from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
+import { useFeedback } from '../../components/common/FeedbackContext.js';
 
 interface ProjectsModalProps {
   isOpen: boolean;
@@ -39,6 +40,7 @@ export const ProjectsModal: React.FC<ProjectsModalProps> = ({
   onOpenCreateTaskForProject,
   onSelectTask
 }) => {
+  const { toast, confirm } = useFeedback();
   const [projects, setProjects] = useState<any[]>([]);
   const [selectedProject, setSelectedProject] = useState<any | null>(null);
   const [projectTasks, setProjectTasks] = useState<Task[]>([]);
@@ -116,7 +118,7 @@ export const ProjectsModal: React.FC<ProjectsModalProps> = ({
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formName.trim()) {
-      alert('Nama proyek wajib diisi.');
+      toast.warning('Nama proyek wajib diisi.', 'Validasi Form');
       return;
     }
 
@@ -129,6 +131,7 @@ export const ProjectsModal: React.FC<ProjectsModalProps> = ({
           status: formStatus,
           dueDate: formDueDate || undefined
         });
+        toast.success(`Proyek "${formName.trim()}" berhasil dibuat.`);
       } else if (isEditing && selectedProject) {
         await api.updateProject(selectedProject.id, {
           name: formName.trim(),
@@ -136,6 +139,7 @@ export const ProjectsModal: React.FC<ProjectsModalProps> = ({
           status: formStatus,
           dueDate: formDueDate || undefined
         });
+        toast.success(`Perubahan proyek "${formName.trim()}" berhasil disimpan.`);
       }
 
       await fetchProjects();
@@ -143,22 +147,30 @@ export const ProjectsModal: React.FC<ProjectsModalProps> = ({
       setIsCreating(false);
       setIsEditing(false);
     } catch (err: any) {
-      alert(`Gagal menyimpan proyek: ${err.message}`);
+      toast.error(err.message || 'Terjadi kesalahan sistem.', 'Gagal Menyimpan Proyek');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Hapus proyek "${name}"? Tugas terkait akan dipisahkan menjadi mandiri.`)) return;
+    const isConfirmed = await confirm({
+      title: 'Hapus Proyek',
+      message: `Hapus proyek "${name}"? Tugas terkait akan dipisahkan menjadi tugas mandiri.`,
+      confirmText: 'Ya, Hapus Proyek',
+      variant: 'danger'
+    });
+    if (!isConfirmed) return;
+
     try {
       setLoading(true);
       await api.deleteProject(id);
       setSelectedProject(null);
       await fetchProjects();
       onProjectsUpdated();
+      toast.success(`Proyek "${name}" berhasil dihapus.`);
     } catch (err: any) {
-      alert(`Gagal menghapus proyek: ${err.message}`);
+      toast.error(err.message || 'Gagal menghapus proyek.', 'Penghapusan Gagal');
     } finally {
       setLoading(false);
     }

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { AIAgent, AgentRun, AgentRole } from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
+import { useFeedback } from '../../components/common/FeedbackContext.js';
 
 interface AgentDetailModalProps {
   agent: AIAgent | null;
@@ -32,6 +33,7 @@ const ROLES: AgentRole[] = [
 ];
 
 export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agent, onClose, onRunFinished }) => {
+  const { toast, confirm } = useFeedback();
   const [currentAgent, setCurrentAgent] = useState<AIAgent | null>(agent);
   const [runs, setRuns] = useState<AgentRun[]>([]);
   const [loadingRuns, setLoadingRuns] = useState(false);
@@ -105,7 +107,7 @@ export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agent, onClo
 
   const handleSaveEdit = async () => {
     if (!editName.trim() || !editPrompt.trim()) {
-      alert('Nama dan instruksi sistem wajib diisi.');
+      toast.warning('Nama dan instruksi sistem wajib diisi.', 'Validasi Form');
       return;
     }
 
@@ -124,21 +126,30 @@ export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agent, onClo
       setCurrentAgent({ ...currentAgent, ...updated });
       setIsEditing(false);
       onRunFinished();
+      toast.success(`Perubahan pada AI Agent "${editName.trim()}" berhasil disimpan.`);
     } catch (err: any) {
-      alert(`Gagal menyimpan perubahan agen: ${err.message}`);
+      toast.error(err.message || 'Gagal menyimpan perubahan agen.', 'Gagal Menyimpan');
     } finally {
       setSavingEdit(false);
     }
   };
 
   const handleDeleteAgent = async () => {
-    if (!confirm(`Hapus anggota AI Team "${currentAgent.name}" secara permanen?`)) return;
+    const isConfirmed = await confirm({
+      title: 'Hapus AI Agent',
+      message: `Hapus anggota AI Team "${currentAgent.name}" secara permanen dari Command Center?`,
+      confirmText: 'Ya, Hapus Agen',
+      variant: 'danger'
+    });
+    if (!isConfirmed) return;
+
     try {
       await api.deleteAgent(currentAgent.id);
       onRunFinished();
+      toast.success(`AI Agent "${currentAgent.name}" berhasil dihapus.`);
       onClose();
     } catch (err: any) {
-      alert(`Gagal menghapus agent: ${err.message}`);
+      toast.error(err.message || 'Gagal menghapus agen.', 'Penghapusan Gagal');
     }
   };
 

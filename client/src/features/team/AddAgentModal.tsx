@@ -3,6 +3,7 @@ import { X, Check, AlertCircle, RefreshCw, Zap, Server, Shield, Layers, HelpCirc
 import { PROVIDER_PRESETS, AGENT_ROLES, ProviderPresetDefinition } from '../../../../shared/constants.js';
 import { AgentRole, ProtocolType, ProviderType, CreateAgentRequest, TestConnectionResponse } from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
+import { useFeedback } from '../../components/common/FeedbackContext.js';
 
 interface AddAgentModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface AddAgentModalProps {
 type TabType = 'preset' | 'custom' | 'hermes';
 
 export const AddAgentModal: React.FC<AddAgentModalProps> = ({ isOpen, onClose, onAgentCreated }) => {
+  const { toast } = useFeedback();
   const [activeTab, setActiveTab] = useState<TabType>('preset');
 
   // Common Fields
@@ -109,11 +111,12 @@ export const AddAgentModal: React.FC<AddAgentModalProps> = ({ isOpen, onClose, o
       const res = await api.discoverModels(baseUrl, apiKey, providerType);
       if (res.models && res.models.length > 0) {
         setDiscoveredModels(res.models);
+        toast.success(`Ditemukan ${res.models.length} model dari endpoint provider.`);
       } else {
-        alert('Tidak ada model yang ditemukan atau provider tidak mendukung GET /models');
+        toast.info('Tidak ada model yang ditemukan atau provider tidak mendukung discovery.', 'Katalog Model');
       }
     } catch (err: any) {
-      alert(`Model discovery gagal: ${err.message}`);
+      toast.error(err.message || 'Gagal mengambil daftar model.', 'Discovery Gagal');
     } finally {
       setIsDiscovering(false);
     }
@@ -187,10 +190,12 @@ export const AddAgentModal: React.FC<AddAgentModalProps> = ({ isOpen, onClose, o
       }
 
       await api.createAgent(payload);
+      toast.success(`Anggota AI Team "${name.trim()}" (${role}) berhasil didaftarkan.`);
       onAgentCreated();
       onClose();
     } catch (err: any) {
       setSubmitError(err.message || 'Gagal menambahkan anggota AI Team');
+      toast.error(err.message || 'Gagal menambahkan anggota AI Team', 'Pendaftaran Gagal');
     } finally {
       setIsSubmitting(false);
     }

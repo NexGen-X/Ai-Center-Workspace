@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Task, TaskStatus, TaskPriority, AIAgent, Project, AgentRun } from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
+import { useFeedback } from '../../components/common/FeedbackContext.js';
 
 interface TaskDetailModalProps {
   taskId: string | null;
@@ -49,6 +50,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   projects,
   onTaskUpdated
 }) => {
+  const { toast, confirm } = useFeedback();
   const [task, setTask] = useState<Task | null>(null);
   const [runs, setRuns] = useState<AgentRun[]>([]);
   const [history, setHistory] = useState<any[]>([]);
@@ -104,7 +106,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   const handleExecute = async () => {
     const targetAgentId = task.assignedAgentId || agents[0]?.id;
     if (!targetAgentId) {
-      alert('Belum ada AI Agent yang terdaftar untuk mengeksekusi tugas ini.');
+      toast.warning('Belum ada AI Agent yang terdaftar untuk mengeksekusi tugas ini.', 'Belum Ditugaskan');
       return;
     }
 
@@ -114,8 +116,9 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
       setLastRun(runResult);
       await loadTask(task.id);
       onTaskUpdated();
+      toast.success(`Eksekusi tugas "${task.title}" berhasil diselesaikan.`);
     } catch (err: any) {
-      alert(`Gagal mengeksekusi tugas: ${err.message}`);
+      toast.error(err.message || 'Eksekusi gagal dijalankan.', 'Gagal Mengeksekusi Tugas');
     } finally {
       setIsExecuting(false);
     }
@@ -126,14 +129,15 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
       await api.transitionTask(task.id, newStatus);
       await loadTask(task.id);
       onTaskUpdated();
+      toast.success(`Status tugas diubah ke "${newStatus}".`);
     } catch (err: any) {
-      alert(`Gagal mengubah status: ${err.message}`);
+      toast.error(err.message || 'Gagal memperbarui status tugas.', 'Gagal Mengubah Status');
     }
   };
 
   const handleSaveEdit = async () => {
     if (!editTitle.trim()) {
-      alert('Judul tugas wajib diisi.');
+      toast.warning('Judul tugas wajib diisi.', 'Validasi Form');
       return;
     }
 
@@ -150,22 +154,31 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
       setIsEditing(false);
       await loadTask(task.id);
       onTaskUpdated();
+      toast.success('Perubahan tugas berhasil disimpan.');
     } catch (err: any) {
-      alert(`Gagal memperbarui tugas: ${err.message}`);
+      toast.error(err.message || 'Gagal menyimpan perubahan tugas.', 'Gagal Menyimpan');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!confirm(`Hapus tugas "${task.title}" secara permanen?`)) return;
+    const isConfirmed = await confirm({
+      title: 'Hapus Tugas',
+      message: `Hapus tugas "${task.title}" secara permanen dari sistem?`,
+      confirmText: 'Ya, Hapus Tugas',
+      variant: 'danger'
+    });
+    if (!isConfirmed) return;
+
     try {
       setLoading(true);
       await api.deleteTask(task.id);
       onTaskUpdated();
+      toast.success(`Tugas "${task.title}" berhasil dihapus.`);
       onClose();
     } catch (err: any) {
-      alert(`Gagal menghapus tugas: ${err.message}`);
+      toast.error(err.message || 'Gagal menghapus tugas.', 'Penghapusan Gagal');
       setLoading(false);
     }
   };

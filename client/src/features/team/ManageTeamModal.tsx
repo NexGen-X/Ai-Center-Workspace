@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { AIAgent, AgentStatus, AgentRole } from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
+import { useFeedback } from '../../components/common/FeedbackContext.js';
 
 interface ManageTeamModalProps {
   isOpen: boolean;
@@ -60,6 +61,7 @@ export const ManageTeamModal: React.FC<ManageTeamModalProps> = ({
   onOpenAddAgent,
   onSelectAgent
 }) => {
+  const { toast, confirm } = useFeedback();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
@@ -101,8 +103,9 @@ export const ManageTeamModal: React.FC<ManageTeamModalProps> = ({
       setTogglingAgentId(agent.id);
       await api.toggleAgentEnabled(agent.id, !agent.enabled);
       onAgentsUpdated();
+      toast.success(`Status agen "${agent.name}" diubah ke ${!agent.enabled ? 'Aktif' : 'Nonaktif'}.`);
     } catch (err: any) {
-      alert(`Gagal mengubah status aktif agen: ${err.message}`);
+      toast.error(err.message || 'Gagal mengubah status aktif agen.', 'Gagal Mengubah Status');
     } finally {
       setTogglingAgentId(null);
     }
@@ -140,14 +143,21 @@ export const ManageTeamModal: React.FC<ManageTeamModalProps> = ({
   // Delete agent
   const handleDelete = async (agent: AIAgent, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm(`Apakah Anda yakin ingin menghapus AI Agent "${agent.name}"?`)) return;
+    const isConfirmed = await confirm({
+      title: 'Hapus AI Agent',
+      message: `Apakah Anda yakin ingin menghapus AI Agent "${agent.name}" (${agent.role}) secara permanen?`,
+      confirmText: 'Ya, Hapus Agen',
+      variant: 'danger'
+    });
+    if (!isConfirmed) return;
 
     try {
       setDeletingAgentId(agent.id);
       await api.deleteAgent(agent.id);
       onAgentsUpdated();
+      toast.success(`AI Agent "${agent.name}" berhasil dihapus.`);
     } catch (err: any) {
-      alert(`Gagal menghapus agen: ${err.message}`);
+      toast.error(err.message || 'Gagal menghapus agen.', 'Penghapusan Gagal');
     } finally {
       setDeletingAgentId(null);
     }

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Task, TaskStatus, AIAgent, Project } from '../../../../shared/types.js';
 import { CheckCircle2, Clock, PlayCircle, AlertCircle, Play, Bot, ArrowRight, Search, Layers } from 'lucide-react';
 import { api } from '../../services/api.js';
+import { useFeedback } from '../../components/common/FeedbackContext.js';
 
 interface TaskListProps {
   tasks: Task[];
@@ -35,6 +36,7 @@ export const TaskList: React.FC<TaskListProps> = ({
   onOpenCreateTask,
   onSelectTask
 }) => {
+  const { toast } = useFeedback();
   const [filter, setFilter] = useState<string>('ALL');
   const [projectFilter, setProjectFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -57,8 +59,9 @@ export const TaskList: React.FC<TaskListProps> = ({
     try {
       await api.transitionTask(taskId, newStatus);
       onTaskUpdated();
+      toast.success(`Status tugas diubah ke "${newStatus}".`);
     } catch (err: any) {
-      alert(`Gagal mengubah status: ${err.message}`);
+      toast.error(err.message || 'Gagal mengubah status tugas.', 'Status Gagal Diubah');
     }
   };
 
@@ -66,7 +69,7 @@ export const TaskList: React.FC<TaskListProps> = ({
     e.stopPropagation();
     const agentId = task.assignedAgentId || agents[0]?.id;
     if (!agentId) {
-      alert('Tugaskan agen terlebih dahulu.');
+      toast.warning('Tugaskan agen terlebih dahulu sebelum mengeksekusi tugas.', 'Belum Ada Agen');
       return;
     }
 
@@ -74,8 +77,9 @@ export const TaskList: React.FC<TaskListProps> = ({
     try {
       await api.executeTask(task.id, agentId);
       onTaskUpdated();
+      toast.success(`Tugas "${task.title}" berhasil dieksekusi oleh AI Agent.`);
     } catch (err: any) {
-      alert(`Gagal mengeksekusi tugas: ${err.message}`);
+      toast.error(err.message || 'Gagal mengeksekusi tugas.', 'Eksekusi Gagal');
     } finally {
       setExecutingTaskId(null);
     }
