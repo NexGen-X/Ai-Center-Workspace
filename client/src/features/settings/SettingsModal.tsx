@@ -13,7 +13,9 @@ import {
   Sliders,
   Lock,
   Globe,
-  Radio
+  Radio,
+  Zap,
+  ExternalLink
 } from 'lucide-react';
 import { ModelProviderConfig } from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
@@ -23,13 +25,15 @@ interface SettingsModalProps {
   onClose: () => void;
   currentUser: any;
   onLogout: () => void;
+  onOpenManageProviders?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
   currentUser,
-  onLogout
+  onLogout,
+  onOpenManageProviders
 }) => {
   const [activeTab, setActiveTab] = useState<'WORKSPACE' | 'SECURITY' | 'PROVIDERS' | 'PREFERENCES'>('WORKSPACE');
   const [providers, setProviders] = useState<ModelProviderConfig[]>([]);
@@ -332,9 +336,29 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {activeTab === 'PROVIDERS' && (
             <div className="space-y-4">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Daftar Model Provider Terkonfigurasi ({providers.length})
-              </h3>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                    Model Provider Terkonfigurasi ({providers.length})
+                  </h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Koneksi upstream multi-model dengan enkripsi AES-256-GCM.
+                  </p>
+                </div>
+                {onOpenManageProviders && (
+                  <button
+                    onClick={() => {
+                      onClose();
+                      onOpenManageProviders();
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold shadow-md shadow-cyan-600/20 transition"
+                  >
+                    <Cpu className="w-3.5 h-3.5" />
+                    <span>Kelola Semua Provider</span>
+                    <ExternalLink className="w-3 h-3 ml-0.5" />
+                  </button>
+                )}
+              </div>
 
               <div className="divide-y divide-slate-800/80 rounded-xl bg-slate-800/30 border border-slate-700/60 overflow-hidden">
                 {providers.length === 0 ? (

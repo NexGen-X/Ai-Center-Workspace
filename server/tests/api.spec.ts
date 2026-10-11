@@ -99,6 +99,76 @@ describe('AI Agent Command Center API Endpoints', () => {
     expect(res.body.status).toBe('CONNECTION_FAILED');
   });
 
+  it('CRUD /api/providers should manage providers with AES-256 encryption & dependency guard', async () => {
+    // 1. Rejection of SSRF target on creation
+    const ssrfCreateRes = await request(app)
+      .post('/api/providers')
+      .send({
+        name: 'Evil Provider',
+        providerType: 'custom_api',
+        baseUrl: 'http://169.254.169.254/metadata',
+        apiKey: 'evil-key'
+      });
+    expect(ssrfCreateRes.status).toBe(400);
+
+    // 2. Create valid provider
+    const createRes = await request(app)
+      .post('/api/providers')
+      .send({
+        name: 'Groq Cloud Production',
+        providerType: 'groq',
+        baseUrl: 'https://api.groq.com/openai/v1',
+        apiKey: 'gsk_supersecretkey1234567890',
+        enabled: true
+      });
+    expect(createRes.status).toBe(201);
+    expect(createRes.body).toHaveProperty('id');
+    expect(createRes.body.name).toBe('Groq Cloud Production');
+    expect(createRes.body.providerType).toBe('groq');
+    // Secret must be masked, NEVER leaked
+    expect(createRes.body.apiKeyMasked).toBe('gsk_••••7890');
+    expect(createRes.body).not.toHaveProperty('apiKey');
+    expect(createRes.body).not.toHaveProperty('api_key_encrypted');
+    const newProvId = createRes.body.id;
+
+    // 3. GET /api/providers should list provider with masked key
+    const listRes = await request(app).get('/api/providers');
+    expect(listRes.status).toBe(200);
+    const found = listRes.body.find((p: any) => p.id === newProvId);
+    expect(found).toBeDefined();
+    expect(found.apiKeyMasked).toBe('gsk_••••7890');
+
+    // 4. Update provider (rename, toggle enabled, update URL)
+    const updateRes = await request(app)
+      .put(`/api/providers/${newProvId}`)
+      .send({
+        name: 'Groq Ultra Fast v2',
+        enabled: false
+      });
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.name).toBe('Groq Ultra Fast v2');
+    expect(updateRes.body.enabled).toBe(false);
+
+    // 5. Test connection on saved provider
+    const testRes = await request(app).post(`/api/providers/${newProvId}/test-connection`);
+    expect(testRes.status).toBe(200);
+    expect(testRes.body).toHaveProperty('status');
+
+    // 6. Delete provider that has active agents (seed provider has 5 agents)
+    const deleteUsedRes = await request(app).delete('/api/providers/prov-routex-local');
+    expect(deleteUsedRes.status).toBe(400);
+    expect(deleteUsedRes.body.error.message).toContain('tidak dapat dihapus karena masih digunakan');
+
+    // 7. Delete unlinked provider should succeed
+    const deleteRes = await request(app).delete(`/api/providers/${newProvId}`);
+    expect(deleteRes.status).toBe(200);
+    expect(deleteRes.body.success).toBe(true);
+
+    // 8. Verify deleted provider is gone
+    const verifyRes = await request(app).get(`/api/providers/${newProvId}`);
+    expect(verifyRes.status).toBe(404);
+  });
+
   it('GET /api/reports/summary should return FinOps analytics', async () => {
     const res = await request(app).get('/api/reports/summary?days=7');
     expect(res.status).toBe(200);

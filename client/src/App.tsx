@@ -11,6 +11,7 @@ import { ReportsModal } from './features/reports/ReportsModal.js';
 import { DocumentsModal } from './features/documents/DocumentsModal.js';
 import { ProjectsModal } from './features/projects/ProjectsModal.js';
 import { SettingsModal } from './features/settings/SettingsModal.js';
+import { ManageProvidersModal } from './features/providers/ManageProvidersModal.js';
 import { TaskList } from './features/tasks/TaskList.js';
 import { CreateTaskModal } from './features/tasks/CreateTaskModal.js';
 import { TaskDetailModal } from './features/tasks/TaskDetailModal.js';
@@ -39,6 +40,7 @@ export const App: React.FC = () => {
   // Modals state
   const [isTasksModalOpen, setIsTasksModalOpen] = useState(false);
   const [isManageTeamOpen, setIsManageTeamOpen] = useState(false);
+  const [isProvidersModalOpen, setIsProvidersModalOpen] = useState(false);
   const [isAddAgentOpen, setIsAddAgentOpen] = useState(false);
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -151,6 +153,18 @@ export const App: React.FC = () => {
         refreshAllData();
       });
 
+      eventSource.addEventListener('provider.created', () => {
+        refreshAllData();
+      });
+
+      eventSource.addEventListener('provider.updated', () => {
+        refreshAllData();
+      });
+
+      eventSource.addEventListener('provider.deleted', () => {
+        refreshAllData();
+      });
+
       eventSource.addEventListener('activity.created', (e: MessageEvent) => {
         const data = JSON.parse(e.data);
         setActivities((prev) => [
@@ -208,6 +222,7 @@ export const App: React.FC = () => {
       <Navbar
         onOpenAddAgent={() => setIsAddAgentOpen(true)}
         onOpenManageTeam={() => setIsManageTeamOpen(true)}
+        onOpenProviders={() => setIsProvidersModalOpen(true)}
         onOpenTasks={() => setIsTasksModalOpen(true)}
         onOpenCreateTask={() => {
           setSelectedProjectIdForTask(undefined);
@@ -442,6 +457,13 @@ export const App: React.FC = () => {
         onClose={() => setIsSettingsOpen(false)}
         currentUser={currentUser}
         onLogout={handleLogout}
+        onOpenManageProviders={() => setIsProvidersModalOpen(true)}
+      />
+
+      <ManageProvidersModal
+        isOpen={isProvidersModalOpen}
+        onClose={() => setIsProvidersModalOpen(false)}
+        onProvidersUpdated={refreshAllData}
       />
     </div>
   );

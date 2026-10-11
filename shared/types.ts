@@ -67,6 +67,7 @@ export interface ModelProviderConfig {
   errorMessage?: string;
   createdAt: string;
   updatedAt: string;
+  agentCount?: number;
 }
 
 export interface AIAgent {
@@ -201,6 +202,24 @@ export interface TestConnectionResponse {
   message: string;
   discoveredModels?: string[];
   latencyMs?: number;
+}
+
+export interface CreateProviderRequest {
+  name: string;
+  providerType: ProviderType;
+  baseUrl: string;
+  protocol?: ProtocolType;
+  apiKey?: string;
+  enabled?: boolean;
+}
+
+export interface UpdateProviderRequest {
+  name?: string;
+  providerType?: ProviderType;
+  baseUrl?: string;
+  protocol?: ProtocolType;
+  apiKey?: string;
+  enabled?: boolean;
 }
 
 export interface CreateAgentRequest {

@@ -12,6 +12,8 @@ import {
   ServerMetrics,
   DashboardSummary,
   ModelProviderConfig,
+  CreateProviderRequest,
+  UpdateProviderRequest,
   TestConnectionRequest,
   TestConnectionResponse,
   AgentRun,
@@ -143,13 +145,28 @@ export const api = {
 
   // Providers & Connection Testing
   getProviders: () => request<ModelProviderConfig[]>('/providers'),
+  getProvider: (id: string) => request<ModelProviderConfig>(`/providers/${id}`),
+  createProvider: (data: CreateProviderRequest) => request<ModelProviderConfig>('/providers', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+  updateProvider: (id: string, data: UpdateProviderRequest) => request<ModelProviderConfig>(`/providers/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  }),
+  deleteProvider: (id: string) => request<{ success: boolean; message: string }>(`/providers/${id}`, {
+    method: 'DELETE'
+  }),
+  testProviderById: (id: string) => request<TestConnectionResponse>(`/providers/${id}/test-connection`, {
+    method: 'POST'
+  }),
   testConnection: (data: TestConnectionRequest) => request<TestConnectionResponse>('/providers/test-connection', {
     method: 'POST',
     body: JSON.stringify(data)
   }),
-  discoverModels: (baseUrl: string, apiKey?: string, providerType?: string) => request<{ models: string[] }>('/providers/discover-models', {
+  discoverModels: (baseUrl: string, apiKey?: string, providerType?: string, existingProviderId?: string) => request<{ models: string[] }>('/providers/discover-models', {
     method: 'POST',
-    body: JSON.stringify({ baseUrl, apiKey, providerType })
+    body: JSON.stringify({ baseUrl, apiKey, providerType, existingProviderId })
   }),
 
   // Reports & FinOps Analytics

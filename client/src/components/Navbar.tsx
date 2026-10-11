@@ -15,13 +15,15 @@ import {
   Users,
   CheckSquare,
   Home,
-  CheckCircle2
+  CheckCircle2,
+  Cpu
 } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown.js';
 
 interface NavbarProps {
   onOpenAddAgent: () => void;
   onOpenManageTeam: () => void;
+  onOpenProviders: () => void;
   onOpenTasks: () => void;
   onOpenCreateTask: () => void;
   onOpenCalendar: () => void;
@@ -40,6 +42,7 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({
   onOpenAddAgent,
   onOpenManageTeam,
+  onOpenProviders,
   onOpenTasks,
   onOpenCreateTask,
   onOpenCalendar,
@@ -171,6 +174,15 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <Users className="w-3.5 h-3.5 text-purple-400 shrink-0" />
             <span>Tim</span>
+          </button>
+
+          {/* Provider */}
+          <button
+            onClick={onOpenProviders}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 text-xs font-medium transition shrink-0 whitespace-nowrap"
+          >
+            <Cpu className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+            <span>Provider</span>
           </button>
 
           {/* Proyek */}
