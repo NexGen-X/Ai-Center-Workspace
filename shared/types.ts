@@ -1,0 +1,228 @@
+/**
+ * Unified Shared Types & Contracts — AI Agent Command Center
+ * Sesuai spesifikasi Rancangan_Arsitektur_AI_Command_Center_Antigravity.md
+ */
+
+export type ProtocolType = 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'hermes_runtime';
+
+export type ProviderType =
+  | 'custom_api'
+  | 'routex_local'
+  | 'openai'
+  | 'anthropic'
+  | 'gemini'
+  | 'groq'
+  | 'ollama'
+  | 'hermes';
+
+export type ConnectionStatus =
+  | 'NOT_CONFIGURED'
+  | 'CONNECTION_OK'
+  | 'CONNECTION_FAILED'
+  | 'MODEL_VERIFIED'
+  | 'UNAVAILABLE';
+
+export type AgentStatus =
+  | 'READY'
+  | 'IDLE'
+  | 'BUSY'
+  | 'UNAVAILABLE'
+  | 'DISABLED';
+
+export type AgentRole =
+  | 'Orchestrator'
+  | 'Planner'
+  | 'Executor'
+  | 'QA / Reviewer'
+  | 'DevOps'
+  | 'Domain Specialist';
+
+export type RunStatus =
+  | 'QUEUED'
+  | 'RUNNING'
+  | 'WAITING'
+  | 'SUCCEEDED'
+  | 'FAILED'
+  | 'CANCELLED';
+
+export type TaskStatus =
+  | 'TODO'
+  | 'IN_PROGRESS'
+  | 'IN_REVIEW'
+  | 'DONE'
+  | 'CANCELLED';
+
+export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+
+export interface ModelProviderConfig {
+  id: string;
+  name: string;
+  providerType: ProviderType;
+  baseUrl: string;
+  protocol: ProtocolType;
+  apiKeyMasked?: string;
+  enabled: boolean;
+  connectionStatus: ConnectionStatus;
+  lastCheckedAt?: string;
+  errorMessage?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AIAgent {
+  id: string;
+  workspaceId: string;
+  name: string;
+  role: AgentRole;
+  description: string;
+  systemPrompt: string;
+  providerId: string;
+  modelId: string;
+  capabilities: string[];
+  parameters: {
+    temperature?: number;
+    maxTokens?: number;
+    topP?: number;
+  };
+  enabled: boolean;
+  status: AgentStatus;
+  lastRunAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  // Joined provider metadata for UI display
+  providerName?: string;
+  providerType?: ProviderType;
+}
+
+export interface AgentRun {
+  id: string;
+  agentId: string;
+  taskId?: string;
+  modelId: string;
+  status: RunStatus;
+  inputPrompt: string;
+  outputResult?: string;
+  errorCode?: string;
+  errorMessage?: string;
+  durationMs?: number;
+  tokensUsed?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+  startedAt?: string;
+  finishedAt?: string;
+  createdAt: string;
+}
+
+export interface Task {
+  id: string;
+  workspaceId: string;
+  projectId?: string;
+  title: string;
+  description?: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  assignedAgentId?: string;
+  assignedAgentName?: string;
+  dueDate?: string;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+}
+
+export interface Project {
+  id: string;
+  workspaceId: string;
+  name: string;
+  description?: string;
+  status: 'PLANNING' | 'ACTIVE' | 'COMPLETED' | 'ON_HOLD';
+  progressPercentage: number;
+  dueDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Activity {
+  id: string;
+  workspaceId: string;
+  actorType: 'AGENT' | 'USER' | 'SYSTEM';
+  actorId?: string;
+  actorName: string;
+  eventType: string;
+  summary: string;
+  targetType?: string;
+  targetId?: string;
+  createdAt: string;
+}
+
+export interface ServerMetrics {
+  cpuUsagePercent: number;
+  cpuCores: number;
+  memoryTotalBytes: number;
+  memoryUsedBytes: number;
+  memoryFreeBytes: number;
+  memoryUsagePercent: number;
+  diskTotalBytes: number;
+  diskUsedBytes: number;
+  diskUsagePercent: number;
+  loadAvg: [number, number, number];
+  uptimeSeconds: number;
+  observedAt: string;
+  status: 'NORMAL' | 'WARNING' | 'CRITICAL';
+}
+
+export interface DashboardSummary {
+  runningTasksCount: number;
+  completedTasksCount: number;
+  onlineAgentsCount: number;
+  totalAgentsCount: number;
+  activeProjectsCount: number;
+  systemStatus: 'OPERATIONAL' | 'DEGRADED' | 'MAINTENANCE';
+  serverMetrics: ServerMetrics;
+}
+
+// Request & Response DTOs
+export interface TestConnectionRequest {
+  providerType: ProviderType;
+  baseUrl: string;
+  protocol: ProtocolType;
+  apiKey?: string;
+  existingProviderId?: string;
+}
+
+export interface TestConnectionResponse {
+  success: boolean;
+  status: ConnectionStatus;
+  message: string;
+  discoveredModels?: string[];
+  latencyMs?: number;
+}
+
+export interface CreateAgentRequest {
+  name: string;
+  role: AgentRole;
+  description: string;
+  systemPrompt: string;
+  providerMode: 'existing' | 'new_custom' | 'new_preset' | 'hermes_runtime';
+  providerId?: string;
+  newProvider?: {
+    name: string;
+    providerType: ProviderType;
+    baseUrl: string;
+    protocol: ProtocolType;
+    apiKey?: string;
+  };
+  modelId: string;
+  capabilities?: string[];
+  parameters?: {
+    temperature?: number;
+    maxTokens?: number;
+  };
+}
+
+export interface ExecuteAgentRunRequest {
+  agentId: string;
+  taskId?: string;
+  prompt: string;
+}

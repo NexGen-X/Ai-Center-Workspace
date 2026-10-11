@@ -1,0 +1,26 @@
+{
+  "name": "ai-center-workspace",
+  "version": "1.0.0",
+  "description": "AI Agent Command Center with 3D Workspace via Web UI",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev:server": "npm run dev -w server",
+    "dev:client": "npm run dev -w client",
+    "build": "npm run build -w server && npm run build -w client",
+    "test": "npm run test -w server",
+    "start": "npm run start -w server"
+  },
+  "keywords": [
+    "ai-agent",
+    "command-center",
+    "threejs",
+    "llm-orchestrator"
+  ],
+  "author": "Antigravity Engineering",
+  "license": "MIT"
+}

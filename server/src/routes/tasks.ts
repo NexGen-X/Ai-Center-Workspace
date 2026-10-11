@@ -1,0 +1,181 @@
+/**
+ * Tasks API Routes — AI Agent Command Center
+ */
+
+import { Router, Request, Response } from 'express';
+import { pool } from '../db/index.js';
+import { v4 as uuidv4 } from 'uuid';
+import { Task, TaskStatus } from '../../../shared/types.js';
+import { executeAgentTask } from '../services/orchestrator.js';
+import { realtimeHub } from '../services/realtime.js';
+
+const router = Router();
+
+// Permitted status transitions map
+const VALID_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
+  TODO: ['IN_PROGRESS', 'CANCELLED'],
+  IN_PROGRESS: ['IN_REVIEW', 'DONE', 'TODO', 'CANCELLED'],
+  IN_REVIEW: ['DONE', 'IN_PROGRESS', 'CANCELLED'],
+  DONE: ['TODO'], // reopen if needed
+  CANCELLED: ['TODO']
+};
+
+// GET /api/tasks — List tasks
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    const { status, priority, projectId } = req.query;
+    let query = `
+      SELECT 
+        t.id, t.workspace_id, t.project_id, t.title, t.description,
+        t.status, t.priority, t.assigned_agent_id, t.due_date,
+        t.completed_at, t.created_at, t.updated_at,
+        a.name as assigned_agent_name
+      FROM tasks t
+      LEFT JOIN ai_agents a ON t.assigned_agent_id = a.id
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+    let idx = 1;
+
+    if (status) {
+      query += ` AND t.status = $${idx++}`;
+      params.push(status);
+    }
+    if (priority) {
+      query += ` AND t.priority = $${idx++}`;
+      params.push(priority);
+    }
+    if (projectId) {
+      query += ` AND t.project_id = $${idx++}`;
+      params.push(projectId);
+    }
+
+    query += ` ORDER BY t.created_at DESC;`;
+
+    const result = await pool.query(query, params);
+    const tasks: Task[] = result.rows.map(row => ({
+      id: row.id,
+      workspaceId: row.workspace_id,
+      projectId: row.project_id,
+      title: row.title,
+      description: row.description,
+      status: row.status,
+      priority: row.priority,
+      assignedAgentId: row.assigned_agent_id,
+      assignedAgentName: row.assigned_agent_name,
+      dueDate: row.due_date,
+      completedAt: row.completed_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    }));
+
+    res.json(tasks);
+  } catch (err: any) {
+    res.status(500).json({ error: { message: err.message } });
+  }
+});
+
+// POST /api/tasks — Create task
+router.post('/', async (req: Request, res: Response) => {
+  try {
+    const { title, description, priority, projectId, assignedAgentId, dueDate } = req.body;
+    if (!title) {
+      return res.status(400).json({ error: { message: 'Judul tugas (title) wajib diisi.' } });
+    }
+
+    const taskId = `task-${uuidv4().slice(0, 8)}`;
+    await pool.query(`
+      INSERT INTO tasks (
+        id, workspace_id, project_id, title, description, status, priority, assigned_agent_id, due_date
+      ) VALUES ($1, 'ws-default-command-center', $2, $3, $4, 'TODO', $5, $6, $7);
+    `, [taskId, projectId || null, title, description || null, priority || 'MEDIUM', assignedAgentId || null, dueDate || null]);
+
+    // Record activity
+    await pool.query(`
+      INSERT INTO activities (id, workspace_id, actor_type, actor_id, actor_name, event_type, summary, target_type, target_id)
+      VALUES ($1, 'ws-default-command-center', 'USER', 'user-admin', 'Lead Operator', 'task.created', $2, 'TASK', $3);
+    `, [`act-${uuidv4().slice(0, 8)}`, `Tugas baru dibuat: ${title}`, taskId]);
+
+    realtimeHub.broadcast('task.created', { id: taskId, title, status: 'TODO' });
+    realtimeHub.broadcast('activity.created', { actorName: 'Lead Operator', summary: `Tugas baru dibuat: ${title}` });
+
+    res.status(201).json({ id: taskId, message: 'Tugas berhasil dibuat.' });
+  } catch (err: any) {
+    res.status(500).json({ error: { message: err.message } });
+  }
+});
+
+// POST /api/tasks/:id/transitions — State machine transition
+router.post('/:id/transitions', async (req: Request, res: Response) => {
+  try {
+    const { newStatus } = req.body as { newStatus: TaskStatus };
+    if (!newStatus) {
+      return res.status(400).json({ error: { message: 'newStatus wajib disertakan.' } });
+    }
+
+    const currentRes = await pool.query('SELECT status, title FROM tasks WHERE id = $1', [req.params.id]);
+    if (currentRes.rows.length === 0) {
+      return res.status(404).json({ error: { message: 'Tugas tidak ditemukan.' } });
+    }
+
+    const currentStatus = currentRes.rows[0].status as TaskStatus;
+    const title = currentRes.rows[0].title;
+    const allowed = VALID_TRANSITIONS[currentStatus] || [];
+
+    if (!allowed.includes(newStatus)) {
+      return res.status(400).json({
+        error: {
+          message: `Transisi status ilegal: dari '${currentStatus}' ke '${newStatus}' tidak diizinkan. Transisi yang valid: [${allowed.join(', ')}]`
+        }
+      });
+    }
+
+    const completedClause = newStatus === 'DONE' ? ', completed_at = CURRENT_TIMESTAMP' : ', completed_at = NULL';
+    await pool.query(`
+      UPDATE tasks 
+      SET status = $1, updated_at = CURRENT_TIMESTAMP ${completedClause}
+      WHERE id = $2;
+    `, [newStatus, req.params.id]);
+
+    // Record history
+    await pool.query(`
+      INSERT INTO task_history (id, task_id, actor_type, actor_id, event_type, old_value, new_value)
+      VALUES ($1, $2, 'USER', 'user-admin', 'status_changed', $3, $4);
+    `, [`hist-${uuidv4().slice(0, 8)}`, req.params.id, currentStatus, newStatus]);
+
+    realtimeHub.broadcast('task.updated', { taskId: req.params.id, status: newStatus });
+    realtimeHub.broadcast('activity.created', {
+      actorName: 'Lead Operator',
+      summary: `Status tugas "${title}" diubah dari ${currentStatus} ke ${newStatus}`
+    });
+
+    res.json({ success: true, taskId: req.params.id, oldStatus: currentStatus, newStatus });
+  } catch (err: any) {
+    res.status(500).json({ error: { message: err.message } });
+  }
+});
+
+// POST /api/tasks/:id/execute — Trigger execution of task by assigned agent
+router.post('/:id/execute', async (req: Request, res: Response) => {
+  try {
+    const taskRes = await pool.query('SELECT id, title, description, assigned_agent_id FROM tasks WHERE id = $1', [req.params.id]);
+    if (taskRes.rows.length === 0) {
+      return res.status(404).json({ error: { message: 'Tugas tidak ditemukan.' } });
+    }
+
+    const task = taskRes.rows[0];
+    const agentId = req.body.agentId || task.assigned_agent_id;
+    if (!agentId) {
+      return res.status(400).json({ error: { message: 'Tugas belum memiliki agent yang ditugaskan.' } });
+    }
+
+    const prompt = req.body.prompt || `Selesaikan tugas: ${task.title}\n\nDeskripsi: ${task.description || 'Tidak ada deskripsi spesifik.'}`;
+    const runResult = await executeAgentTask(agentId, prompt, task.id);
+
+    res.json(runResult);
+  } catch (err: any) {
+    res.status(500).json({ error: { message: err.message } });
+  }
+});
+
+export default router;
