@@ -81,6 +81,13 @@ export const api = {
     method: 'POST',
     body: JSON.stringify({ prompt })
   }),
+  pingAgent: (id: string) => request<{ success: boolean; status: string; agentStatus: string; latencyMs: number; message?: string }>(`/agents/${id}/ping`, {
+    method: 'POST'
+  }),
+  toggleAgentEnabled: (id: string, enabled: boolean) => request<AIAgent>(`/agents/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ enabled })
+  }),
 
   // Tasks
   getTasks: (filter?: { status?: string; projectId?: string; search?: string }) => {

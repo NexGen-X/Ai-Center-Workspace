@@ -31,7 +31,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onQuickRun, onSelec
   const statusStyle = STATUS_CONFIG[agent.status] || STATUS_CONFIG.READY;
 
   return (
-    <div className="bg-[#111827]/90 border border-slate-800 rounded-xl p-4 flex flex-col justify-between hover:border-slate-700 hover:shadow-xl hover:shadow-blue-950/20 transition group">
+    <div className={`bg-[#111827]/90 border ${agent.enabled ? 'border-slate-800' : 'border-slate-800/40 opacity-75'} rounded-xl p-4 flex flex-col justify-between hover:border-slate-700 hover:shadow-xl hover:shadow-blue-950/20 transition group`}>
       <div>
         {/* Header: Status, Role & Provider */}
         <div className="flex items-center justify-between mb-3">
@@ -46,7 +46,10 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onQuickRun, onSelec
 
         {/* Agent Name & Model Info */}
         <div className="flex items-start gap-3 mb-2.5">
-          <div className="w-9 h-9 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 text-slate-300 group-hover:text-blue-400 transition">
+          <div
+            className="w-9 h-9 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 text-slate-300 group-hover:text-blue-400 transition cursor-pointer"
+            onClick={() => onSelect(agent)}
+          >
             <Bot className="w-5 h-5" />
           </div>
           <div className="min-w-0">
@@ -86,16 +89,20 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onQuickRun, onSelec
         </div>
       </div>
 
-      {/* Footer: Capabilities & Quick Action */}
+      {/* Footer: Capabilities, Tasks Count & Quick Action */}
       <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between">
-        <div className="flex items-center gap-1">
-          {agent.capabilities?.slice(0, 2).map((cap, i) => (
-            <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800/70 text-slate-400 font-mono">
-              {cap.replace(/_/g, ' ')}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex items-center gap-1">
+            {agent.capabilities?.slice(0, 2).map((cap, i) => (
+              <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800/70 text-slate-400 font-mono">
+                {cap.replace(/_/g, ' ')}
+              </span>
+            ))}
+          </div>
+          {agent.totalTasks !== undefined && agent.totalTasks > 0 && (
+            <span className="text-[9px] text-slate-400 font-mono px-1 py-0.5 rounded bg-slate-900 border border-slate-800">
+              {agent.completedTasks || 0}/{agent.totalTasks}
             </span>
-          ))}
-          {(agent.capabilities?.length || 0) > 2 && (
-            <span className="text-[9px] text-slate-500 font-mono">+{agent.capabilities.length - 2}</span>
           )}
         </div>
 

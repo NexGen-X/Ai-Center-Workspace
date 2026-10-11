@@ -7,13 +7,15 @@ interface StatCardsProps {
   loading: boolean;
   onOpenProjects?: () => void;
   onOpenTasks?: () => void;
+  onOpenManageTeam?: () => void;
 }
 
 export const StatCards: React.FC<StatCardsProps> = ({
   summary,
   loading,
   onOpenProjects,
-  onOpenTasks
+  onOpenTasks,
+  onOpenManageTeam
 }) => {
   if (loading || !summary) {
     return (
@@ -66,9 +68,12 @@ export const StatCards: React.FC<StatCardsProps> = ({
       </div>
 
       {/* 3. AI Team Online */}
-      <div className="bg-[#111827]/80 border border-purple-500/20 rounded-xl p-3.5 relative overflow-hidden group hover:border-purple-500/40 transition">
+      <div
+        onClick={onOpenManageTeam}
+        className="bg-[#111827]/80 border border-purple-500/20 rounded-xl p-3.5 relative overflow-hidden group hover:border-purple-500/50 cursor-pointer transition"
+      >
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-slate-400">AI Team Online</span>
+          <span className="text-xs font-medium text-slate-400 group-hover:text-purple-300 transition">AI Team Online</span>
           <div className="w-7 h-7 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400">
             <Users className="w-4 h-4" />
           </div>

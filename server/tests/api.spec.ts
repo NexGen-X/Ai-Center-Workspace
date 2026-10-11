@@ -44,6 +44,9 @@ describe('AI Agent Command Center API Endpoints', () => {
     expect(firstAgent).toHaveProperty('name');
     expect(firstAgent).toHaveProperty('role');
     expect(firstAgent).toHaveProperty('status');
+    expect(firstAgent).toHaveProperty('totalTasks');
+    expect(firstAgent).toHaveProperty('completedTasks');
+    expect(firstAgent).toHaveProperty('totalRuns');
     // Secret keys must never be in agents response
     expect(firstAgent).not.toHaveProperty('apiKey');
     expect(firstAgent).not.toHaveProperty('api_key_encrypted');
@@ -310,5 +313,34 @@ describe('AI Agent Command Center API Endpoints', () => {
     expect(runsRes.status).toBe(200);
     expect(Array.isArray(runsRes.body)).toBe(true);
     expect(runsRes.body.length).toBeGreaterThan(0);
+  });
+
+  it('POST /api/agents/:id/ping and PATCH enable/disable status synchronization', async () => {
+    const agentsRes = await request(app).get('/api/agents');
+    expect(agentsRes.status).toBe(200);
+    const agent = agentsRes.body[0];
+
+    // 1. Live ping test
+    const pingRes = await request(app).post(`/api/agents/${agent.id}/ping`);
+    expect(pingRes.status).toBe(200);
+    expect(pingRes.body).toHaveProperty('success');
+    expect(pingRes.body).toHaveProperty('status');
+    expect(pingRes.body).toHaveProperty('latencyMs');
+
+    // 2. Toggle disabled: should automatically synchronize status to DISABLED
+    const disableRes = await request(app)
+      .patch(`/api/agents/${agent.id}`)
+      .send({ enabled: false });
+    expect(disableRes.status).toBe(200);
+    expect(disableRes.body.enabled).toBe(false);
+    expect(disableRes.body.status).toBe('DISABLED');
+
+    // 3. Toggle enabled: should automatically synchronize status to READY
+    const enableRes = await request(app)
+      .patch(`/api/agents/${agent.id}`)
+      .send({ enabled: true });
+    expect(enableRes.status).toBe(200);
+    expect(enableRes.body.enabled).toBe(true);
+    expect(enableRes.body.status).toBe('READY');
   });
 });

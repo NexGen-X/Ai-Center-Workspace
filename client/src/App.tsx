@@ -4,6 +4,7 @@ import { StatCards } from './components/StatCards.js';
 import { AgentCard } from './features/team/AgentCard.js';
 import { AddAgentModal } from './features/team/AddAgentModal.js';
 import { AgentDetailModal } from './features/team/AgentDetailModal.js';
+import { ManageTeamModal } from './features/team/ManageTeamModal.js';
 import { LoginModal } from './components/LoginModal.js';
 import { CalendarModal } from './features/calendar/CalendarModal.js';
 import { ReportsModal } from './features/reports/ReportsModal.js';
@@ -19,7 +20,7 @@ import { ActivityFeed } from './components/ActivityFeed.js';
 import { ServerMonitoringWidget } from './components/ServerMonitoringWidget.js';
 import { api } from './services/api.js';
 import { AIAgent, Task, Activity, DashboardSummary, ServerMetrics, Project } from '../../shared/types.js';
-import { Bot, Plus, RefreshCw, Zap, Layers } from 'lucide-react';
+import { Bot, Plus, RefreshCw, Zap, Layers, Users } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
@@ -35,6 +36,7 @@ export const App: React.FC = () => {
   const [viewMode, setViewMode] = useState<'3D' | '2D'>('3D');
 
   // Modals state
+  const [isManageTeamOpen, setIsManageTeamOpen] = useState(false);
   const [isAddAgentOpen, setIsAddAgentOpen] = useState(false);
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -203,6 +205,7 @@ export const App: React.FC = () => {
       {/* Top Navigation */}
       <Navbar
         onOpenAddAgent={() => setIsAddAgentOpen(true)}
+        onOpenManageTeam={() => setIsManageTeamOpen(true)}
         onOpenCreateTask={() => {
           setSelectedProjectIdForTask(undefined);
           setIsCreateTaskOpen(true);
@@ -227,6 +230,7 @@ export const App: React.FC = () => {
           summary={summary}
           loading={loading}
           onOpenProjects={() => setIsProjectsOpen(true)}
+          onOpenManageTeam={() => setIsManageTeamOpen(true)}
         />
 
         {/* 3D Virtual Workspace & 2D Fallback */}
@@ -271,6 +275,15 @@ export const App: React.FC = () => {
                 title="Segarkan Data"
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-400' : ''}`} />
+              </button>
+
+              <button
+                onClick={() => setIsManageTeamOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+                title="Buka Panel Kelola AI Team"
+              >
+                <Users className="w-3.5 h-3.5 text-blue-400" />
+                <span>Kelola Semua Tim</span>
               </button>
 
               <button
@@ -325,6 +338,15 @@ export const App: React.FC = () => {
       </footer>
 
       {/* Modals */}
+      <ManageTeamModal
+        isOpen={isManageTeamOpen}
+        onClose={() => setIsManageTeamOpen(false)}
+        agents={agents}
+        onAgentsUpdated={refreshAllData}
+        onOpenAddAgent={() => setIsAddAgentOpen(true)}
+        onSelectAgent={(agent) => setSelectedAgent(agent)}
+      />
+
       <AddAgentModal
         isOpen={isAddAgentOpen}
         onClose={() => setIsAddAgentOpen(false)}

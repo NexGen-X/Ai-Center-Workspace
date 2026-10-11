@@ -4,11 +4,12 @@
 
 import { Router, Request, Response } from 'express';
 import { pool } from '../db/index.js';
-import { encryptSecret } from '../utils/crypto.js';
+import { encryptSecret, decryptSecret } from '../utils/crypto.js';
 import { v4 as uuidv4 } from 'uuid';
 import { CreateAgentRequest, AIAgent } from '../../../shared/types.js';
 import { realtimeHub } from '../services/realtime.js';
 import { executeAgentTask } from '../services/orchestrator.js';
+import { ConnectionRouter } from '../adapters/router.js';
 
 const router = Router();
 
@@ -20,9 +21,15 @@ router.get('/', async (_req: Request, res: Response) => {
         a.id, a.workspace_id, a.name, a.role, a.description, a.system_prompt,
         a.provider_id, a.model_id, a.capabilities, a.parameters_json,
         a.enabled, a.status, a.last_run_at, a.created_at, a.updated_at,
-        p.name as provider_name, p.provider_type
+        p.name as provider_name, p.provider_type,
+        COUNT(DISTINCT t.id)::int as total_tasks,
+        COUNT(DISTINCT CASE WHEN t.status = 'DONE' THEN t.id END)::int as completed_tasks,
+        COUNT(DISTINCT r.id)::int as total_runs
       FROM ai_agents a
       LEFT JOIN model_providers p ON a.provider_id = p.id
+      LEFT JOIN tasks t ON a.id = t.assigned_agent_id
+      LEFT JOIN agent_runs r ON a.id = r.agent_id
+      GROUP BY a.id, p.name, p.provider_type
       ORDER BY a.created_at ASC;
     `);
 
@@ -43,7 +50,10 @@ router.get('/', async (_req: Request, res: Response) => {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       providerName: row.provider_name,
-      providerType: row.provider_type
+      providerType: row.provider_type,
+      totalTasks: row.total_tasks || 0,
+      completedTasks: row.completed_tasks || 0,
+      totalRuns: row.total_runs || 0
     }));
 
     res.json(agents);
@@ -184,7 +194,14 @@ router.patch('/:id', async (req: Request, res: Response) => {
     if (description !== undefined) { updates.push(`description = $${idx++}`); values.push(description); }
     if (systemPrompt !== undefined) { updates.push(`system_prompt = $${idx++}`); values.push(systemPrompt); }
     if (modelId !== undefined) { updates.push(`model_id = $${idx++}`); values.push(modelId); }
-    if (enabled !== undefined) { updates.push(`enabled = $${idx++}`); values.push(enabled); }
+    if (enabled !== undefined) {
+      updates.push(`enabled = $${idx++}`);
+      values.push(enabled);
+      if (status === undefined) {
+        updates.push(`status = $${idx++}`);
+        values.push(enabled ? 'READY' : 'DISABLED');
+      }
+    }
     if (status !== undefined) { updates.push(`status = $${idx++}`); values.push(status); }
     if (parameters !== undefined) { updates.push(`parameters_json = $${idx++}`); values.push(JSON.stringify(parameters)); }
 
@@ -199,7 +216,7 @@ router.patch('/:id', async (req: Request, res: Response) => {
       UPDATE ai_agents
       SET ${updates.join(', ')}
       WHERE id = $${idx}
-      RETURNING id, name, role, status, enabled;
+      RETURNING id;
     `;
 
     const result = await pool.query(query, values);
@@ -207,8 +224,93 @@ router.patch('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: { message: 'Agent tidak ditemukan.' } });
     }
 
-    realtimeHub.broadcast('agent.updated', result.rows[0]);
-    res.json(result.rows[0]);
+    const updatedRes = await pool.query(`
+      SELECT 
+        a.id, a.workspace_id, a.name, a.role, a.description, a.system_prompt,
+        a.provider_id, a.model_id, a.capabilities, a.parameters_json,
+        a.enabled, a.status, a.last_run_at, a.created_at, a.updated_at,
+        p.name as provider_name, p.provider_type,
+        COUNT(DISTINCT t.id)::int as total_tasks,
+        COUNT(DISTINCT CASE WHEN t.status = 'DONE' THEN t.id END)::int as completed_tasks,
+        COUNT(DISTINCT r.id)::int as total_runs
+      FROM ai_agents a
+      LEFT JOIN model_providers p ON a.provider_id = p.id
+      LEFT JOIN tasks t ON a.id = t.assigned_agent_id
+      LEFT JOIN agent_runs r ON a.id = r.agent_id
+      WHERE a.id = $1
+      GROUP BY a.id, p.name, p.provider_type;
+    `, [req.params.id]);
+
+    const updatedRow = updatedRes.rows[0];
+    const fullAgent: AIAgent = {
+      id: updatedRow.id,
+      workspaceId: updatedRow.workspace_id,
+      name: updatedRow.name,
+      role: updatedRow.role,
+      description: updatedRow.description || '',
+      systemPrompt: updatedRow.system_prompt,
+      providerId: updatedRow.provider_id,
+      modelId: updatedRow.model_id,
+      capabilities: updatedRow.capabilities || [],
+      parameters: updatedRow.parameters_json || {},
+      enabled: updatedRow.enabled,
+      status: updatedRow.status,
+      lastRunAt: updatedRow.last_run_at,
+      createdAt: updatedRow.created_at,
+      updatedAt: updatedRow.updated_at,
+      providerName: updatedRow.provider_name,
+      providerType: updatedRow.provider_type,
+      totalTasks: updatedRow.total_tasks || 0,
+      completedTasks: updatedRow.completed_tasks || 0,
+      totalRuns: updatedRow.total_runs || 0
+    };
+
+    realtimeHub.broadcast('agent.updated', fullAgent);
+    res.json(fullAgent);
+  } catch (err: any) {
+    res.status(500).json({ error: { message: err.message } });
+  }
+});
+
+// POST /api/agents/:id/ping — Live test connection & latency for registered agent
+router.post('/:id/ping', async (req: Request, res: Response) => {
+  try {
+    const agentRes = await pool.query(`
+      SELECT 
+        a.id, a.name, a.model_id, a.enabled,
+        p.id as provider_id, p.provider_type, p.base_url, p.protocol, p.api_key_encrypted
+      FROM ai_agents a
+      JOIN model_providers p ON a.provider_id = p.id
+      WHERE a.id = $1;
+    `, [req.params.id]);
+
+    if (agentRes.rows.length === 0) {
+      return res.status(404).json({ error: { message: 'Agent tidak ditemukan.' } });
+    }
+
+    const row = agentRes.rows[0];
+    const apiKey = row.api_key_encrypted ? decryptSecret(row.api_key_encrypted) : undefined;
+    const adapter = ConnectionRouter.getAdapter(row.provider_type);
+
+    const testRes = await adapter.testConnection({
+      baseUrl: row.base_url,
+      apiKey,
+      protocol: row.protocol,
+      timeoutMs: 15000
+    });
+
+    const newStatus = testRes.success ? (row.enabled ? 'READY' : 'DISABLED') : 'UNAVAILABLE';
+    await pool.query('UPDATE ai_agents SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2;', [newStatus, req.params.id]);
+    realtimeHub.broadcast('agent.status_changed', { agentId: req.params.id, status: newStatus });
+
+    res.json({
+      success: testRes.success,
+      status: testRes.status,
+      agentStatus: newStatus,
+      latencyMs: testRes.latencyMs || 0,
+      message: testRes.message,
+      discoveredModels: testRes.discoveredModels
+    });
   } catch (err: any) {
     res.status(500).json({ error: { message: err.message } });
   }

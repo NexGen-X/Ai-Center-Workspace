@@ -11,12 +11,14 @@ import {
   BarChart2,
   BookOpen,
   Layers,
-  Settings
+  Settings,
+  Users
 } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown.js';
 
 interface NavbarProps {
   onOpenAddAgent: () => void;
+  onOpenManageTeam: () => void;
   onOpenCreateTask: () => void;
   onOpenCalendar: () => void;
   onOpenReports: () => void;
@@ -33,6 +35,7 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({
   onOpenAddAgent,
+  onOpenManageTeam,
   onOpenCreateTask,
   onOpenCalendar,
   onOpenReports,
@@ -107,6 +110,16 @@ export const Navbar: React.FC<NavbarProps> = ({
             <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
             <span className="text-slate-300 font-medium">{systemStatus}</span>
           </div>
+
+          {/* Manage Team Button */}
+          <button
+            onClick={onOpenManageTeam}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+            title="Kelola Registry AI Team & Model"
+          >
+            <Users className="w-3.5 h-3.5 text-blue-400" />
+            <span className="hidden md:inline">Kelola Tim</span>
+          </button>
 
           {/* Projects Button */}
           <button

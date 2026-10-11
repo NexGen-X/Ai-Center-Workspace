@@ -92,6 +92,10 @@ export interface AIAgent {
   // Joined provider metadata for UI display
   providerName?: string;
   providerType?: ProviderType;
+  // Computed productivity & execution statistics
+  totalTasks?: number;
+  completedTasks?: number;
+  totalRuns?: number;
 }
 
 export interface AgentRun {
