@@ -154,41 +154,42 @@ export const ManageTeamModal: React.FC<ManageTeamModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#0B0F17] border border-slate-800 rounded-2xl w-full max-w-6xl max-h-[92vh] flex flex-col shadow-2xl shadow-blue-950/40 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-[#0B0F17] border border-slate-800 rounded-2xl w-full max-w-6xl max-h-[94vh] sm:max-h-[92vh] flex flex-col shadow-2xl shadow-blue-950/40 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800/80 bg-slate-900/40">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+        <div className="flex items-center justify-between px-3.5 sm:px-6 py-3 sm:py-4 border-b border-slate-800/80 bg-slate-900/40 gap-2">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
               <Users className="w-5 h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-white tracking-tight">Kelola AI Team Registry</h2>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-bold font-mono">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-base sm:text-lg font-bold text-white tracking-tight truncate">Kelola AI Team</h2>
+                <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-bold font-mono shrink-0">
                   {filteredAgents.length} / {totalAgents} Anggota
                 </span>
               </div>
-              <p className="text-xs text-slate-400">
+              <p className="text-[11px] sm:text-xs text-slate-400 hidden sm:block truncate">
                 Pusat manajemen orkestrasi seluruh agen AI (LLM / Agent Runtimes) dalam workspace.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             <button
               onClick={() => {
                 onClose();
                 onOpenAddAgent();
               }}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-xs font-bold shadow-lg shadow-blue-600/25 transition active:scale-95"
+              className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-xs font-bold shadow-lg shadow-blue-600/25 transition active:scale-95 shrink-0"
             >
-              <Plus className="w-4 h-4" />
-              <span>+ Tambah Anggota</span>
+              <Plus className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">+ Tambah Anggota</span>
+              <span className="sm:hidden">+ Anggota</span>
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              className="p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
               title="Tutup (Esc)"
             >
               <X className="w-5 h-5" />
@@ -197,7 +198,7 @@ export const ManageTeamModal: React.FC<ManageTeamModalProps> = ({
         </div>
 
         {/* Top Summary Metrics Banner */}
-        <div className="px-6 py-3.5 bg-slate-950/60 border-b border-slate-800/60 grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <div className="px-3.5 sm:px-6 py-2.5 sm:py-3.5 bg-slate-950/60 border-b border-slate-800/60 grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3">
           <div className="flex items-center gap-3 p-2 rounded-lg bg-slate-900/40 border border-slate-800/60">
             <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 shrink-0">
               <Bot className="w-4 h-4" />
@@ -250,13 +251,13 @@ export const ManageTeamModal: React.FC<ManageTeamModalProps> = ({
         </div>
 
         {/* Filter and Control Bar */}
-        <div className="p-4 px-6 border-b border-slate-800/60 flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-2.5 flex-1 min-w-[240px]">
+        <div className="p-3 sm:p-4 px-3.5 sm:px-6 border-b border-slate-800/60 flex items-center justify-between flex-wrap gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-2 flex-1 min-w-[200px] sm:min-w-[240px]">
             <div className="relative flex-1 max-w-sm">
               <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
               <input
                 type="text"
-                placeholder="Cari nama, peran, model ID, atau provider..."
+                placeholder="Cari nama, peran, model..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
@@ -267,7 +268,7 @@ export const ManageTeamModal: React.FC<ManageTeamModalProps> = ({
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
-              className="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-blue-500"
+              className="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-blue-500 shrink-0"
             >
               <option value="ALL">Semua Peran</option>
               <option value="Orchestrator">Orchestrator</option>
@@ -279,9 +280,9 @@ export const ManageTeamModal: React.FC<ManageTeamModalProps> = ({
             </select>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar max-w-full">
             {/* Status Filter Tabs */}
-            <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800 text-xs">
+            <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800 text-xs shrink-0">
               {[
                 { id: 'ALL', label: 'Semua' },
                 { id: 'READY', label: 'Ready' },
@@ -292,7 +293,7 @@ export const ManageTeamModal: React.FC<ManageTeamModalProps> = ({
                 <button
                   key={st.id}
                   onClick={() => setStatusFilter(st.id)}
-                  className={`px-2.5 py-1 rounded-md font-semibold transition text-[11px] ${
+                  className={`px-2 sm:px-2.5 py-1 rounded-md font-semibold transition text-[11px] whitespace-nowrap ${
                     statusFilter === st.id
                       ? 'bg-blue-600 text-white shadow-sm'
                       : 'text-slate-400 hover:text-slate-200'
@@ -304,7 +305,7 @@ export const ManageTeamModal: React.FC<ManageTeamModalProps> = ({
             </div>
 
             {/* View Mode Switch */}
-            <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
+            <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800 shrink-0">
               <button
                 onClick={() => setViewMode('table')}
                 className={`p-1.5 rounded-md transition ${viewMode === 'table' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-slate-300'}`}
@@ -324,7 +325,7 @@ export const ManageTeamModal: React.FC<ManageTeamModalProps> = ({
         </div>
 
         {/* Content Body: Agents List */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4">
           {filteredAgents.length === 0 ? (
             <div className="text-center py-16 border border-dashed border-slate-800 rounded-2xl bg-slate-950/30">
               <Bot className="w-10 h-10 text-slate-600 mx-auto mb-3" />
@@ -344,9 +345,9 @@ export const ManageTeamModal: React.FC<ManageTeamModalProps> = ({
               </button>
             </div>
           ) : viewMode === 'table' ? (
-            /* Table View */
-            <div className="border border-slate-800/80 rounded-xl overflow-hidden bg-slate-950/40">
-              <table className="w-full text-left border-collapse text-xs">
+            /* Table View with responsive horizontal scroll */
+            <div className="border border-slate-800/80 rounded-xl overflow-x-auto no-scrollbar bg-slate-950/40">
+              <table className="w-full min-w-[720px] text-left border-collapse text-xs">
                 <thead>
                   <tr className="border-b border-slate-800 bg-slate-900/60 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
                     <th className="py-3 px-4">Nama & Model</th>

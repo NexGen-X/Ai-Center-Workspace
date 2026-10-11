@@ -169,36 +169,39 @@ export const ProjectsModal: React.FC<ProjectsModalProps> = ({
     return p.status === statusFilter;
   });
 
+  const isMobileDetailView = Boolean(selectedProject || isCreating || isEditing);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-      <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-5xl h-[88vh] flex flex-col shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+      <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-5xl h-[92vh] sm:h-[88vh] flex flex-col shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-800/40">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
+        <div className="flex items-center justify-between px-3.5 sm:px-6 py-3 sm:py-4 border-b border-slate-800 bg-slate-800/40 gap-2">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="p-2 sm:p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 shrink-0">
               <Layers className="w-5 h-5" />
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-white tracking-wide">
-                Manajemen Proyek & Roadmap Pipeline
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-lg font-bold text-white tracking-wide truncate">
+                Manajemen Proyek
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-[11px] sm:text-xs text-slate-400 hidden sm:block truncate">
                 Pantau progres tugas terintegrasi, target milestone, dan delegasi pekerjaan AI Team.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <button
               onClick={handleStartCreate}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-bold text-xs shadow-md transition-all active:scale-95"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-bold text-xs shadow-md transition-all active:scale-95"
             >
-              <Plus className="w-4 h-4" />
-              <span>Proyek Baru</span>
+              <Plus className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">Proyek Baru</span>
+              <span className="sm:hidden">+ Baru</span>
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+              className="p-1.5 sm:p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -208,7 +211,7 @@ export const ProjectsModal: React.FC<ProjectsModalProps> = ({
         {/* Body: Left List + Right Detail/Form */}
         <div className="flex-1 flex overflow-hidden">
           {/* Left Column: Projects List */}
-          <div className="w-80 border-r border-slate-800 bg-slate-900/60 flex flex-col">
+          <div className={`${isMobileDetailView ? 'hidden md:flex' : 'flex'} w-full md:w-80 border-r border-slate-800 bg-slate-900/60 flex-col shrink-0`}>
             {/* Filter Pills */}
             <div className="p-3 border-b border-slate-800 flex items-center gap-1.5 overflow-x-auto text-xs">
               {['ALL', 'ACTIVE', 'PLANNING', 'COMPLETED', 'ON_HOLD'].map((st) => (
@@ -282,10 +285,21 @@ export const ProjectsModal: React.FC<ProjectsModalProps> = ({
           </div>
 
           {/* Right Column: Detail or Form */}
-          <div className="flex-1 flex flex-col bg-slate-900/40 overflow-hidden">
+          <div className={`${!isMobileDetailView ? 'hidden md:flex' : 'flex'} flex-1 flex-col bg-slate-900/40 overflow-hidden`}>
             {isCreating || isEditing ? (
               /* Create / Edit Form */
-              <form onSubmit={handleSave} className="p-6 space-y-4 flex-1 overflow-y-auto">
+              <form onSubmit={handleSave} className="p-4 sm:p-6 space-y-4 flex-1 overflow-y-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCreating(false);
+                    setIsEditing(false);
+                  }}
+                  className="md:hidden flex items-center gap-1.5 text-xs text-amber-400 font-bold mb-2 hover:text-amber-300"
+                >
+                  ← Kembali ke Daftar Proyek
+                </button>
+
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-bold text-white">
                     {isCreating ? 'Buat Proyek Baru' : 'Edit Rincian Proyek'}
@@ -366,8 +380,19 @@ export const ProjectsModal: React.FC<ProjectsModalProps> = ({
             ) : selectedProject ? (
               /* Detail View */
               <div className="flex-1 flex flex-col overflow-hidden">
+                {/* Mobile Back Button */}
+                <div className="px-4 pt-3 pb-0 md:hidden bg-slate-850/40">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedProject(null)}
+                    className="flex items-center gap-1.5 text-xs text-amber-400 font-bold hover:text-amber-300"
+                  >
+                    ← Kembali ke Daftar Proyek
+                  </button>
+                </div>
+
                 {/* Detail Header */}
-                <div className="p-6 border-b border-slate-800/80 bg-slate-850/40 flex items-start justify-between">
+                <div className="p-4 sm:p-6 border-b border-slate-800/80 bg-slate-850/40 flex items-start justify-between">
                   <div className="space-y-1.5 flex-1 pr-4">
                     <div className="flex items-center gap-2">
                       <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${STATUS_BADGES[selectedProject.status]?.bg} ${STATUS_BADGES[selectedProject.status]?.text}`}>
@@ -404,8 +429,8 @@ export const ProjectsModal: React.FC<ProjectsModalProps> = ({
                 </div>
 
                 {/* Progress Overview Bar */}
-                <div className="p-4 bg-slate-900/70 border-b border-slate-800 flex items-center justify-between gap-4">
-                  <div className="flex-1">
+                <div className="p-4 bg-slate-900/70 border-b border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
+                  <div className="flex-1 w-full">
                     <div className="flex items-center justify-between text-xs text-slate-400 mb-1.5 font-mono">
                       <span>Progres Penyelesaian Tugas</span>
                       <span className="font-bold text-amber-400">
@@ -423,7 +448,7 @@ export const ProjectsModal: React.FC<ProjectsModalProps> = ({
                   {onOpenCreateTaskForProject && (
                     <button
                       onClick={() => onOpenCreateTaskForProject(selectedProject.id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 text-xs font-semibold whitespace-nowrap"
+                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 text-xs font-semibold whitespace-nowrap shrink-0 self-start sm:self-auto"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>+ Tambah Tugas ke Proyek</span>

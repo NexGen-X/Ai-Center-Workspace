@@ -47,38 +47,38 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({ isOpen, onClose }) =
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-      <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+      <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-5xl max-h-[94vh] sm:max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-800/40">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
+        <div className="flex items-center justify-between px-3.5 sm:px-6 py-3 sm:py-4 border-b border-slate-800 bg-slate-800/40 flex-wrap gap-2.5">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="p-2 sm:p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 shrink-0">
               <BarChart2 className="w-5 h-5" />
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-white tracking-wide">
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-lg font-bold text-white tracking-wide truncate">
                 FinOps & Telemetry Analytics
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-[11px] sm:text-xs text-slate-400 hidden sm:block truncate">
                 Pemantauan konsumsi token, estimasi biaya inferensi LLM, dan efisiensi eksekusi AI Team
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 shrink-0">
             {/* Period Selector */}
             <div className="flex items-center bg-slate-800 p-1 rounded-lg border border-slate-700/60 text-xs">
               {[7, 14, 30, 90].map((d) => (
                 <button
                   key={d}
                   onClick={() => setDays(d)}
-                  className={`px-2.5 py-1 rounded-md font-medium transition-all ${
+                  className={`px-2 sm:px-2.5 py-1 rounded-md font-medium transition-all text-[11px] ${
                     days === d
                       ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  {d} Hari
+                  {d}h
                 </button>
               ))}
             </div>
@@ -86,7 +86,7 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({ isOpen, onClose }) =
             <button
               onClick={() => fetchReports(days)}
               disabled={loading}
-              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-colors"
+              className="p-1.5 sm:p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-colors"
               title="Perbarui Data"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-cyan-400' : ''}`} />
@@ -94,7 +94,7 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({ isOpen, onClose }) =
 
             <button
               onClick={onClose}
-              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+              className="p-1.5 sm:p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -102,7 +102,7 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({ isOpen, onClose }) =
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-4 sm:space-y-6">
           {error && (
             <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-300 flex items-center gap-2">
               <AlertOctagon className="w-4 h-4 shrink-0" />

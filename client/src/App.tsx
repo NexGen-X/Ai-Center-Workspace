@@ -285,19 +285,21 @@ export const App: React.FC = () => {
 
               <button
                 onClick={() => setIsManageTeamOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
                 title="Buka Panel Kelola AI Team"
               >
                 <Users className="w-3.5 h-3.5 text-blue-400" />
-                <span>Kelola Semua Tim</span>
+                <span className="hidden sm:inline">Kelola Semua Tim</span>
+                <span className="sm:hidden">Kelola</span>
               </button>
 
               <button
                 onClick={() => setIsAddAgentOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition active:scale-95"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition active:scale-95"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>+ Anggota Baru</span>
+                <span className="hidden sm:inline">+ Anggota Baru</span>
+                <span className="sm:hidden">+ Baru</span>
               </button>
             </div>
           </div>

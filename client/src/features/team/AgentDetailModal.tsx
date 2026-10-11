@@ -143,18 +143,18 @@ export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agent, onClo
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#111827] border border-slate-800 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-[#111827] border border-slate-800 rounded-2xl w-full max-w-3xl max-h-[94vh] sm:max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-[#0B0F17]/60">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
+        <div className="flex items-center justify-between px-3.5 sm:px-6 py-3 sm:py-4 border-b border-slate-800 bg-[#0B0F17]/60 gap-2">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
               <Bot className="w-5 h-5" />
             </div>
-            <div>
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <span>{currentAgent.name}</span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-normal">
+            <div className="min-w-0">
+              <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <span className="truncate">{currentAgent.name}</span>
+                <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-normal">
                   {currentAgent.role}
                 </span>
                 <span className={`text-[10px] font-mono px-2 py-0.2 rounded border ${
@@ -167,17 +167,17 @@ export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agent, onClo
                   {currentAgent.status}
                 </span>
               </h2>
-              <p className="text-xs text-slate-400 font-mono">
+              <p className="text-[11px] sm:text-xs text-slate-400 font-mono truncate">
                 Model: {currentAgent.modelId} • Provider: {currentAgent.providerName || currentAgent.providerType}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {!isEditing ? (
               <button
                 onClick={() => setIsEditing(true)}
-                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition"
+                className="p-1.5 sm:p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition"
                 title="Edit Konfigurasi Agen"
               >
                 <Edit3 className="w-4 h-4" />
@@ -193,20 +193,20 @@ export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agent, onClo
 
             <button
               onClick={handleDeleteAgent}
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-900/40 text-rose-400 transition"
+              className="p-1.5 sm:p-2 rounded-lg bg-slate-800 hover:bg-rose-900/40 text-rose-400 transition"
               title="Hapus Agen"
             >
               <Trash2 className="w-4 h-4" />
             </button>
 
-            <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+            <button onClick={onClose} className="p-1.5 sm:p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto p-6 space-y-5 flex-1">
+        <div className="overflow-y-auto p-3.5 sm:p-6 space-y-4 sm:space-y-5 flex-1">
           {isEditing ? (
             /* Edit Agent Form */
             <div className="space-y-4">
@@ -318,14 +318,14 @@ export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agent, onClo
                     className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
                   />
 
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                     <span className="text-[11px] text-slate-500">
                       Agen akan mengeksekusi instruksi sesuai batasan kapabilitas dan parameter model.
                     </span>
                     <button
                       type="submit"
                       disabled={isExecuting || !prompt.trim() || currentAgent.status === 'UNAVAILABLE'}
-                      className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-50"
+                      className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-50 shrink-0 self-end sm:self-auto"
                     >
                       <Play className={`w-3 h-3 ${isExecuting ? 'animate-spin' : ''}`} />
                       <span>{isExecuting ? 'Mengeksekusi...' : 'Kirim Eksekusi'}</span>

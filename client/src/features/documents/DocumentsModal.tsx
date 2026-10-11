@@ -165,36 +165,39 @@ export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose,
 
   if (!isOpen) return null;
 
+  const isMobileDetailView = Boolean(selectedDoc || isCreating || isEditing);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-      <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-6xl h-[88vh] flex flex-col shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+      <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-6xl h-[92vh] sm:h-[88vh] flex flex-col shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-800/40">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400">
+        <div className="flex items-center justify-between px-3.5 sm:px-6 py-3 sm:py-4 border-b border-slate-800 bg-slate-800/40 gap-2">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="p-2 sm:p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400 shrink-0">
               <BookOpen className="w-5 h-5" />
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-white tracking-wide">
-                Knowledge Base & Dokumen SOP
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-lg font-bold text-white tracking-wide truncate">
+                Knowledge Base & SOP
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-[11px] sm:text-xs text-slate-400 hidden sm:block truncate">
                 Pusat referensi SOP, arsitektur, prompt template, dan dokumentasi kerja AI Team
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <button
               onClick={handleStartCreate}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs shadow-md transition-all"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs shadow-md transition-all active:scale-95"
             >
-              <Plus className="w-4 h-4" />
-              <span>Buat Dokumen</span>
+              <Plus className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">Buat Dokumen</span>
+              <span className="sm:hidden">+ Dokumen</span>
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+              className="p-1.5 sm:p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -204,7 +207,7 @@ export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose,
         {/* Content Body: Sidebar + Main Viewer */}
         <div className="flex-1 flex overflow-hidden">
           {/* Left Sidebar: Filters & List */}
-          <div className="w-80 border-r border-slate-800 bg-slate-900/60 flex flex-col">
+          <div className={`${isMobileDetailView ? 'hidden md:flex' : 'flex'} w-full md:w-80 border-r border-slate-800 bg-slate-900/60 flex-col shrink-0`}>
             {/* Search */}
             <div className="p-3 border-b border-slate-800/80">
               <div className="relative">
@@ -290,7 +293,7 @@ export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose,
           </div>
 
           {/* Right Main Panel: Viewer or Editor */}
-          <div className="flex-1 flex flex-col bg-slate-900/40 overflow-hidden">
+          <div className={`${!isMobileDetailView ? 'hidden md:flex' : 'flex'} flex-1 flex-col bg-slate-900/40 overflow-hidden`}>
             {statusMessage && (
               <div
                 className={`p-3 text-xs flex items-center justify-between border-b ${
@@ -318,7 +321,18 @@ export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose,
 
             {isCreating || isEditing ? (
               // Form Editor
-              <div className="flex-1 p-6 flex flex-col space-y-4 overflow-y-auto">
+              <div className="flex-1 p-4 sm:p-6 flex flex-col space-y-4 overflow-y-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCreating(false);
+                    setIsEditing(false);
+                  }}
+                  className="md:hidden flex items-center gap-1.5 text-xs text-purple-400 font-bold mb-2 hover:text-purple-300"
+                >
+                  ← Kembali ke Daftar Dokumen
+                </button>
+
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-bold text-white">
                     {isCreating ? 'Buat Dokumen Baru' : 'Edit Dokumen'}
@@ -421,7 +435,18 @@ export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose,
             ) : selectedDoc ? (
               // Document Viewer
               <div className="flex-1 flex flex-col overflow-hidden">
-                <div className="p-6 border-b border-slate-800/80 bg-slate-850/40 flex items-start justify-between">
+                {/* Mobile Back Button */}
+                <div className="px-4 pt-3 pb-0 md:hidden bg-slate-850/40">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDoc(null)}
+                    className="flex items-center gap-1.5 text-xs text-purple-400 font-bold hover:text-purple-300"
+                  >
+                    ← Kembali ke Daftar Dokumen
+                  </button>
+                </div>
+
+                <div className="p-4 sm:p-6 border-b border-slate-800/80 bg-slate-850/40 flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-xs font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">

@@ -173,11 +173,11 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   const statusConfig = STATUS_BADGES[task.status] || STATUS_BADGES.TODO;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-      <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+      <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-3xl max-h-[94vh] sm:max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-800/40">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between px-3.5 sm:px-6 py-3 sm:py-4 border-b border-slate-800 bg-slate-800/40 gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <span className={`px-2.5 py-1 rounded-full text-xs font-bold border border-slate-700 ${statusConfig.bg} ${statusConfig.text}`}>
               {statusConfig.label}
             </span>
@@ -186,11 +186,11 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {!isEditing ? (
               <button
                 onClick={() => setIsEditing(true)}
-                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition"
+                className="p-1.5 sm:p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition"
                 title="Edit Tugas"
               >
                 <Edit3 className="w-4 h-4" />
@@ -206,7 +206,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
             <button
               onClick={handleDelete}
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-900/40 text-rose-400 transition"
+              className="p-1.5 sm:p-2 rounded-lg bg-slate-800 hover:bg-rose-900/40 text-rose-400 transition"
               title="Hapus Tugas"
             >
               <Trash2 className="w-4 h-4" />
@@ -214,7 +214,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
+              className="p-1.5 sm:p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
             >
               <X className="w-5 h-5" />
             </button>
@@ -222,7 +222,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-4 sm:space-y-6">
           {error && (
             <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />

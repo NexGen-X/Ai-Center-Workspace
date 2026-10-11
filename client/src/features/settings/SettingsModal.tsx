@@ -90,19 +90,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-      <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+      <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-4xl max-h-[94vh] sm:max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-800/40">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300">
+        <div className="flex items-center justify-between px-3.5 sm:px-6 py-3 sm:py-4 border-b border-slate-800 bg-slate-800/40 gap-2">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="p-2 sm:p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 shrink-0">
               <Settings className="w-5 h-5 text-cyan-400" />
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-white tracking-wide">
-                Pengaturan Sistem & Workspace
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-lg font-bold text-white tracking-wide truncate">
+                Pengaturan Sistem
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-[11px] sm:text-xs text-slate-400 hidden sm:block truncate">
                 Konfigurasi profil operator, pengawasan keamanan, dan koneksi provider AI
               </p>
             </div>
@@ -110,53 +110,53 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
+            className="p-1.5 sm:p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center px-6 border-b border-slate-800 bg-slate-900/60 gap-4 text-xs font-semibold">
+        <div className="flex items-center px-3.5 sm:px-6 border-b border-slate-800 bg-slate-900/60 gap-3 sm:gap-4 text-xs font-semibold overflow-x-auto no-scrollbar">
           <button
             onClick={() => setActiveTab('WORKSPACE')}
-            className={`py-3 border-b-2 transition flex items-center gap-1.5 ${
+            className={`py-3 border-b-2 transition flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
               activeTab === 'WORKSPACE'
                 ? 'border-cyan-400 text-cyan-300'
                 : 'border-transparent text-slate-400 hover:text-white'
             }`}
           >
             <User className="w-4 h-4" />
-            <span>Workspace & Operator</span>
+            <span>Workspace</span>
           </button>
 
           <button
             onClick={() => setActiveTab('SECURITY')}
-            className={`py-3 border-b-2 transition flex items-center gap-1.5 ${
+            className={`py-3 border-b-2 transition flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
               activeTab === 'SECURITY'
                 ? 'border-cyan-400 text-cyan-300'
                 : 'border-transparent text-slate-400 hover:text-white'
             }`}
           >
             <Shield className="w-4 h-4" />
-            <span>Kontrol Keamanan (Security)</span>
+            <span>Keamanan</span>
           </button>
 
           <button
             onClick={() => setActiveTab('PROVIDERS')}
-            className={`py-3 border-b-2 transition flex items-center gap-1.5 ${
+            className={`py-3 border-b-2 transition flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
               activeTab === 'PROVIDERS'
                 ? 'border-cyan-400 text-cyan-300'
                 : 'border-transparent text-slate-400 hover:text-white'
             }`}
           >
             <Globe className="w-4 h-4" />
-            <span>Koneksi Model Provider ({providers.length})</span>
+            <span>Model Provider ({providers.length})</span>
           </button>
         </div>
 
         {/* Tab Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-4 sm:space-y-6">
           {activeTab === 'WORKSPACE' && (
             <div className="space-y-6">
               {/* Workspace Info Card */}

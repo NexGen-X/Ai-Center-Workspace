@@ -35,41 +35,41 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({ isOpen, onClose, t
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#111827] border border-slate-800 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-[#111827] border border-slate-800 rounded-2xl w-full max-w-4xl max-h-[94vh] sm:max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-[#0B0F17]/60">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
-              <CalendarIcon className="w-5 h-5" />
+        <div className="flex items-center justify-between px-3.5 sm:px-6 py-3 sm:py-4 border-b border-slate-800 bg-[#0B0F17]/60 gap-2">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
+              <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <h2 className="text-base font-bold text-white">Kalender Orkestrasi & Tenggat Waktu</h2>
-              <p className="text-xs text-slate-400">Jadwal target penyelesaian tugas dan milestone proyek.</p>
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-lg font-bold text-white truncate">Kalender Orkestrasi</h2>
+              <p className="text-[11px] sm:text-xs text-slate-400 hidden sm:block truncate">Jadwal target penyelesaian tugas dan milestone proyek.</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
+          <button onClick={onClose} className="p-1.5 sm:p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Calendar Nav */}
-        <div className="flex items-center justify-between px-6 py-3 border-b border-slate-800 bg-slate-900/40">
+        <div className="flex items-center justify-between px-3.5 sm:px-6 py-2.5 sm:py-3 border-b border-slate-800 bg-slate-900/40">
           <div className="flex items-center gap-3">
-            <h3 className="text-sm font-bold text-white font-mono">
+            <h3 className="text-xs sm:text-sm font-bold text-white font-mono">
               {monthNames[month]} {year}
             </h3>
           </div>
           <div className="flex items-center gap-1">
             <button
               onClick={prevMonth}
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
+              className="p-1 sm:p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               onClick={nextMonth}
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
+              className="p-1 sm:p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -77,15 +77,15 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({ isOpen, onClose, t
         </div>
 
         {/* Days Grid */}
-        <div className="p-6 overflow-y-auto flex-1">
-          <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-slate-400 font-mono">
+        <div className="p-2 sm:p-6 overflow-y-auto flex-1">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 text-center text-[10px] sm:text-xs font-bold text-slate-400 font-mono">
             <span>MIN</span><span>SEN</span><span>SEL</span><span>RAB</span><span>KAM</span><span>JUM</span><span>SAB</span>
           </div>
 
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2">
             {/* Blank padding */}
             {Array.from({ length: firstDay }).map((_, i) => (
-              <div key={`empty-${i}`} className="min-h-[85px] rounded-xl bg-slate-950/20 border border-transparent" />
+              <div key={`empty-${i}`} className="min-h-[52px] sm:min-h-[85px] rounded-lg sm:rounded-xl bg-slate-950/20 border border-transparent" />
             ))}
 
             {/* Month days */}
@@ -100,14 +100,14 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({ isOpen, onClose, t
               return (
                 <div
                   key={`day-${day}`}
-                  className={`min-h-[85px] p-2 rounded-xl border flex flex-col justify-between transition ${
+                  className={`min-h-[52px] sm:min-h-[85px] p-1 sm:p-2 rounded-lg sm:rounded-xl border flex flex-col justify-between transition ${
                     isToday
                       ? 'bg-blue-950/30 border-blue-500/50'
                       : 'bg-slate-950/70 border-slate-800/80 hover:border-slate-700'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className={`text-xs font-mono font-bold ${isToday ? 'text-blue-400' : 'text-slate-300'}`}>
+                    <span className={`text-[10px] sm:text-xs font-mono font-bold ${isToday ? 'text-blue-400' : 'text-slate-300'}`}>
                       {day}
                     </span>
                     {dayTasks.length > 0 && (

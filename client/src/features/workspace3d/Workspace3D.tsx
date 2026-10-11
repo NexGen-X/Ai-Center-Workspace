@@ -58,7 +58,12 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
   const [activeCamView, setActiveCamView] = useState<'overview' | 'task_wall' | 'agent' | 'tour'>('overview');
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [hoveredAgent, setHoveredAgent] = useState<AIAgent | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 1024;
+    }
+    return true;
+  });
   const [webGlSupported, setWebGlSupported] = useState(true);
 
   // References for camera transitions
@@ -792,14 +797,14 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
   }
 
   return (
-    <div className="relative w-full h-[620px] lg:h-[700px] bg-[#1a2133] rounded-2xl border border-slate-800/80 overflow-hidden shadow-2xl shadow-blue-950/40 select-none">
+    <div className="relative w-full h-[480px] sm:h-[580px] lg:h-[700px] bg-[#1a2133] rounded-2xl border border-slate-800/80 overflow-hidden shadow-2xl shadow-blue-950/40 select-none">
       {/* Three.js Canvas Container */}
       <div ref={mountRef} className="w-full h-full" />
 
       {/* Floating Top-Left Card: ✦ Team • Live (Matching Reference Screenshot) */}
-      <div className="absolute top-4 left-4 z-20 flex flex-col gap-2 pointer-events-auto">
-        <div className="p-3 rounded-2xl bg-slate-900/85 backdrop-blur-md border border-slate-800 shadow-xl max-w-xs">
-          <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-800/80">
+      <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-20 flex flex-col gap-2 pointer-events-auto max-w-[calc(100%-16px)] sm:max-w-xs">
+        <div className="p-2.5 sm:p-3 rounded-2xl bg-slate-900/85 backdrop-blur-md border border-slate-800 shadow-xl w-full">
+          <div className="flex items-center justify-between mb-1.5 sm:mb-2 pb-1.5 border-b border-slate-800/80">
             <span className="text-xs font-bold text-white flex items-center gap-1.5">
               <span>✦ Team</span>
             </span>
@@ -810,7 +815,7 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
           </div>
 
           {/* Member Chips */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar pb-0.5 sm:pb-1">
             {agents.slice(0, 4).map((agent) => {
               const isSelected = selectedAgentId === agent.id;
               return (
@@ -844,17 +849,27 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
 
       {/* Floating Right Panel: Server & Layanan + Aktivitas Terbaru (Matching Reference Screenshot) */}
       {isSidebarOpen && (
-        <div className="absolute top-4 right-4 z-20 w-80 max-h-[88%] flex flex-col gap-3 pointer-events-auto transition-all duration-300 animate-in fade-in slide-in-from-right-4">
+        <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-30 w-[calc(100%-16px)] sm:w-80 max-h-[85%] sm:max-h-[88%] flex flex-col gap-2.5 sm:gap-3 pointer-events-auto transition-all duration-300 animate-in fade-in slide-in-from-right-4">
           {/* Top Panel: Server & Layanan • live */}
-          <div className="p-4 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-slate-800 shadow-xl space-y-3">
+          <div className="p-3 sm:p-4 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-slate-800 shadow-xl space-y-2.5 sm:space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
               <span className="text-xs font-bold text-white flex items-center gap-1.5">
                 <Radio className="w-3.5 h-3.5 text-cyan-400" />
                 <span>Server & layanan</span>
               </span>
-              <div className="flex items-center gap-1.5 text-[10px] font-semibold text-emerald-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span>live</span>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 text-[10px] font-semibold text-emerald-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>live</span>
+                </div>
+                <button
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 lg:hidden transition"
+                  title="Tutup panel"
+                  aria-label="Tutup panel"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
             </div>
 
@@ -964,21 +979,22 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
       )}
 
       {/* Floating Bottom Toolbar (Matching Reference Screenshot) */}
-      <div className="absolute bottom-4 inset-x-4 z-20 flex items-center justify-between gap-3 pointer-events-auto">
+      <div className="absolute bottom-2.5 inset-x-2 sm:bottom-4 sm:inset-x-4 z-20 flex items-center justify-between gap-1.5 sm:gap-3 pointer-events-auto">
         {/* Left Action: + Titip tugas baru */}
         <button
           onClick={onOpenCreateTask}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800/90 backdrop-blur-md border border-slate-800 text-xs font-bold text-white shadow-xl transition active:scale-95 shrink-0"
+          className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-slate-900/90 hover:bg-slate-800/90 backdrop-blur-md border border-slate-800 text-xs font-bold text-white shadow-xl transition active:scale-95 shrink-0"
         >
-          <Plus className="w-4 h-4 text-cyan-400" />
-          <span>+ Titip tugas baru</span>
+          <Plus className="w-4 h-4 text-cyan-400 shrink-0" />
+          <span className="hidden sm:inline">+ Titip tugas baru</span>
+          <span className="sm:hidden text-[11px] font-bold">Tugas</span>
         </button>
 
         {/* Center: Camera Director Pills (Overview, Task wall, Arka, Hanna, Auto-tour) */}
-        <div className="flex items-center bg-slate-900/90 backdrop-blur-md border border-slate-800 p-1.5 rounded-2xl shadow-xl gap-1 overflow-x-auto">
+        <div className="flex items-center bg-slate-900/90 backdrop-blur-md border border-slate-800 p-1 sm:p-1.5 rounded-xl sm:rounded-2xl shadow-xl gap-1 overflow-x-auto no-scrollbar max-w-full">
           <button
             onClick={handleCamOverview}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
+            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold transition flex items-center gap-1 shrink-0 whitespace-nowrap ${
               activeCamView === 'overview'
                 ? 'bg-blue-600 text-white shadow-md'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
@@ -989,7 +1005,7 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
 
           <button
             onClick={handleCamTaskWall}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
+            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold transition flex items-center gap-1 shrink-0 whitespace-nowrap ${
               activeCamView === 'task_wall'
                 ? 'bg-blue-600 text-white shadow-md'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
@@ -1003,7 +1019,7 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
             <button
               key={agent.id}
               onClick={() => handleCamFocusAgent(agent)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1 ${
+              className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold transition flex items-center gap-1 shrink-0 whitespace-nowrap ${
                 selectedAgentId === agent.id && activeCamView === 'agent'
                   ? 'bg-blue-600 text-white shadow-md'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
@@ -1015,41 +1031,43 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
 
           <button
             onClick={handleToggleAutoTour}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
+            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold transition flex items-center gap-1 shrink-0 whitespace-nowrap ${
               autoTour
                 ? 'bg-blue-600 text-white shadow-md'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
             <RotateCw className={`w-3 h-3 ${autoTour ? 'animate-spin' : ''}`} />
-            <span>Auto-tour</span>
+            <span className="hidden sm:inline">Auto-tour</span>
+            <span className="sm:hidden">Tour</span>
           </button>
         </div>
 
         {/* Right Toggle Button: Riwayat tugas & aktivitas • Live */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className={`flex items-center gap-2 px-3.5 py-2.5 rounded-2xl backdrop-blur-md border text-xs font-semibold shadow-xl transition ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl backdrop-blur-md border text-xs font-semibold shadow-xl transition ${
               isSidebarOpen
                 ? 'bg-slate-900/90 border-slate-800 text-slate-300 hover:text-white'
                 : 'bg-blue-600 border-blue-500 text-white'
             }`}
           >
-            <Clock className="w-3.5 h-3.5 text-cyan-400" />
+            <Clock className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
             <span className="hidden sm:inline">Riwayat tugas & aktivitas</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
           </button>
 
           <button
             onClick={onFallbackTo2D}
-            className="p-2.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800/90 backdrop-blur-md border border-slate-800 text-slate-400 hover:text-white transition"
+            className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-slate-900/90 hover:bg-slate-800/90 backdrop-blur-md border border-slate-800 text-slate-400 hover:text-white transition"
             title="Beralih ke Tampilan 2D"
           >
-            <Layers className="w-4 h-4 text-indigo-400" />
+            <Layers className="w-4 h-4 text-indigo-400 shrink-0" />
           </button>
         </div>
       </div>
+
     </div>
   );
 };
