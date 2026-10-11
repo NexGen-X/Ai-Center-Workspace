@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Check, AlertCircle } from 'lucide-react';
-import { AIAgent, TaskPriority } from '../../../../shared/types.js';
+import { AIAgent, TaskPriority, Project } from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
 
 interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   agents: AIAgent[];
+  projects?: Project[];
+  initialProjectId?: string;
   onTaskCreated: () => void;
 }
 
@@ -14,15 +16,24 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   isOpen,
   onClose,
   agents,
+  projects = [],
+  initialProjectId,
   onTaskCreated
 }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<TaskPriority>('MEDIUM');
   const [assignedAgentId, setAssignedAgentId] = useState<string>(agents[0]?.id || '');
+  const [projectId, setProjectId] = useState<string>(initialProjectId || '');
   const [dueDate, setDueDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialProjectId) {
+      setProjectId(initialProjectId);
+    }
+  }, [initialProjectId]);
 
   if (!isOpen) return null;
 
@@ -40,6 +51,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
         title: title.trim(),
         description: description.trim() || undefined,
         priority,
+        projectId: projectId || undefined,
         assignedAgentId: assignedAgentId || undefined,
         dueDate: dueDate || undefined
       });
@@ -129,14 +141,32 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">Tenggat Waktu (Opsional)</label>
-            <input
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-blue-500"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">Hubungkan ke Proyek</label>
+              <select
+                value={projectId}
+                onChange={(e) => setProjectId(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-blue-500"
+              >
+                <option value="">(Tanpa Proyek)</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">Tenggat Waktu (Opsional)</label>
+              <input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-blue-500"
+              />
+            </div>
           </div>
 
           <div className="pt-3 border-t border-slate-800 flex justify-end gap-2">

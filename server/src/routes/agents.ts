@@ -8,6 +8,7 @@ import { encryptSecret } from '../utils/crypto.js';
 import { v4 as uuidv4 } from 'uuid';
 import { CreateAgentRequest, AIAgent } from '../../../shared/types.js';
 import { realtimeHub } from '../services/realtime.js';
+import { executeAgentTask } from '../services/orchestrator.js';
 
 const router = Router();
 
@@ -228,6 +229,36 @@ router.get('/:id/runs', async (req: Request, res: Response) => {
     `, [req.params.id]);
 
     res.json(result.rows);
+  } catch (err: any) {
+    res.status(500).json({ error: { message: err.message } });
+  }
+});
+
+// POST /api/agents/:id/execute — Execute agent directly with prompt
+router.post('/:id/execute', async (req: Request, res: Response) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+      return res.status(400).json({ error: { message: 'Prompt eksekusi wajib diisi.' } });
+    }
+
+    const runResult = await executeAgentTask(req.params.id, prompt.trim(), undefined);
+    res.json(runResult);
+  } catch (err: any) {
+    res.status(500).json({ error: { message: err.message } });
+  }
+});
+
+// DELETE /api/agents/:id — Delete agent
+router.delete('/:id', async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query('DELETE FROM ai_agents WHERE id = $1 RETURNING name', [req.params.id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: { message: 'Agent tidak ditemukan.' } });
+    }
+
+    realtimeHub.broadcast('agent.deleted', { agentId: req.params.id });
+    res.json({ success: true, message: `Agent "${result.rows[0].name}" berhasil dihapus.` });
   } catch (err: any) {
     res.status(500).json({ error: { message: err.message } });
   }

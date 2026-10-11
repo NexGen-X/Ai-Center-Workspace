@@ -1,5 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, Plus, ShieldCheck, Clock, Radio, Calendar, User, LogOut, BarChart2, BookOpen } from 'lucide-react';
+import {
+  Bot,
+  Plus,
+  ShieldCheck,
+  Clock,
+  Radio,
+  Calendar,
+  User,
+  LogOut,
+  BarChart2,
+  BookOpen,
+  Layers,
+  Settings
+} from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown.js';
 
 interface NavbarProps {
@@ -8,6 +21,8 @@ interface NavbarProps {
   onOpenCalendar: () => void;
   onOpenReports: () => void;
   onOpenDocuments: () => void;
+  onOpenProjects: () => void;
+  onOpenSettings: () => void;
   onOpenLogin: () => void;
   onLogout: () => void;
   currentUser: { displayName: string; email: string; role: string } | null;
@@ -22,6 +37,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenCalendar,
   onOpenReports,
   onOpenDocuments,
+  onOpenProjects,
+  onOpenSettings,
   onOpenLogin,
   onLogout,
   currentUser,
@@ -69,9 +86,9 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Center / Right: Status badges & action buttons */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           {/* Live Clock */}
-          <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 text-xs font-mono text-slate-300">
+          <div className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 text-xs font-mono text-slate-300">
             <Clock className="w-3.5 h-3.5 text-slate-400" />
             <span>{timeStr || '00:00:00'}</span>
           </div>
@@ -90,6 +107,16 @@ export const Navbar: React.FC<NavbarProps> = ({
             <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
             <span className="text-slate-300 font-medium">{systemStatus}</span>
           </div>
+
+          {/* Projects Button */}
+          <button
+            onClick={onOpenProjects}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+            title="Kelola Proyek & Milestone"
+          >
+            <Layers className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden md:inline">Proyek</span>
+          </button>
 
           {/* Calendar Button */}
           <button
@@ -119,6 +146,15 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
             <span className="hidden lg:inline">SOP</span>
+          </button>
+
+          {/* Settings Button */}
+          <button
+            onClick={onOpenSettings}
+            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition"
+            title="Pengaturan Workspace & Operator"
+          >
+            <Settings className="w-4 h-4 text-slate-400 hover:text-cyan-400" />
           </button>
 
           {/* Notification Center Dropdown */}

@@ -169,4 +169,146 @@ describe('AI Agent Command Center API Endpoints', () => {
     expect(delRes.status).toBe(200);
     expect(delRes.body.success).toBe(true);
   });
+
+  it('CRUD /api/projects with dynamic task progress computation', async () => {
+    // 1. Create project
+    const createProj = await request(app)
+      .post('/api/projects')
+      .send({
+        name: 'Infrastruktur High-Availability & Disaster Recovery',
+        description: 'Implementasi multi-zone failover dan sinkronisasi cluster',
+        status: 'ACTIVE'
+      });
+    expect(createProj.status).toBe(201);
+    const projId = createProj.body.id;
+    expect(projId).toBeDefined();
+
+    // 2. Create tasks linked to this project
+    const task1 = await request(app)
+      .post('/api/tasks')
+      .send({
+        title: 'Setup PostgreSQL Streaming Replication',
+        projectId: projId,
+        priority: 'HIGH'
+      });
+    expect(task1.status).toBe(201);
+
+    const task2 = await request(app)
+      .post('/api/tasks')
+      .send({
+        title: 'Konfigurasi Keepalived Virtual IP',
+        projectId: projId,
+        priority: 'CRITICAL'
+      });
+    expect(task2.status).toBe(201);
+
+    // 3. Mark task1 as DONE to test 50% computed progress
+    await request(app)
+      .post(`/api/tasks/${task1.body.id}/transitions`)
+      .send({ newStatus: 'IN_PROGRESS' });
+    await request(app)
+      .post(`/api/tasks/${task1.body.id}/transitions`)
+      .send({ newStatus: 'DONE' });
+
+    // 4. Get single project and verify calculated progress
+    const getProj = await request(app).get(`/api/projects/${projId}`);
+    expect(getProj.status).toBe(200);
+    expect(getProj.body).toHaveProperty('project');
+    expect(getProj.body).toHaveProperty('tasks');
+    expect(getProj.body.project.totalTasks).toBe(2);
+    expect(getProj.body.project.completedTasks).toBe(1);
+    expect(getProj.body.project.progressPercentage).toBe(50);
+    expect(getProj.body.tasks.length).toBe(2);
+
+    // 5. Update project details
+    const patchProj = await request(app)
+      .patch(`/api/projects/${projId}`)
+      .send({ status: 'COMPLETED', description: 'Implementasi selesai dan terverifikasi' });
+    expect(patchProj.status).toBe(200);
+    expect(patchProj.body.status).toBe('COMPLETED');
+
+    // 6. Delete project
+    const delProj = await request(app).delete(`/api/projects/${projId}`);
+    expect(delProj.status).toBe(200);
+    expect(delProj.body.success).toBe(true);
+
+    // Cleanup tasks
+    await request(app).delete(`/api/tasks/${task1.body.id}`);
+    await request(app).delete(`/api/tasks/${task2.body.id}`);
+  });
+
+  it('CRUD /api/tasks extended operations (Details, Audit History, Update, Delete)', async () => {
+    // 1. Create a task
+    const createRes = await request(app)
+      .post('/api/tasks')
+      .send({
+        title: 'Task Audit Trail Testing',
+        description: 'Memastikan audit log tercatat saat perubahan atribut',
+        priority: 'MEDIUM'
+      });
+    expect(createRes.status).toBe(201);
+    const taskId = createRes.body.id;
+
+    // 2. Update task details
+    const updateRes = await request(app)
+      .patch(`/api/tasks/${taskId}`)
+      .send({
+        title: 'Task Audit Trail Testing (Updated)',
+        priority: 'HIGH'
+      });
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.title).toContain('(Updated)');
+    expect(updateRes.body.priority).toBe('HIGH');
+
+    // 3. Get task details + runs + history
+    const detailRes = await request(app).get(`/api/tasks/${taskId}`);
+    expect(detailRes.status).toBe(200);
+    expect(detailRes.body.task.title).toContain('(Updated)');
+    expect(Array.isArray(detailRes.body.history)).toBe(true);
+    expect(detailRes.body.history.length).toBeGreaterThan(0);
+
+    // 4. Get task history directly
+    const historyRes = await request(app).get(`/api/tasks/${taskId}/history`);
+    expect(historyRes.status).toBe(200);
+    expect(Array.isArray(historyRes.body)).toBe(true);
+    expect(historyRes.body.length).toBeGreaterThan(0);
+
+    // 5. Delete task
+    const delRes = await request(app).delete(`/api/tasks/${taskId}`);
+    expect(delRes.status).toBe(200);
+    expect(delRes.body.success).toBe(true);
+
+    // 6. Verify 404 after deletion
+    const getDeleted = await request(app).get(`/api/tasks/${taskId}`);
+    expect(getDeleted.status).toBe(404);
+  });
+
+  it('POST /api/agents/:id/execute should validate input and process runs', async () => {
+    // Get existing agents
+    const agentsRes = await request(app).get('/api/agents');
+    expect(agentsRes.status).toBe(200);
+    const targetAgent = agentsRes.body[0];
+    expect(targetAgent).toBeDefined();
+
+    // 1. Reject empty prompt
+    const emptyPromptRes = await request(app)
+      .post(`/api/agents/${targetAgent.id}/execute`)
+      .send({ prompt: '' });
+    expect(emptyPromptRes.status).toBe(400);
+
+    // 2. Execute with valid prompt
+    const executeRes = await request(app)
+      .post(`/api/agents/${targetAgent.id}/execute`)
+      .send({ prompt: 'Verifikasi status operasional agen command center' });
+    expect(executeRes.status).toBe(200);
+    expect(executeRes.body).toHaveProperty('id');
+    expect(executeRes.body).toHaveProperty('status');
+    expect(executeRes.body.agentId).toBe(targetAgent.id);
+
+    // 3. Verify runs are accessible via GET /api/agents/:id/runs
+    const runsRes = await request(app).get(`/api/agents/${targetAgent.id}/runs`);
+    expect(runsRes.status).toBe(200);
+    expect(Array.isArray(runsRes.body)).toBe(true);
+    expect(runsRes.body.length).toBeGreaterThan(0);
+  });
 });

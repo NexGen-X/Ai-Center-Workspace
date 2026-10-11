@@ -14,16 +14,17 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { api } from '../../services/api.js';
-import { DocumentItem, DocumentCategory } from '../../../../shared/types.js';
+import { DocumentItem, DocumentCategory, Project } from '../../../../shared/types.js';
 
 interface DocumentsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  projects?: Project[];
 }
 
 const CATEGORIES: DocumentCategory[] = ['SOP', 'SPEC', 'PROMPT_TEMPLATE', 'ARCHITECTURE', 'NOTE'];
 
-export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose }) => {
+export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose, projects = [] }) => {
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [selectedDoc, setSelectedDoc] = useState<DocumentItem | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
@@ -37,6 +38,7 @@ export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose 
   const [formTitle, setFormTitle] = useState('');
   const [formCategory, setFormCategory] = useState<DocumentCategory>('SOP');
   const [formTags, setFormTags] = useState('');
+  const [formProjectId, setFormProjectId] = useState('');
   const [formContent, setFormContent] = useState('');
 
   const fetchDocs = async () => {
@@ -75,6 +77,7 @@ export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose 
     setFormTitle('');
     setFormCategory('SOP');
     setFormTags('');
+    setFormProjectId('');
     setFormContent('# Judul Dokumen\n\nTuliskan instruksi atau panduan di sini...');
     setStatusMessage(null);
   };
@@ -85,6 +88,7 @@ export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose 
     setFormTitle(doc.title);
     setFormCategory(doc.category);
     setFormTags(doc.tags.join(', '));
+    setFormProjectId(doc.projectId || '');
     setFormContent(doc.content);
     setStatusMessage(null);
   };
@@ -108,6 +112,7 @@ export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose 
           content: formContent,
           category: formCategory,
           tags: tagsArray,
+          projectId: formProjectId || undefined
         });
         setDocuments([created, ...documents]);
         setSelectedDoc(created);
@@ -119,6 +124,7 @@ export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose 
           content: formContent,
           category: formCategory,
           tags: tagsArray,
+          projectId: formProjectId || undefined
         });
         setDocuments(documents.map((d) => (d.id === updated.id ? updated : d)));
         setSelectedDoc(updated);
@@ -369,17 +375,35 @@ export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose 
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">
-                    Tags (pisahkan koma)
-                  </label>
-                  <input
-                    type="text"
-                    value={formTags}
-                    onChange={(e) => setFormTags(e.target.value)}
-                    placeholder="SOP, Security, Onboarding"
-                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none focus:border-purple-500"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">
+                      Tags (pisahkan koma)
+                    </label>
+                    <input
+                      type="text"
+                      value={formTags}
+                      onChange={(e) => setFormTags(e.target.value)}
+                      placeholder="SOP, Security, Onboarding"
+                      className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">
+                      Hubungkan ke Proyek (Opsional)
+                    </label>
+                    <select
+                      value={formProjectId}
+                      onChange={(e) => setFormProjectId(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none focus:border-purple-500"
+                    >
+                      <option value="">(Tanpa Proyek Khusus)</option>
+                      {projects.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 <div className="flex-1 flex flex-col">

@@ -8,8 +8,11 @@ import { LoginModal } from './components/LoginModal.js';
 import { CalendarModal } from './features/calendar/CalendarModal.js';
 import { ReportsModal } from './features/reports/ReportsModal.js';
 import { DocumentsModal } from './features/documents/DocumentsModal.js';
+import { ProjectsModal } from './features/projects/ProjectsModal.js';
+import { SettingsModal } from './features/settings/SettingsModal.js';
 import { TaskList } from './features/tasks/TaskList.js';
 import { CreateTaskModal } from './features/tasks/CreateTaskModal.js';
+import { TaskDetailModal } from './features/tasks/TaskDetailModal.js';
 import { Workspace3D } from './features/workspace3d/Workspace3D.js';
 import { Workspace2DView } from './features/workspace3d/Workspace2DView.js';
 import { ActivityFeed } from './components/ActivityFeed.js';
@@ -38,7 +41,11 @@ export const App: React.FC = () => {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [isDocumentsOpen, setIsDocumentsOpen] = useState(false);
+  const [isProjectsOpen, setIsProjectsOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<AIAgent | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [selectedProjectIdForTask, setSelectedProjectIdForTask] = useState<string | undefined>(undefined);
 
   const refreshAllData = useCallback(async () => {
     try {
@@ -109,6 +116,10 @@ export const App: React.FC = () => {
         refreshAllData();
       });
 
+      eventSource.addEventListener('agent.deleted', () => {
+        refreshAllData();
+      });
+
       eventSource.addEventListener('task.created', () => {
         refreshAllData();
       });
@@ -116,8 +127,24 @@ export const App: React.FC = () => {
       eventSource.addEventListener('task.updated', (e: MessageEvent) => {
         const data = JSON.parse(e.data);
         setTasks((prev) =>
-          prev.map((t) => (t.id === data.taskId ? { ...t, status: data.status } : t))
+          prev.map((t) => (t.id === data.taskId ? { ...t, status: data.status || t.status } : t))
         );
+      });
+
+      eventSource.addEventListener('task.deleted', () => {
+        refreshAllData();
+      });
+
+      eventSource.addEventListener('project.created', () => {
+        refreshAllData();
+      });
+
+      eventSource.addEventListener('project.updated', () => {
+        refreshAllData();
+      });
+
+      eventSource.addEventListener('project.deleted', () => {
+        refreshAllData();
       });
 
       eventSource.addEventListener('activity.created', (e: MessageEvent) => {
@@ -162,15 +189,29 @@ export const App: React.FC = () => {
     };
   }, [refreshAllData]);
 
+  const handleOpenCreateTaskForProject = (projId: string) => {
+    setSelectedProjectIdForTask(projId);
+    setIsCreateTaskOpen(true);
+  };
+
+  const handleSelectTask = (task: Task) => {
+    setSelectedTaskId(task.id);
+  };
+
   return (
     <div className="min-h-screen bg-[#0B0F17] text-slate-100 flex flex-col">
       {/* Top Navigation */}
       <Navbar
         onOpenAddAgent={() => setIsAddAgentOpen(true)}
-        onOpenCreateTask={() => setIsCreateTaskOpen(true)}
+        onOpenCreateTask={() => {
+          setSelectedProjectIdForTask(undefined);
+          setIsCreateTaskOpen(true);
+        }}
         onOpenCalendar={() => setIsCalendarOpen(true)}
         onOpenReports={() => setIsReportsOpen(true)}
         onOpenDocuments={() => setIsDocumentsOpen(true)}
+        onOpenProjects={() => setIsProjectsOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenLogin={() => setIsLoginOpen(true)}
         onLogout={handleLogout}
         currentUser={currentUser}
@@ -182,7 +223,11 @@ export const App: React.FC = () => {
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6 space-y-6">
         {/* Metric Summary Cards */}
-        <StatCards summary={summary} loading={loading} />
+        <StatCards
+          summary={summary}
+          loading={loading}
+          onOpenProjects={() => setIsProjectsOpen(true)}
+        />
 
         {/* 3D Virtual Workspace & 2D Fallback */}
         <section aria-label="Virtual Workspace">
@@ -223,22 +268,23 @@ export const App: React.FC = () => {
               <button
                 onClick={refreshAllData}
                 className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition"
-                title="Segarkan data"
+                title="Segarkan Data"
               >
-                <RefreshCw className="w-3.5 h-3.5" />
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-400' : ''}`} />
               </button>
+
               <button
                 onClick={() => setIsAddAgentOpen(true)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition shadow-md shadow-blue-600/20"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition active:scale-95"
               >
-                <Plus className="w-4 h-4" />
-                <span>Tambah Anggota</span>
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ Anggota Baru</span>
               </button>
             </div>
           </div>
 
           {/* Agents Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5">
             {agents.map((agent) => (
               <AgentCard
                 key={agent.id}
@@ -256,8 +302,13 @@ export const App: React.FC = () => {
             <TaskList
               tasks={tasks}
               agents={agents}
+              projects={projects}
               onTaskUpdated={refreshAllData}
-              onOpenCreateTask={() => setIsCreateTaskOpen(true)}
+              onOpenCreateTask={() => {
+                setSelectedProjectIdForTask(undefined);
+                setIsCreateTaskOpen(true);
+              }}
+              onSelectTask={handleSelectTask}
             />
           </div>
 
@@ -282,9 +333,22 @@ export const App: React.FC = () => {
 
       <CreateTaskModal
         isOpen={isCreateTaskOpen}
-        onClose={() => setIsCreateTaskOpen(false)}
+        onClose={() => {
+          setIsCreateTaskOpen(false);
+          setSelectedProjectIdForTask(undefined);
+        }}
         agents={agents}
+        projects={projects}
+        initialProjectId={selectedProjectIdForTask}
         onTaskCreated={refreshAllData}
+      />
+
+      <TaskDetailModal
+        taskId={selectedTaskId}
+        onClose={() => setSelectedTaskId(null)}
+        agents={agents}
+        projects={projects}
+        onTaskUpdated={refreshAllData}
       />
 
       <AgentDetailModal
@@ -307,6 +371,7 @@ export const App: React.FC = () => {
         onClose={() => setIsCalendarOpen(false)}
         tasks={tasks}
         projects={projects}
+        onSelectTask={handleSelectTask}
       />
 
       <ReportsModal
@@ -317,6 +382,22 @@ export const App: React.FC = () => {
       <DocumentsModal
         isOpen={isDocumentsOpen}
         onClose={() => setIsDocumentsOpen(false)}
+        projects={projects}
+      />
+
+      <ProjectsModal
+        isOpen={isProjectsOpen}
+        onClose={() => setIsProjectsOpen(false)}
+        onProjectsUpdated={refreshAllData}
+        onOpenCreateTaskForProject={handleOpenCreateTaskForProject}
+        onSelectTask={handleSelectTask}
+      />
+
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        currentUser={currentUser}
+        onLogout={handleLogout}
       />
     </div>
   );

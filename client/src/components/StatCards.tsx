@@ -5,9 +5,16 @@ import { DashboardSummary } from '../../../shared/types.js';
 interface StatCardsProps {
   summary: DashboardSummary | null;
   loading: boolean;
+  onOpenProjects?: () => void;
+  onOpenTasks?: () => void;
 }
 
-export const StatCards: React.FC<StatCardsProps> = ({ summary, loading }) => {
+export const StatCards: React.FC<StatCardsProps> = ({
+  summary,
+  loading,
+  onOpenProjects,
+  onOpenTasks
+}) => {
   if (loading || !summary) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-6">
@@ -23,9 +30,12 @@ export const StatCards: React.FC<StatCardsProps> = ({ summary, loading }) => {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-6">
       {/* 1. Running Tasks */}
-      <div className="bg-[#111827]/80 border border-blue-500/20 rounded-xl p-3.5 relative overflow-hidden group hover:border-blue-500/40 transition">
+      <div
+        onClick={onOpenTasks}
+        className="bg-[#111827]/80 border border-blue-500/20 rounded-xl p-3.5 relative overflow-hidden group hover:border-blue-500/50 cursor-pointer transition"
+      >
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-slate-400">Tugas Berjalan</span>
+          <span className="text-xs font-medium text-slate-400 group-hover:text-blue-300 transition">Tugas Berjalan</span>
           <div className="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
             <PlayCircle className="w-4 h-4 animate-spin text-blue-400" />
           </div>
@@ -38,9 +48,12 @@ export const StatCards: React.FC<StatCardsProps> = ({ summary, loading }) => {
       </div>
 
       {/* 2. Completed Tasks */}
-      <div className="bg-[#111827]/80 border border-emerald-500/20 rounded-xl p-3.5 relative overflow-hidden group hover:border-emerald-500/40 transition">
+      <div
+        onClick={onOpenTasks}
+        className="bg-[#111827]/80 border border-emerald-500/20 rounded-xl p-3.5 relative overflow-hidden group hover:border-emerald-500/50 cursor-pointer transition"
+      >
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-slate-400">Tugas Selesai</span>
+          <span className="text-xs font-medium text-slate-400 group-hover:text-emerald-300 transition">Tugas Selesai</span>
           <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
             <CheckCircle2 className="w-4 h-4" />
           </div>
@@ -69,9 +82,12 @@ export const StatCards: React.FC<StatCardsProps> = ({ summary, loading }) => {
       </div>
 
       {/* 4. Active Projects */}
-      <div className="bg-[#111827]/80 border border-amber-500/20 rounded-xl p-3.5 relative overflow-hidden group hover:border-amber-500/40 transition">
+      <div
+        onClick={onOpenProjects}
+        className="bg-[#111827]/80 border border-amber-500/20 rounded-xl p-3.5 relative overflow-hidden group hover:border-amber-500/50 cursor-pointer transition"
+      >
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-slate-400">Proyek Aktif</span>
+          <span className="text-xs font-medium text-slate-400 group-hover:text-amber-300 transition">Proyek Aktif</span>
           <div className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400">
             <Layers className="w-4 h-4" />
           </div>

@@ -7,9 +7,10 @@ interface CalendarModalProps {
   onClose: () => void;
   tasks: Task[];
   projects: Project[];
+  onSelectTask?: (task: Task) => void;
 }
 
-export const CalendarModal: React.FC<CalendarModalProps> = ({ isOpen, onClose, tasks, projects }) => {
+export const CalendarModal: React.FC<CalendarModalProps> = ({ isOpen, onClose, tasks, projects, onSelectTask }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   if (!isOpen) return null;
@@ -116,16 +117,17 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({ isOpen, onClose, t
                     )}
                   </div>
 
-                  <div className="space-y-1 mt-1 overflow-y-auto max-h-[55px]">
+                    <div className="space-y-1 mt-1 overflow-y-auto max-h-[55px]">
                     {dayTasks.map((t) => (
                       <div
                         key={t.id}
-                        className={`text-[10px] p-1 rounded truncate font-medium flex items-center gap-1 ${
+                        onClick={() => onSelectTask && onSelectTask(t)}
+                        className={`text-[10px] p-1 rounded truncate font-medium flex items-center gap-1 cursor-pointer transition hover:opacity-80 ${
                           t.status === 'DONE'
                             ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                             : 'bg-slate-900 text-slate-200 border border-slate-800'
                         }`}
-                        title={t.title}
+                        title={`${t.title} (Klik untuk rincian)`}
                       >
                         {t.status === 'DONE' ? <CheckCircle2 className="w-2.5 h-2.5 shrink-0" /> : <Clock className="w-2.5 h-2.5 shrink-0" />}
                         <span className="truncate">{t.title}</span>
