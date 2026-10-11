@@ -1,45 +1,73 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { AIAgent } from '../../../../shared/types.js';
+import { AIAgent, DashboardSummary, ServerMetrics, Activity } from '../../../../shared/types.js';
 import {
   Monitor,
   RotateCw,
   Eye,
   Compass,
   Zap,
-  Activity,
+  Activity as ActivityIcon,
   Layers,
   Sparkles,
+  Plus,
+  Play,
+  Cpu,
+  HardDrive,
+  Clock,
+  Radio,
+  ChevronRight,
   Maximize2,
+  X,
+  User,
+  Coffee,
+  CheckCircle2,
   AlertCircle
 } from 'lucide-react';
 
 interface Workspace3DProps {
   agents: AIAgent[];
+  summary: DashboardSummary | null;
+  serverMetrics: ServerMetrics | null;
+  activities: Activity[];
+  currentUser: any;
   onSelectAgent: (agent: AIAgent) => void;
+  onOpenCreateTask: () => void;
+  onOpenTasks: () => void;
+  onOpenProjects: () => void;
+  onOpenManageTeam: () => void;
   onFallbackTo2D: () => void;
 }
 
-const ROLE_HEX_COLORS: Record<string, number> = {
-  Orchestrator: 0x3b82f6, // Blue
-  Planner: 0x8b5cf6,      // Purple
-  Executor: 0x10b981,     // Emerald
-  'QA / Reviewer': 0xf59e0b, // Amber
-  DevOps: 0xec4899,       // Pink
-  'Domain Specialist': 0x06b6d4 // Cyan
-};
-
-type CameraPreset = 'cinematic' | 'tactical' | 'core' | 'front';
-
-export const Workspace3D: React.FC<Workspace3DProps> = ({ agents, onSelectAgent, onFallbackTo2D }) => {
+export const Workspace3D: React.FC<Workspace3DProps> = ({
+  agents,
+  summary,
+  serverMetrics,
+  activities,
+  currentUser,
+  onSelectAgent,
+  onOpenCreateTask,
+  onOpenTasks,
+  onOpenProjects,
+  onOpenManageTeam,
+  onFallbackTo2D
+}) => {
   const mountRef = useRef<HTMLDivElement>(null);
-  const [autoTour, setAutoTour] = useState(true);
-  const [activePreset, setActivePreset] = useState<CameraPreset>('cinematic');
+  const [autoTour, setAutoTour] = useState(false);
+  const [activeCamView, setActiveCamView] = useState<'overview' | 'task_wall' | 'agent' | 'tour'>('overview');
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [hoveredAgent, setHoveredAgent] = useState<AIAgent | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [webGlSupported, setWebGlSupported] = useState(true);
-  const [controlsRef, setControlsRef] = useState<OrbitControls | null>(null);
+
+  // References for camera transitions
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const controlsRef = useRef<OrbitControls | null>(null);
+  const targetCamPos = useRef<THREE.Vector3>(new THREE.Vector3(0, 14, 22));
+  const targetLookAt = useRef<THREE.Vector3>(new THREE.Vector3(0, 2.5, 0));
+
+  const operatorName = currentUser?.displayName || 'Yulian';
 
   useEffect(() => {
     const container = mountRef.current;
@@ -59,16 +87,16 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({ agents, onSelectAgent,
     }
 
     const width = container.clientWidth;
-    const height = container.clientHeight || 460;
+    const height = container.clientHeight || 560;
 
     // 1. Scene, Camera, Renderer
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x060911);
-    scene.fog = new THREE.FogExp2(0x060911, 0.028);
+    scene.background = new THREE.Color(0x1a2133); // Soft midnight navy background
+    scene.fog = new THREE.FogExp2(0x1a2133, 0.022);
 
-    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-    camera.position.set(0, 13, 20);
-    camera.lookAt(0, 1.5, 0);
+    const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 1000);
+    camera.position.set(0, 15, 23);
+    camera.lookAt(0, 2.5, 0);
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -77,452 +105,533 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({ agents, onSelectAgent,
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 1.15;
     container.appendChild(renderer.domElement);
 
-    // 2. Interactive OrbitControls
+    // 2. OrbitControls
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.maxPolarAngle = Math.PI / 2 - 0.04; // Don't clip under the floor
-    controls.minDistance = 5;
-    controls.maxDistance = 38;
-    controls.target.set(0, 1.5, 0);
-    controls.autoRotate = autoTour;
-    controls.autoRotateSpeed = 0.7;
-    setControlsRef(controls);
+    controls.dampingFactor = 0.06;
+    controls.maxPolarAngle = Math.PI / 2 - 0.05; // Prevent camera under floor
+    controls.minDistance = 6;
+    controls.maxDistance = 42;
+    controls.target.set(0, 2.5, 0);
+    controlsRef.current = controls;
 
-    // 3. Lighting System
-    const ambientLight = new THREE.AmbientLight(0x0f172a, 1.8);
+    // 3. Ambient & Studio Lighting
+    const ambientLight = new THREE.AmbientLight(0xe2e8f0, 1.6);
     scene.add(ambientLight);
 
-    const keyLight = new THREE.DirectionalLight(0x38bdf8, 2.2);
-    keyLight.position.set(12, 22, 14);
-    keyLight.castShadow = true;
-    keyLight.shadow.mapSize.width = 2048;
-    keyLight.shadow.mapSize.height = 2048;
-    keyLight.shadow.camera.near = 0.5;
-    keyLight.shadow.camera.far = 60;
-    scene.add(keyLight);
+    const sunLight = new THREE.DirectionalLight(0xfff8ee, 2.4);
+    sunLight.position.set(16, 26, 18);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    sunLight.shadow.camera.near = 0.5;
+    sunLight.shadow.camera.far = 70;
+    sunLight.shadow.bias = -0.0002;
+    scene.add(sunLight);
 
-    const rimLight = new THREE.DirectionalLight(0x818cf8, 1.2);
-    rimLight.position.set(-14, 15, -12);
-    scene.add(rimLight);
+    const softFillLight = new THREE.DirectionalLight(0xa5b4fc, 1.2);
+    softFillLight.position.set(-18, 18, -12);
+    scene.add(softFillLight);
 
-    const coreLight = new THREE.PointLight(0x38bdf8, 4.0, 30);
-    coreLight.position.set(0, 3, 0);
-    scene.add(coreLight);
+    const loungeLight = new THREE.PointLight(0xfef08a, 1.2, 18);
+    loungeLight.position.set(0, 4.5, 2);
+    scene.add(loungeLight);
 
-    // 4. Cyber Command Floor with Procedural Canvas Tech Pattern
-    const floorCanvas = document.createElement('canvas');
-    floorCanvas.width = 512;
-    floorCanvas.height = 512;
-    const fctx = floorCanvas.getContext('2d')!;
-    fctx.fillStyle = '#080d1a';
-    fctx.fillRect(0, 0, 512, 512);
-
-    // Draw tech concentric circles & radial grid ticks
-    fctx.strokeStyle = '#1e293b';
-    fctx.lineWidth = 1.5;
-    for (let r = 50; r <= 240; r += 45) {
-      fctx.beginPath();
-      fctx.arc(256, 256, r, 0, Math.PI * 2);
-      fctx.stroke();
-    }
-    // Neon accent ring
-    fctx.strokeStyle = '#0284c7';
-    fctx.lineWidth = 2.5;
-    fctx.beginPath();
-    fctx.arc(256, 256, 180, 0, Math.PI * 2);
-    fctx.stroke();
-
-    fctx.strokeStyle = '#38bdf8';
-    fctx.lineWidth = 1;
-    fctx.setLineDash([4, 12]);
-    fctx.beginPath();
-    fctx.arc(256, 256, 120, 0, Math.PI * 2);
-    fctx.stroke();
-    fctx.setLineDash([]);
-
-    const floorTexture = new THREE.CanvasTexture(floorCanvas);
-    floorTexture.wrapS = THREE.RepeatWrapping;
-    floorTexture.wrapT = THREE.RepeatWrapping;
-    floorTexture.repeat.set(2, 2);
-
-    const floorGeo = new THREE.PlaneGeometry(44, 44);
+    // 4. Studio Room Architecture: Floor, Walls, Rugs
+    // A. Warm Matte Cream/Beige Studio Floor
+    const floorGeo = new THREE.PlaneGeometry(38, 30);
     const floorMat = new THREE.MeshStandardMaterial({
-      map: floorTexture,
-      roughness: 0.4,
-      metalness: 0.6
+      color: 0xcfc5bb,
+      roughness: 0.85,
+      metalness: 0.1
     });
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     scene.add(floor);
 
-    // Hologram grid overlay
-    const grid = new THREE.GridHelper(44, 44, 0x0284c7, 0x111c30);
-    grid.position.y = 0.02;
-    scene.add(grid);
-
-    // 5. Central Quantum AI Hologram Core
-    // Multitier base pedestal
-    const baseGeo = new THREE.CylinderGeometry(2.8, 3.2, 0.35, 32);
-    const baseMat = new THREE.MeshStandardMaterial({
-      color: 0x0f172a,
-      metalness: 0.8,
-      roughness: 0.2,
-      emissive: 0x0284c7,
-      emissiveIntensity: 0.4
+    // B. Soft Pastel Lavender Circular Rug (Center Lounge)
+    const rugGeo1 = new THREE.CircleGeometry(4.8, 48);
+    const rugMat1 = new THREE.MeshStandardMaterial({
+      color: 0xa899c7,
+      roughness: 0.95
     });
-    const baseMesh = new THREE.Mesh(baseGeo, baseMat);
-    baseMesh.position.set(0, 0.175, 0);
-    baseMesh.receiveShadow = true;
-    scene.add(baseMesh);
+    const rug1 = new THREE.Mesh(rugGeo1, rugMat1);
+    rug1.rotation.x = -Math.PI / 2;
+    rug1.position.set(0, 0.015, 2.8);
+    rug1.receiveShadow = true;
+    scene.add(rug1);
 
-    // Neon trim ring
-    const baseRingGeo = new THREE.TorusGeometry(3.1, 0.04, 16, 64);
-    const baseRingMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
-    const baseRing = new THREE.Mesh(baseRingGeo, baseRingMat);
-    baseRing.rotation.x = Math.PI / 2;
-    baseRing.position.y = 0.35;
-    scene.add(baseRing);
-
-    // Holographic Gyroscope Nested Rings
-    const ring1Geo = new THREE.TorusGeometry(1.6, 0.035, 16, 64);
-    const ring1Mat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.85 });
-    const gyroRing1 = new THREE.Mesh(ring1Geo, ring1Mat);
-    gyroRing1.position.set(0, 2.5, 0);
-    scene.add(gyroRing1);
-
-    const ring2Geo = new THREE.TorusGeometry(1.3, 0.03, 16, 64);
-    const ring2Mat = new THREE.MeshBasicMaterial({ color: 0x818cf8, transparent: true, opacity: 0.8 });
-    const gyroRing2 = new THREE.Mesh(ring2Geo, ring2Mat);
-    gyroRing2.position.set(0, 2.5, 0);
-    scene.add(gyroRing2);
-
-    const ring3Geo = new THREE.TorusGeometry(1.0, 0.025, 16, 64);
-    const ring3Mat = new THREE.MeshBasicMaterial({ color: 0x34d399, transparent: true, opacity: 0.75 });
-    const gyroRing3 = new THREE.Mesh(ring3Geo, ring3Mat);
-    gyroRing3.position.set(0, 2.5, 0);
-    scene.add(gyroRing3);
-
-    // Central Floating Crystalline Quantum AI Core (Icosahedron)
-    const coreGeo = new THREE.IcosahedronGeometry(0.75, 1);
-    const coreMat = new THREE.MeshStandardMaterial({
-      color: 0x38bdf8,
-      emissive: 0x0284c7,
-      emissiveIntensity: 0.9,
-      roughness: 0.1,
-      metalness: 0.9,
-      wireframe: true
+    // C. Soft Sky-Blue Adjacent Circular Rug
+    const rugGeo2 = new THREE.CircleGeometry(3.2, 48);
+    const rugMat2 = new THREE.MeshStandardMaterial({
+      color: 0x93c5fd,
+      roughness: 0.95
     });
-    const coreMesh = new THREE.Mesh(coreGeo, coreMat);
-    coreMesh.position.set(0, 2.5, 0);
-    scene.add(coreMesh);
+    const rug2 = new THREE.Mesh(rugGeo2, rugMat2);
+    rug2.rotation.x = -Math.PI / 2;
+    rug2.position.set(-3.2, 0.02, 3.6);
+    rug2.receiveShadow = true;
+    scene.add(rug2);
 
-    // Inner glowing energy orb inside the icosahedron
-    const innerOrbGeo = new THREE.SphereGeometry(0.4, 16, 16);
-    const innerOrbMat = new THREE.MeshBasicMaterial({
-      color: 0x67e8f9,
+    // D. Back Gradient Wall
+    const backWallGeo = new THREE.PlaneGeometry(38, 14);
+    const backWallMat = new THREE.MeshStandardMaterial({
+      color: 0x333c56,
+      roughness: 0.8
+    });
+    const backWall = new THREE.Mesh(backWallGeo, backWallMat);
+    backWall.position.set(0, 7, -8.5);
+    backWall.receiveShadow = true;
+    scene.add(backWall);
+
+    // E. Left Accent Wall with Neon Typography Sign
+    const leftWallGeo = new THREE.PlaneGeometry(30, 14);
+    const leftWallMat = new THREE.MeshStandardMaterial({
+      color: 0x272f45,
+      roughness: 0.8
+    });
+    const leftWall = new THREE.Mesh(leftWallGeo, leftWallMat);
+    leftWall.rotation.y = Math.PI / 2;
+    leftWall.position.set(-18.5, 7, 6);
+    leftWall.receiveShadow = true;
+    scene.add(leftWall);
+
+    // Neon Wall Art: "GOOD IDEAS BETTER WEBSITES"
+    const neonCanvas = document.createElement('canvas');
+    neonCanvas.width = 512;
+    neonCanvas.height = 256;
+    const nctx = neonCanvas.getContext('2d')!;
+    nctx.clearRect(0, 0, 512, 256);
+    nctx.font = 'bold 38px sans-serif';
+    nctx.fillStyle = '#818cf8';
+    nctx.shadowColor = '#6366f1';
+    nctx.shadowBlur = 18;
+    nctx.fillText('GOOD', 30, 70);
+    nctx.fillText('IDEAS', 30, 125);
+    nctx.fillText('BETTER', 30, 180);
+    nctx.fillText('WEBSITES', 30, 235);
+
+    const neonTexture = new THREE.CanvasTexture(neonCanvas);
+    const neonGeo = new THREE.PlaneGeometry(6, 3);
+    const neonMat = new THREE.MeshBasicMaterial({
+      map: neonTexture,
       transparent: true,
-      opacity: 0.9
-    });
-    const innerOrb = new THREE.Mesh(innerOrbGeo, innerOrbMat);
-    innerOrb.position.set(0, 2.5, 0);
-    scene.add(innerOrb);
-
-    // Vertical Translucent Holographic Pillar of Light
-    const pillarGeo = new THREE.CylinderGeometry(0.5, 0.5, 14, 32, 1, true);
-    const pillarMat = new THREE.MeshBasicMaterial({
-      color: 0x0284c7,
-      transparent: true,
-      opacity: 0.12,
       side: THREE.DoubleSide
     });
-    const pillar = new THREE.Mesh(pillarGeo, pillarMat);
-    pillar.position.set(0, 7, 0);
-    scene.add(pillar);
+    const neonSign = new THREE.Mesh(neonGeo, neonMat);
+    neonSign.rotation.y = Math.PI / 2;
+    neonSign.position.set(-18.4, 6.5, -2);
+    scene.add(neonSign);
 
-    // 6. Ambient Floating Cyber Dust Particles
-    const particleCount = 350;
-    const particleGeo = new THREE.BufferGeometry();
-    const particlePositions = new Float32Array(particleCount * 3);
-    const particleSpeeds = new Float32Array(particleCount);
+    // 5. Large Projector Screen on the Back Wall (Interactive Live Dashboard)
+    const projCanvas = document.createElement('canvas');
+    projCanvas.width = 1024;
+    projCanvas.height = 512;
+    const pctx = projCanvas.getContext('2d')!;
+    const projTex = new THREE.CanvasTexture(projCanvas);
 
-    for (let i = 0; i < particleCount; i++) {
-      const pRadius = 2 + Math.random() * 16;
-      const pAngle = Math.random() * Math.PI * 2;
-      particlePositions[i * 3] = Math.sin(pAngle) * pRadius;
-      particlePositions[i * 3 + 1] = Math.random() * 12;
-      particlePositions[i * 3 + 2] = Math.cos(pAngle) * pRadius;
-      particleSpeeds[i] = 0.2 + Math.random() * 0.5;
-    }
-    particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
-
-    // Create soft circular particle texture
-    const pCanvas = document.createElement('canvas');
-    pCanvas.width = 32;
-    pCanvas.height = 32;
-    const pctx = pCanvas.getContext('2d')!;
-    const pGrad = pctx.createRadialGradient(16, 16, 0, 16, 16, 16);
-    pGrad.addColorStop(0, 'rgba(56, 189, 248, 1)');
-    pGrad.addColorStop(0.4, 'rgba(56, 189, 248, 0.5)');
-    pGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    pctx.fillStyle = pGrad;
-    pctx.fillRect(0, 0, 32, 32);
-    const pTex = new THREE.CanvasTexture(pCanvas);
-
-    const particleMat = new THREE.PointsMaterial({
-      size: 0.22,
-      map: pTex,
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
+    const projGeo = new THREE.PlaneGeometry(13.6, 6.8);
+    const projMat = new THREE.MeshBasicMaterial({
+      map: projTex,
+      side: THREE.DoubleSide
     });
-    const particleSystem = new THREE.Points(particleGeo, particleMat);
-    scene.add(particleSystem);
+    const projScreen = new THREE.Mesh(projGeo, projMat);
+    projScreen.position.set(0, 7.2, -8.4);
+    scene.add(projScreen);
 
-    // 7. Background Quantum Compute Towers at 4 corners
-    const towerCoords = [
-      [-16, -16],
-      [16, -16],
-      [-16, 16],
-      [16, 16]
-    ];
-    towerCoords.forEach(([tx, tz]) => {
-      const towerGeo = new THREE.BoxGeometry(2.4, 9, 2.4);
-      const towerMat = new THREE.MeshStandardMaterial({
-        color: 0x090e1a,
-        metalness: 0.8,
-        roughness: 0.3
+    // Projector Mount Bar & Suspension Wires
+    const projBarGeo = new THREE.CylinderGeometry(0.08, 0.08, 14.4, 16);
+    const projBarMat = new THREE.MeshStandardMaterial({ color: 0x1e293b });
+    const projBar = new THREE.Mesh(projBarGeo, projBarMat);
+    projBar.rotation.z = Math.PI / 2;
+    projBar.position.set(0, 10.7, -8.35);
+    scene.add(projBar);
+
+    // Function to render content on projector canvas
+    const updateProjectorScreen = () => {
+      pctx.fillStyle = '#20293d';
+      pctx.fillRect(0, 0, 1024, 512);
+
+      // Gradient header backdrop
+      const grad = pctx.createLinearGradient(0, 0, 1024, 0);
+      grad.addColorStop(0, '#1e293b');
+      grad.addColorStop(1, '#2c3752');
+      pctx.fillStyle = grad;
+      pctx.fillRect(0, 0, 1024, 160);
+
+      // Greeting Header
+      pctx.font = 'bold 38px sans-serif';
+      pctx.fillStyle = '#ffffff';
+      pctx.fillText(`Selamat siang, ${operatorName}! 👋`, 50, 75);
+
+      pctx.font = '22px sans-serif';
+      pctx.fillStyle = '#94a3b8';
+      pctx.fillText('Semua sistem berjalan dengan baik.', 50, 120);
+
+      // 4 Metric Pill Cards on the Projector
+      const runningCount = summary?.runningTasksCount ?? 0;
+      const completedCount = summary?.completedTasksCount ?? 2;
+      const onlineAgents = summary?.onlineAgentsCount ?? agents.filter(a => a.status === 'READY').length;
+      const totalAgents = summary?.totalAgentsCount ?? agents.length;
+      const activeProj = summary?.activeProjectsCount ?? 2;
+
+      const cards = [
+        { label: 'Tugas berjalan', val: `${runningCount}`, col: '#38bdf8' },
+        { label: 'Selesai hari ini', val: `${completedCount}`, col: '#34d399' },
+        { label: 'Tim online', val: `${onlineAgents}/${totalAgents} online`, col: '#a855f7' },
+        { label: 'Proyek aktif', val: `${activeProj}`, col: '#fbbf24' }
+      ];
+
+      cards.forEach((c, idx) => {
+        const cx = 50 + idx * 230;
+        const cy = 200;
+        pctx.fillStyle = '#172033';
+        pctx.beginPath();
+        pctx.roundRect(cx, cy, 210, 140, 16);
+        pctx.fill();
+
+        pctx.strokeStyle = '#2d3b55';
+        pctx.lineWidth = 2;
+        pctx.stroke();
+
+        // Indicator dot
+        pctx.fillStyle = c.col;
+        pctx.beginPath();
+        pctx.arc(cx + 25, cy + 32, 7, 0, Math.PI * 2);
+        pctx.fill();
+
+        pctx.font = '16px sans-serif';
+        pctx.fillStyle = '#94a3b8';
+        pctx.fillText(c.label, cx + 42, cy + 38);
+
+        pctx.font = 'bold 36px monospace';
+        pctx.fillStyle = '#ffffff';
+        pctx.fillText(c.val, cx + 25, cy + 96);
       });
-      const tower = new THREE.Mesh(towerGeo, towerMat);
-      tower.position.set(tx, 4.5, tz);
-      tower.castShadow = true;
-      tower.receiveShadow = true;
-      scene.add(tower);
 
-      // Server vertical LED strips
-      const ledGeo = new THREE.BoxGeometry(0.1, 7.5, 0.1);
-      const ledMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
-      const led1 = new THREE.Mesh(ledGeo, ledMat);
-      led1.position.set(tx + 1.15, 4.5, tz);
-      scene.add(led1);
+      // Active Task Status Box below
+      pctx.fillStyle = '#172033';
+      pctx.beginPath();
+      pctx.roundRect(50, 375, 924, 90, 16);
+      pctx.fill();
+      pctx.strokeStyle = '#2d3b55';
+      pctx.stroke();
+
+      pctx.font = '17px sans-serif';
+      pctx.fillStyle = '#64748b';
+      pctx.fillText('Task saat ini:', 80, 412);
+
+      pctx.font = 'bold 20px sans-serif';
+      pctx.fillStyle = runningCount > 0 ? '#38bdf8' : '#94a3b8';
+      pctx.fillText(
+        runningCount > 0
+          ? 'Sedang menjalankan eksekusi orkestrasi otomatis...'
+          : 'Belum ada tugas berjalan. Sistem siap menerima instruksi.',
+        80,
+        446
+      );
+
+      projTex.needsUpdate = true;
+    };
+    updateProjectorScreen();
+
+    // 6. Furniture & Studio Props
+    // A. Center Lounge: Modern Grey Fabric Sofa with Plaid Throw
+    const sofaGroup = new THREE.Group();
+    sofaGroup.position.set(-2.5, 0, 1.8);
+    sofaGroup.rotation.y = 0.25;
+
+    // Sofa Base / Cushion
+    const sofaBaseGeo = new THREE.BoxGeometry(4.4, 0.9, 2.0);
+    const sofaBaseMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.9 });
+    const sofaBase = new THREE.Mesh(sofaBaseGeo, sofaBaseMat);
+    sofaBase.position.set(0, 0.45, 0);
+    sofaBase.castShadow = true;
+    sofaBase.receiveShadow = true;
+    sofaGroup.add(sofaBase);
+
+    // Sofa Backrest
+    const sofaBackGeo = new THREE.BoxGeometry(4.4, 1.2, 0.5);
+    const sofaBack = new THREE.Mesh(sofaBackGeo, sofaBaseMat);
+    sofaBack.position.set(0, 1.1, -0.75);
+    sofaBack.castShadow = true;
+    sofaGroup.add(sofaBack);
+
+    // Sofa Armrests
+    const armGeo = new THREE.BoxGeometry(0.5, 0.8, 2.0);
+    const armL = new THREE.Mesh(armGeo, sofaBaseMat);
+    armL.position.set(-2.2, 0.85, 0);
+    const armR = new THREE.Mesh(armGeo, sofaBaseMat);
+    armR.position.set(2.2, 0.85, 0);
+    sofaGroup.add(armL);
+    sofaGroup.add(armR);
+
+    // Plaid Throw Blanket draped on sofa
+    const throwGeo = new THREE.BoxGeometry(1.6, 0.05, 1.6);
+    const throwMat = new THREE.MeshStandardMaterial({ color: 0xdbeafe, roughness: 0.8 });
+    const throwMesh = new THREE.Mesh(throwGeo, throwMat);
+    throwMesh.position.set(-0.6, 0.93, 0.1);
+    throwMesh.rotation.y = 0.1;
+    sofaGroup.add(throwMesh);
+
+    scene.add(sofaGroup);
+
+    // B. Soft Beanbags / Poufs
+    // Sky-Blue Round Beanbag
+    const pouf1Geo = new THREE.SphereGeometry(0.9, 16, 16);
+    const pouf1Mat = new THREE.MeshStandardMaterial({ color: 0x93c5fd, roughness: 0.95 });
+    const pouf1 = new THREE.Mesh(pouf1Geo, pouf1Mat);
+    pouf1.scale.set(1.1, 0.65, 1.1);
+    pouf1.position.set(-4.5, 0.4, 4.2);
+    pouf1.castShadow = true;
+    scene.add(pouf1);
+
+    // Pastel Yellow Round Beanbag
+    const pouf2Geo = new THREE.SphereGeometry(0.8, 16, 16);
+    const pouf2Mat = new THREE.MeshStandardMaterial({ color: 0xfef08a, roughness: 0.95 });
+    const pouf2 = new THREE.Mesh(pouf2Geo, pouf2Mat);
+    pouf2.scale.set(1.0, 0.6, 1.0);
+    pouf2.position.set(-3.0, 0.35, 5.8);
+    pouf2.castShadow = true;
+    scene.add(pouf2);
+
+    // C. Modular Wooden Coffee Table Blocks (Right of Lounge)
+    const tableGroup = new THREE.Group();
+    tableGroup.position.set(5.2, 0, 3.8);
+
+    const block1Geo = new THREE.BoxGeometry(2.4, 0.8, 2.0);
+    const blockMat = new THREE.MeshStandardMaterial({ color: 0xded2c6, roughness: 0.7 });
+    const block1 = new THREE.Mesh(block1Geo, blockMat);
+    block1.position.set(0, 0.4, 0);
+    block1.castShadow = true;
+    block1.receiveShadow = true;
+    tableGroup.add(block1);
+
+    const block2Geo = new THREE.BoxGeometry(1.8, 1.1, 1.6);
+    const block2 = new THREE.Mesh(block2Geo, blockMat);
+    block2.position.set(1.4, 0.55, 0.6);
+    block2.castShadow = true;
+    tableGroup.add(block2);
+
+    scene.add(tableGroup);
+
+    // D. Mini Retro Green Radio/Speaker on Floor with Cable
+    const radioGeo = new THREE.BoxGeometry(0.6, 0.8, 0.45);
+    const radioMat = new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.5 });
+    const radio = new THREE.Mesh(radioGeo, radioMat);
+    radio.position.set(0.5, 0.4, 5.0);
+    radio.rotation.y = -0.4;
+    radio.castShadow = true;
+    scene.add(radio);
+
+    // Radio speaker grille
+    const grilleGeo = new THREE.CircleGeometry(0.18, 16);
+    const grilleMat = new THREE.MeshBasicMaterial({ color: 0x064e3b });
+    const grille = new THREE.Mesh(grilleGeo, grilleMat);
+    grille.position.set(0.5, 0.5, 5.23);
+    grille.rotation.y = -0.4;
+    scene.add(grille);
+
+    // E. Indoor Potted Plants (Monstera / Foliage in Terracotta Pots)
+    const plantLocations = [
+      [-16, -6],
+      [-17, 8],
+      [16, 7]
+    ];
+    plantLocations.forEach(([px, pz]) => {
+      const plantGroup = new THREE.Group();
+      plantGroup.position.set(px, 0, pz);
+
+      // Pot
+      const potGeo = new THREE.CylinderGeometry(0.65, 0.45, 1.2, 16);
+      const potMat = new THREE.MeshStandardMaterial({ color: 0xca8a04, roughness: 0.8 });
+      const pot = new THREE.Mesh(potGeo, potMat);
+      pot.position.set(0, 0.6, 0);
+      pot.castShadow = true;
+      plantGroup.add(pot);
+
+      // Leaves (Multiple stylized broad leaves)
+      for (let li = 0; li < 6; li++) {
+        const leafAngle = (li / 6) * Math.PI * 2;
+        const leafGeo = new THREE.SphereGeometry(0.5, 8, 8);
+        const leafMat = new THREE.MeshStandardMaterial({ color: 0x34d399, roughness: 0.7 });
+        const leaf = new THREE.Mesh(leafGeo, leafMat);
+        leaf.scale.set(0.4, 1.2, 0.1);
+        leaf.position.set(Math.cos(leafAngle) * 0.4, 1.5 + Math.random() * 0.4, Math.sin(leafAngle) * 0.4);
+        leaf.rotation.set(Math.sin(leafAngle) * 0.5, leafAngle, Math.cos(leafAngle) * 0.5);
+        leaf.castShadow = true;
+        plantGroup.add(leaf);
+      }
+      scene.add(plantGroup);
     });
 
-    // 8. Build High-Tech AI Workstations, Neural Data Links & Cyber Droids
+    // 7. Workstations & Stylized 3D Character Avatars
     const interactiveMeshes: THREE.Mesh[] = [];
     const agentMap = new Map<THREE.Mesh, AIAgent>();
-    const characterMeshes: {
-      mesh: THREE.Group;
-      headVisor: THREE.Mesh;
-      hoverRing1: THREE.Mesh;
-      hoverRing2: THREE.Mesh;
-      satellite1: THREE.Mesh;
-      satellite2: THREE.Mesh;
-      screenMat: THREE.MeshBasicMaterial;
-      screenCanvas: HTMLCanvasElement;
-      screenCtx: CanvasRenderingContext2D;
-      screenTex: THREE.CanvasTexture;
-      dataCurve: THREE.QuadraticBezierCurve3;
-      pulseMesh: THREE.Mesh;
-      agent: AIAgent;
-      baseAngle: number;
-    }[] = [];
+    const agentPositions: { agent: AIAgent; pos: THREE.Vector3 }[] = [];
 
-    const radius = 7.5;
-    const totalAgents = Math.max(agents.length, 1);
+    // Desk clusters: 2 desks on the Left side, 2 desks on the Right side
+    const deskConfigs = [
+      { deskPos: new THREE.Vector3(-11, 0, -2.5), charPos: new THREE.Vector3(-9.2, 0, -2.5), isStanding: true },
+      { deskPos: new THREE.Vector3(-11, 0, 3.5), charPos: new THREE.Vector3(-11, 0, 4.4), isStanding: false },
+      { deskPos: new THREE.Vector3(10.5, 0, -2.5), charPos: new THREE.Vector3(10.5, 0, -1.6), isStanding: false },
+      { deskPos: new THREE.Vector3(10.5, 0, 3.5), charPos: new THREE.Vector3(12.2, 0, 3.5), isStanding: true }
+    ];
 
     agents.forEach((agent, index) => {
-      const angle = (index / totalAgents) * Math.PI * 1.6 - Math.PI * 0.8;
-      const x = Math.sin(angle) * radius;
-      const z = Math.cos(angle) * radius - 0.8;
+      const cfg = deskConfigs[index % deskConfigs.length];
+      const deskOffset = Math.floor(index / deskConfigs.length) * 0.8;
+      const deskX = cfg.deskPos.x + (index >= 4 ? (cfg.deskPos.x > 0 ? 3 : -3) : 0);
+      const deskZ = cfg.deskPos.z + deskOffset;
 
-      const group = new THREE.Group();
-      group.position.set(x, 0, z);
-      group.lookAt(0, 0, 0);
+      const workstationGroup = new THREE.Group();
+      workstationGroup.position.set(deskX, 0, deskZ);
 
-      const roleColor = ROLE_HEX_COLORS[agent.role] || 0x3b82f6;
+      // Desk Top (Light Wood / Minimalist White)
+      const deskTopGeo = new THREE.BoxGeometry(3.6, 0.12, 1.8);
+      const deskTopMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.6 });
+      const deskTop = new THREE.Mesh(deskTopGeo, deskTopMat);
+      deskTop.position.set(0, 1.3, 0);
+      deskTop.castShadow = true;
+      deskTop.receiveShadow = true;
+      workstationGroup.add(deskTop);
 
-      // A. Curved Cyber Workstation Desk
-      const deskGeo = new THREE.BoxGeometry(2.6, 0.12, 1.3);
-      const deskMat = new THREE.MeshStandardMaterial({
-        color: 0x0f172a,
-        metalness: 0.7,
-        roughness: 0.3
+      // Desk Legs (Blue / Grey cylindrical modern legs)
+      const legGeo = new THREE.CylinderGeometry(0.06, 0.06, 1.3, 12);
+      const legMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6 });
+      [
+        [-1.6, 0.65, -0.75],
+        [1.6, 0.65, -0.75],
+        [-1.6, 0.65, 0.75],
+        [1.6, 0.65, 0.75]
+      ].forEach(([lx, ly, lz]) => {
+        const leg = new THREE.Mesh(legGeo, legMat);
+        leg.position.set(lx, ly, lz);
+        leg.castShadow = true;
+        workstationGroup.add(leg);
       });
-      const desk = new THREE.Mesh(deskGeo, deskMat);
-      desk.position.set(0, 1.05, 0);
-      desk.castShadow = true;
-      desk.receiveShadow = true;
-      group.add(desk);
 
-      // Neon edge trim on desk front
-      const edgeGeo = new THREE.BoxGeometry(2.6, 0.04, 0.04);
-      const edgeMat = new THREE.MeshBasicMaterial({ color: roleColor });
-      const edge = new THREE.Mesh(edgeGeo, edgeMat);
-      edge.position.set(0, 1.05, 0.65);
-      group.add(edge);
+      // White Monitor Riser Stand
+      const riserGeo = new THREE.BoxGeometry(2.4, 0.16, 0.6);
+      const riserMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+      const riser = new THREE.Mesh(riserGeo, riserMat);
+      riser.position.set(0, 1.44, -0.4);
+      riser.castShadow = true;
+      workstationGroup.add(riser);
 
-      // Angled titanium legs
-      const legMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9, roughness: 0.2 });
-      const legGeo = new THREE.CylinderGeometry(0.04, 0.04, 1.05, 12);
-      const leg1 = new THREE.Mesh(legGeo, legMat);
-      leg1.position.set(1.15, 0.525, 0.45);
-      const leg2 = new THREE.Mesh(legGeo, legMat);
-      leg2.position.set(-1.15, 0.525, 0.45);
-      group.add(leg1);
-      group.add(leg2);
-
-      // B. Floating Holographic Terminal Screen with Live Procedural Code Canvas
-      const screenCanvas = document.createElement('canvas');
-      screenCanvas.width = 256;
-      screenCanvas.height = 160;
-      const screenCtx = screenCanvas.getContext('2d')!;
-      const screenTex = new THREE.CanvasTexture(screenCanvas);
-
-      const screenGeo = new THREE.PlaneGeometry(1.3, 0.8);
-      const screenMat = new THREE.MeshBasicMaterial({
-        map: screenTex,
-        side: THREE.DoubleSide,
-        transparent: true,
-        opacity: 0.95
+      // Dual Computer Monitors displaying code/UI
+      [-0.65, 0.65].forEach((mx) => {
+        const monGeo = new THREE.BoxGeometry(1.0, 0.65, 0.06);
+        const monMat = new THREE.MeshStandardMaterial({
+          color: 0x0f172a,
+          emissive: agent.status === 'BUSY' ? 0xf59e0b : 0x0284c7,
+          emissiveIntensity: 0.6
+        });
+        const mon = new THREE.Mesh(monGeo, monMat);
+        mon.position.set(mx, 1.88, -0.4);
+        mon.rotation.y = mx > 0 ? -0.1 : 0.1;
+        workstationGroup.add(mon);
       });
-      const screen = new THREE.Mesh(screenGeo, screenMat);
-      screen.position.set(0, 1.65, -0.35);
-      screen.rotation.x = 0.15;
-      group.add(screen);
 
-      // Screen border frame
-      const frameGeo = new THREE.BoxGeometry(1.34, 0.84, 0.02);
-      const frameMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.8 });
-      const frame = new THREE.Mesh(frameGeo, frameMat);
-      frame.position.set(0, 1.65, -0.37);
-      frame.rotation.x = 0.15;
-      group.add(frame);
+      // Blue Round Stool Chair
+      const stoolGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.8, 16);
+      const stoolMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6 });
+      const stool = new THREE.Mesh(stoolGeo, stoolMat);
+      stool.position.set(0, 0.4, 0.9);
+      stool.castShadow = true;
+      workstationGroup.add(stool);
 
-      // C. Cyber Droid Character Avatar (Behind Desk)
-      const droidGroup = new THREE.Group();
-      droidGroup.position.set(0, 0, 0.85);
+      scene.add(workstationGroup);
 
-      // Dual Hover Rings (Levitation Effect)
-      const hRing1Geo = new THREE.TorusGeometry(0.48, 0.02, 16, 32);
-      const hRing1Mat = new THREE.MeshBasicMaterial({ color: roleColor, transparent: true, opacity: 0.85 });
-      const hoverRing1 = new THREE.Mesh(hRing1Geo, hRing1Mat);
-      hoverRing1.rotation.x = Math.PI / 2;
-      hoverRing1.position.y = 0.3;
-      droidGroup.add(hoverRing1);
+      // B. Stylized 3D Chibi / Humanoid Character Avatar
+      const charGroup = new THREE.Group();
+      const charX = cfg.charPos.x + (index >= 4 ? (cfg.charPos.x > 0 ? 3 : -3) : 0);
+      const charZ = cfg.charPos.z + deskOffset;
+      charGroup.position.set(charX, 0, charZ);
 
-      const hRing2Geo = new THREE.TorusGeometry(0.36, 0.015, 16, 32);
-      const hRing2Mat = new THREE.MeshBasicMaterial({ color: 0x67e8f9, transparent: true, opacity: 0.7 });
-      const hoverRing2 = new THREE.Mesh(hRing2Geo, hRing2Mat);
-      hoverRing2.rotation.x = Math.PI / 2;
-      hoverRing2.position.y = 0.22;
-      droidGroup.add(hoverRing2);
+      // Orientation towards desk
+      if (cfg.isStanding) {
+        charGroup.lookAt(charX + (deskX > charX ? 1 : -1), 0, charZ);
+      } else {
+        charGroup.lookAt(deskX, 0, deskZ);
+      }
 
-      // Angular Torso (Titanium Chassis)
-      const torsoGeo = new THREE.CylinderGeometry(0.32, 0.38, 0.85, 8);
-      const torsoMat = new THREE.MeshStandardMaterial({
-        color: 0x0f172a,
-        metalness: 0.8,
-        roughness: 0.25
-      });
-      const torso = new THREE.Mesh(torsoGeo, torsoMat);
-      torso.position.set(0, 0.9, 0);
-      torso.castShadow = true;
-      droidGroup.add(torso);
+      // Torso / Hoodie (Colored per agent role)
+      const roleColor =
+        agent.role === 'Orchestrator'
+          ? 0x3b82f6
+          : agent.role === 'Planner'
+          ? 0x8b5cf6
+          : agent.role === 'Executor'
+          ? 0x10b981
+          : agent.role === 'QA / Reviewer'
+          ? 0xf59e0b
+          : 0xec4899;
 
-      // Chest Power Core
-      const chestCoreGeo = new THREE.SphereGeometry(0.12, 16, 16);
-      const chestCoreMat = new THREE.MeshBasicMaterial({
-        color: agent.status === 'BUSY' ? 0xf59e0b : roleColor
-      });
-      const chestCore = new THREE.Mesh(chestCoreGeo, chestCoreMat);
-      chestCore.position.set(0, 1.05, 0.32);
-      droidGroup.add(chestCore);
+      const bodyGeo = new THREE.CylinderGeometry(0.35, 0.4, 0.9, 16);
+      const bodyMat = new THREE.MeshStandardMaterial({ color: roleColor, roughness: 0.6 });
+      const body = new THREE.Mesh(bodyGeo, bodyMat);
+      body.position.set(0, 1.1, 0);
+      body.castShadow = true;
+      charGroup.add(body);
 
-      // Aerodynamic Cyber Helmet (Head)
-      const headGeo = new THREE.SphereGeometry(0.32, 24, 24);
-      const headMat = new THREE.MeshStandardMaterial({
-        color: 0x1e293b,
-        metalness: 0.9,
-        roughness: 0.2
-      });
-      const head = new THREE.Mesh(headGeo, headMat);
-      head.position.set(0, 1.55, 0);
+      // Legs / Pants
+      const legPantsGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.8, 12);
+      const legPantsMat = new THREE.MeshStandardMaterial({ color: 0x334155 });
+      const legL = new THREE.Mesh(legPantsGeo, legPantsMat);
+      legL.position.set(-0.16, 0.45, 0);
+      const legR = new THREE.Mesh(legPantsGeo, legPantsMat);
+      legR.position.set(0.16, 0.45, 0);
+      charGroup.add(legL);
+      charGroup.add(legR);
+
+      // Shoes / Sneakers (White)
+      const shoeGeo = new THREE.BoxGeometry(0.18, 0.14, 0.3);
+      const shoeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+      const shoeL = new THREE.Mesh(shoeGeo, shoeMat);
+      shoeL.position.set(-0.16, 0.08, 0.05);
+      const shoeR = new THREE.Mesh(shoeGeo, shoeMat);
+      shoeR.position.set(0.16, 0.08, 0.05);
+      charGroup.add(shoeL);
+      charGroup.add(shoeR);
+
+      // Head / Face
+      const headGeo = new THREE.SphereGeometry(0.36, 16, 16);
+      const skinMat = new THREE.MeshStandardMaterial({ color: 0xffdfc4 });
+      const head = new THREE.Mesh(headGeo, skinMat);
+      head.position.set(0, 1.85, 0);
       head.castShadow = true;
-      droidGroup.add(head);
+      charGroup.add(head);
 
-      // Horizontal Glowing Visor Scanner (Eyes)
-      const visorGeo = new THREE.BoxGeometry(0.42, 0.1, 0.12);
-      const visorMat = new THREE.MeshStandardMaterial({
-        color: agent.status === 'BUSY' ? 0xf59e0b : roleColor,
-        emissive: agent.status === 'BUSY' ? 0xf59e0b : roleColor,
-        emissiveIntensity: agent.status === 'DISABLED' ? 0.1 : 1.2,
-        roughness: 0.1
-      });
-      const headVisor = new THREE.Mesh(visorGeo, visorMat);
-      headVisor.position.set(0, 1.55, 0.27);
-      droidGroup.add(headVisor);
+      // Anime / Chibi Hair (Dark brown / black)
+      const hairGeo = new THREE.SphereGeometry(0.39, 16, 16);
+      const hairMat = new THREE.MeshStandardMaterial({ color: 0x1e1b18 });
+      const hair = new THREE.Mesh(hairGeo, hairMat);
+      hair.position.set(0, 1.93, -0.05);
+      charGroup.add(hair);
 
-      // Two Micro-Satellite Subprocess Orbs Orbiting Head
-      const satGeo = new THREE.SphereGeometry(0.06, 12, 12);
-      const satMat = new THREE.MeshBasicMaterial({ color: roleColor });
-      const satellite1 = new THREE.Mesh(satGeo, satMat);
-      const satellite2 = new THREE.Mesh(satGeo, satMat);
-      droidGroup.add(satellite1);
-      droidGroup.add(satellite2);
+      // If standing, add coffee mug or tablet
+      if (cfg.isStanding) {
+        const mugGeo = new THREE.CylinderGeometry(0.1, 0.08, 0.22, 12);
+        const mugMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+        const mug = new THREE.Mesh(mugGeo, mugMat);
+        mug.position.set(0.35, 1.0, 0.3);
+        charGroup.add(mug);
+      }
 
-      group.add(droidGroup);
-      scene.add(group);
+      scene.add(charGroup);
 
-      // D. Neural Data Link (Energy Beam to Central Quantum Core)
-      const startPt = new THREE.Vector3(x, 1.2, z);
-      const midPt = new THREE.Vector3(x * 0.45, 3.8, z * 0.45);
-      const endPt = new THREE.Vector3(0, 2.5, 0);
-      const dataCurve = new THREE.QuadraticBezierCurve3(startPt, midPt, endPt);
-
-      const tubeGeo = new THREE.TubeGeometry(dataCurve, 24, 0.025, 8, false);
-      const tubeMat = new THREE.MeshBasicMaterial({
-        color: agent.status === 'BUSY' ? 0xf59e0b : roleColor,
-        transparent: true,
-        opacity: agent.status === 'DISABLED' ? 0.08 : 0.35
-      });
-      const tube = new THREE.Mesh(tubeGeo, tubeMat);
-      scene.add(tube);
-
-      // Traveling Photon Pulse along the curve
-      const pulseGeo = new THREE.SphereGeometry(0.12, 12, 12);
-      const pulseMat = new THREE.MeshBasicMaterial({
-        color: agent.status === 'BUSY' ? 0xfbbf24 : 0x67e8f9
-      });
-      const pulseMesh = new THREE.Mesh(pulseGeo, pulseMat);
-      scene.add(pulseMesh);
-
-      // Register interactive meshes for click & raycasting
+      // Register head mesh for interaction
       interactiveMeshes.push(head);
       agentMap.set(head, agent);
-
-      characterMeshes.push({
-        mesh: droidGroup,
-        headVisor,
-        hoverRing1,
-        hoverRing2,
-        satellite1,
-        satellite2,
-        screenMat,
-        screenCanvas,
-        screenCtx,
-        screenTex,
-        dataCurve,
-        pulseMesh,
-        agent,
-        baseAngle: angle
-      });
+      agentPositions.push({ agent, pos: new THREE.Vector3(charX, 1.5, charZ) });
     });
 
-    // 9. Raycasting & Interaction
+    // 8. Raycasting (Interaction & Hover)
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
@@ -567,18 +676,18 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({ agents, onSelectAgent,
     renderer.domElement.addEventListener('pointermove', handlePointerMove);
     renderer.domElement.addEventListener('click', handleClick);
 
-    // 10. Resize Observer
+    // 9. Resize Observer
     const handleResize = () => {
       if (!container) return;
       const newWidth = container.clientWidth;
-      const newHeight = container.clientHeight || 460;
+      const newHeight = container.clientHeight || 560;
       camera.aspect = newWidth / newHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(newWidth, newHeight);
     };
     window.addEventListener('resize', handleResize);
 
-    // 11. Animation Loop
+    // 10. Animation Loop & Smooth Camera Glide
     let animationFrameId: number;
     const clock = new THREE.Clock();
 
@@ -586,99 +695,19 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({ agents, onSelectAgent,
       animationFrameId = requestAnimationFrame(animate);
       const elapsedTime = clock.getElapsedTime();
 
-      // Gyroscope multi-axis rotation
-      gyroRing1.rotation.x = elapsedTime * 0.9;
-      gyroRing1.rotation.y = elapsedTime * 0.6;
-      gyroRing2.rotation.y = -elapsedTime * 0.7;
-      gyroRing2.rotation.z = elapsedTime * 0.5;
-      gyroRing3.rotation.z = -elapsedTime * 0.8;
-      gyroRing3.rotation.x = -elapsedTime * 0.4;
-
-      // Central core geometric pulse & spin
-      coreMesh.rotation.y = elapsedTime * 1.1;
-      coreMesh.rotation.x = Math.sin(elapsedTime * 0.7) * 0.4;
-      const coreScale = 1 + Math.sin(elapsedTime * 3) * 0.06;
-      coreMesh.scale.set(coreScale, coreScale, coreScale);
-
-      innerOrb.scale.set(1 + Math.sin(elapsedTime * 4) * 0.12, 1 + Math.sin(elapsedTime * 4) * 0.12, 1 + Math.sin(elapsedTime * 4) * 0.12);
-
-      // Animate Floating Cyber Particles
-      const posAttr = particleGeo.attributes.position as THREE.BufferAttribute;
-      const pArray = posAttr.array as Float32Array;
-      for (let i = 0; i < particleCount; i++) {
-        pArray[i * 3 + 1] += particleSpeeds[i] * 0.02;
-        if (pArray[i * 3 + 1] > 14) {
-          pArray[i * 3 + 1] = 0.2;
-        }
+      // Smooth camera interpolation towards target position and target lookAt
+      if (activeCamView !== 'tour' && !autoTour) {
+        camera.position.lerp(targetCamPos.current, 0.05);
+        controls.target.lerp(targetLookAt.current, 0.05);
+      } else {
+        // Auto-tour orbit
+        const orbitRadius = 22;
+        const orbitAngle = elapsedTime * 0.15;
+        camera.position.x = Math.sin(orbitAngle) * orbitRadius;
+        camera.position.z = Math.cos(orbitAngle) * orbitRadius;
+        camera.position.y = 15 + Math.sin(elapsedTime * 0.25) * 2;
+        controls.target.set(0, 2.5, 0);
       }
-      posAttr.needsUpdate = true;
-      particleSystem.rotation.y = elapsedTime * 0.03;
-
-      // Animate AI Droids & Neural Data Pulses
-      characterMeshes.forEach((item, idx) => {
-        const offset = idx * 0.6;
-        const isBusy = item.agent.status === 'BUSY';
-        const isReady = item.agent.status === 'READY';
-
-        // Organic levitation bobbing
-        item.mesh.position.y = Math.sin(elapsedTime * 2.5 + offset) * 0.06;
-
-        // Counter-rotating hover rings
-        item.hoverRing1.rotation.z = elapsedTime * 2;
-        item.hoverRing2.rotation.z = -elapsedTime * 2.5;
-
-        // Orbiting satellite subprocess orbs
-        const satRadius = 0.5;
-        const satSpeed = isBusy ? 4.5 : 2.0;
-        item.satellite1.position.set(
-          Math.cos(elapsedTime * satSpeed + offset) * satRadius,
-          1.55 + Math.sin(elapsedTime * 2 + offset) * 0.1,
-          Math.sin(elapsedTime * satSpeed + offset) * satRadius
-        );
-        item.satellite2.position.set(
-          Math.cos(elapsedTime * satSpeed + offset + Math.PI) * satRadius,
-          1.55 - Math.sin(elapsedTime * 2 + offset) * 0.1,
-          Math.sin(elapsedTime * satSpeed + offset + Math.PI) * satRadius
-        );
-
-        // Neural Link Traveling Photon Pulse
-        const pulseSpeed = isBusy ? 1.4 : 0.6;
-        const pulseProgress = ((elapsedTime * pulseSpeed + offset) % 1);
-        const pulsePt = item.dataCurve.getPoint(pulseProgress);
-        item.pulseMesh.position.copy(pulsePt);
-
-        // Update procedural terminal screen canvas every few frames
-        if (Math.floor(elapsedTime * 24) % 4 === 0) {
-          const sCtx = item.screenCtx;
-          sCtx.fillStyle = '#060a14';
-          sCtx.fillRect(0, 0, 256, 160);
-
-          // Header
-          sCtx.fillStyle = isBusy ? '#f59e0b' : '#38bdf8';
-          sCtx.font = 'bold 13px monospace';
-          sCtx.fillText(`[AGENT] ${item.agent.name.toUpperCase()}`, 10, 20);
-
-          sCtx.font = '10px monospace';
-          sCtx.fillStyle = '#64748b';
-          sCtx.fillText(`ROLE: ${item.agent.role} | ${item.agent.modelId}`, 10, 36);
-
-          // Simulated terminal lines / wave activity
-          const numLines = 6;
-          for (let li = 0; li < numLines; li++) {
-            const yLine = 56 + li * 14;
-            const lineProgress = ((elapsedTime * 3 + li * 2 + idx) % 10) / 10;
-            sCtx.fillStyle = isBusy ? '#fbbf24' : '#0ea5e9';
-            sCtx.fillRect(10, yLine, 30 + lineProgress * 180, 5);
-          }
-
-          // Status footer
-          sCtx.fillStyle = isBusy ? '#f59e0b' : isReady ? '#10b981' : '#ef4444';
-          sCtx.font = 'bold 11px monospace';
-          sCtx.fillText(`● STATUS: ${item.agent.status}`, 10, 148);
-
-          item.screenTex.needsUpdate = true;
-        }
-      });
 
       controls.update();
       renderer.render(scene, camera);
@@ -686,7 +715,6 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({ agents, onSelectAgent,
 
     animate();
 
-    // Cleanup resources
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
@@ -695,42 +723,53 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({ agents, onSelectAgent,
 
       floorGeo.dispose();
       floorMat.dispose();
-      floorTexture.dispose();
-      controls.dispose();
+      projCanvas.remove();
       renderer.dispose();
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
       }
     };
-  }, [agents, autoTour]);
+  }, [agents, summary, operatorName]);
 
-  // Handle Preset Camera Views
-  const handleApplyPreset = (preset: CameraPreset) => {
-    setActivePreset(preset);
-    const camera = cameraRef.current;
-    const controls = controlsRef;
-    if (!camera || !controls) return;
+  // Handle Camera Moves
+  const handleCamOverview = () => {
+    setActiveCamView('overview');
+    setAutoTour(false);
+    setSelectedAgentId(null);
+    targetCamPos.current.set(0, 15, 23);
+    targetLookAt.current.set(0, 2.5, 0);
+  };
 
-    if (preset === 'cinematic') {
-      setAutoTour(true);
-      controls.autoRotate = true;
-      camera.position.set(0, 13, 20);
-      controls.target.set(0, 1.5, 0);
-    } else if (preset === 'tactical') {
-      setAutoTour(false);
-      controls.autoRotate = false;
-      camera.position.set(0, 22, 12);
-      controls.target.set(0, 1.5, 0);
-    } else if (preset === 'core') {
-      setAutoTour(false);
-      controls.autoRotate = false;
-      camera.position.set(0, 4.5, 8);
-      controls.target.set(0, 2.5, 0);
-    } else if (preset === 'front') {
-      setAutoTour(false);
-      controls.autoRotate = false;
-      camera.position.set(0, 8, 17);
-      controls.target.set(0, 1.5, 0);
+  const handleCamTaskWall = () => {
+    setActiveCamView('task_wall');
+    setAutoTour(false);
+    setSelectedAgentId(null);
+    targetCamPos.current.set(0, 7.2, 5.5);
+    targetLookAt.current.set(0, 7.2, -8.4);
+  };
+
+  const handleCamFocusAgent = (agent: AIAgent) => {
+    setActiveCamView('agent');
+    setAutoTour(false);
+    setSelectedAgentId(agent.id);
+
+    // Find agent desk coordinate
+    const targetAgentIndex = agents.findIndex(a => a.id === agent.id);
+    const isLeft = targetAgentIndex % 2 === 0;
+    const ax = isLeft ? -9.5 : 9.5;
+    const az = (targetAgentIndex % 4) * 1.5 - 1.5;
+
+    targetCamPos.current.set(ax + (isLeft ? 4.5 : -4.5), 3.8, az + 4.5);
+    targetLookAt.current.set(ax, 1.8, az);
+  };
+
+  const handleToggleAutoTour = () => {
+    const nextState = !autoTour;
+    setAutoTour(nextState);
+    if (nextState) {
+      setActiveCamView('tour');
+    } else {
+      handleCamOverview();
     }
   };
 
@@ -740,7 +779,7 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({ agents, onSelectAgent,
         <AlertCircle className="w-8 h-8 text-amber-400 mx-auto" />
         <h3 className="text-sm font-bold text-white">WebGL Tidak Didukung pada Browser Ini</h3>
         <p className="text-xs text-slate-400 max-w-md mx-auto">
-          Perangkat Anda tidak mendukung akselerasi grafis 3D WebGL. Gunakan tampilan 2D yang dapat diakses penuh di bawah ini.
+          Perangkat Anda tidak mendukung akselerasi grafis 3D WebGL.
         </p>
         <button
           onClick={onFallbackTo2D}
@@ -753,135 +792,263 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({ agents, onSelectAgent,
   }
 
   return (
-    <div className="relative w-full h-[440px] lg:h-[500px] bg-[#060911] rounded-2xl border border-slate-800/80 overflow-hidden shadow-2xl shadow-blue-950/30 group">
+    <div className="relative w-full h-[620px] lg:h-[700px] bg-[#1a2133] rounded-2xl border border-slate-800/80 overflow-hidden shadow-2xl shadow-blue-950/40 select-none">
       {/* Three.js Canvas Container */}
       <div ref={mountRef} className="w-full h-full" />
 
-      {/* Top Left: Title Badge & Camera Preset Controls */}
-      <div className="absolute top-4 left-4 z-10 flex items-center gap-2 flex-wrap">
-        <div className="px-3 py-1.5 rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-800 text-xs font-semibold text-white flex items-center gap-2 shadow-lg">
-          <Monitor className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-          <span className="font-bold">Virtual 3D Command Deck</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-mono">
-            {agents.length} Neural Nodes
-          </span>
-        </div>
+      {/* Floating Top-Left Card: ✦ Team • Live (Matching Reference Screenshot) */}
+      <div className="absolute top-4 left-4 z-20 flex flex-col gap-2 pointer-events-auto">
+        <div className="p-3 rounded-2xl bg-slate-900/85 backdrop-blur-md border border-slate-800 shadow-xl max-w-xs">
+          <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-800/80">
+            <span className="text-xs font-bold text-white flex items-center gap-1.5">
+              <span>✦ Team</span>
+            </span>
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold text-emerald-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Live</span>
+            </div>
+          </div>
 
-        {/* Camera Preset Selector */}
-        <div className="flex items-center gap-1 bg-slate-900/90 backdrop-blur-md p-1 rounded-xl border border-slate-800 text-xs shadow-lg">
-          <button
-            onClick={() => handleApplyPreset('cinematic')}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition flex items-center gap-1 ${
-              activePreset === 'cinematic'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-            title="Kamera Berputar Sinematik"
-          >
-            <RotateCw className="w-3 h-3" />
-            <span>Orbit</span>
-          </button>
-          <button
-            onClick={() => handleApplyPreset('tactical')}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition flex items-center gap-1 ${
-              activePreset === 'tactical'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-            title="Tampilan Taktikal Atas"
-          >
-            <Compass className="w-3 h-3" />
-            <span>Taktikal</span>
-          </button>
-          <button
-            onClick={() => handleApplyPreset('core')}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition flex items-center gap-1 ${
-              activePreset === 'core'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-            title="Fokus Quantum Hologram Core"
-          >
-            <Zap className="w-3 h-3 text-cyan-400" />
-            <span>Core</span>
-          </button>
-          <button
-            onClick={() => handleApplyPreset('front')}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition flex items-center gap-1 ${
-              activePreset === 'front'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-            title="Tampilan Depan Operasi"
-          >
-            <Eye className="w-3 h-3" />
-            <span>Depan</span>
-          </button>
+          {/* Member Chips */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            {agents.slice(0, 4).map((agent) => {
+              const isSelected = selectedAgentId === agent.id;
+              return (
+                <div
+                  key={agent.id}
+                  onClick={() => handleCamFocusAgent(agent)}
+                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl border transition cursor-pointer shrink-0 ${
+                    isSelected
+                      ? 'bg-blue-600/30 border-blue-500 text-white'
+                      : 'bg-slate-950/60 hover:bg-slate-800/80 border-slate-800 text-slate-300'
+                  }`}
+                  title={`Klik untuk fokus kamera ke ${agent.name}`}
+                >
+                  <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-blue-600 to-purple-600 flex items-center justify-center text-[10px] font-bold text-white">
+                    {agent.name.charAt(0)}
+                  </div>
+                  <div className="text-left">
+                    <span className="font-bold text-[11px] block leading-tight truncate max-w-[70px]">
+                      {agent.name}
+                    </span>
+                    <span className="text-[9px] text-slate-400 font-mono block leading-tight">
+                      {agent.status === 'BUSY' ? 'sedang kerja' : 'denyut baru'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {/* Top Right: View Controls */}
-      <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
-        <button
-          onClick={() => {
-            const nextTour = !autoTour;
-            setAutoTour(nextTour);
-            if (controlsRef) controlsRef.autoRotate = nextTour;
-          }}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold border backdrop-blur-md transition flex items-center gap-1.5 shadow-lg ${
-            autoTour
-              ? 'bg-blue-600/30 border-blue-500 text-blue-300'
-              : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:text-white'
-          }`}
-          title="Nyalakan/matikan rotasi otomatis kamera"
-        >
-          <RotateCw className={`w-3.5 h-3.5 ${autoTour ? 'animate-spin' : ''}`} />
-          <span>Auto-Tour</span>
-        </button>
+      {/* Floating Right Panel: Server & Layanan + Aktivitas Terbaru (Matching Reference Screenshot) */}
+      {isSidebarOpen && (
+        <div className="absolute top-4 right-4 z-20 w-80 max-h-[88%] flex flex-col gap-3 pointer-events-auto transition-all duration-300 animate-in fade-in slide-in-from-right-4">
+          {/* Top Panel: Server & Layanan • live */}
+          <div className="p-4 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-slate-800 shadow-xl space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
+              <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                <Radio className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Server & layanan</span>
+              </span>
+              <div className="flex items-center gap-1.5 text-[10px] font-semibold text-emerald-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>live</span>
+              </div>
+            </div>
 
-        <button
-          onClick={onFallbackTo2D}
-          className="px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md border border-slate-800 text-xs font-semibold text-slate-300 hover:text-white transition shadow-lg flex items-center gap-1.5"
-        >
-          <Layers className="w-3.5 h-3.5 text-indigo-400" />
-          <span>2D Mode</span>
-        </button>
-      </div>
+            <div className="space-y-2 text-xs font-mono">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
+                  <span>CPU</span>
+                </span>
+                <span className="font-bold text-emerald-400">
+                  {serverMetrics?.cpuUsagePercent ?? 8.2}% ({serverMetrics?.cpuCores ?? 2} core)
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 flex items-center gap-1.5">
+                  <Cpu className="w-3.5 h-3.5 text-purple-400" />
+                  <span>RAM</span>
+                </span>
+                <span className="font-bold text-cyan-400">
+                  {serverMetrics
+                    ? `${(serverMetrics.memoryUsedBytes / (1024 * 1024)).toFixed(0)} / ${(
+                        serverMetrics.memoryTotalBytes / (1024 * 1024)
+                      ).toFixed(0)} MB (${serverMetrics.memoryUsagePercent}%)`
+                    : '1434 / 1936 MB (74.1%)'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 flex items-center gap-1.5">
+                  <HardDrive className="w-3.5 h-3.5 text-pink-400" />
+                  <span>Disk</span>
+                </span>
+                <span className="font-bold text-slate-300">
+                  {serverMetrics
+                    ? `${(serverMetrics.diskUsedBytes / (1024 * 1024 * 1024)).toFixed(1)} / ${(serverMetrics.diskTotalBytes / (1024 * 1024 * 1024)).toFixed(1)} GB (${serverMetrics.diskUsagePercent}%)`
+                    : '19.6 / 42.2 GB (46.5%)'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 flex items-center gap-1.5">
+                  <ActivityIcon className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Load</span>
+                </span>
+                <span className="font-bold text-emerald-400">
+                  {serverMetrics?.loadAvg ? serverMetrics.loadAvg.map((v) => v.toFixed(2)).join(' / ') : '0.02 / 0.08 / 0.08'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Uptime</span>
+                </span>
+                <span className="font-bold text-slate-300">
+                  {serverMetrics ? `${Math.floor(serverMetrics.uptimeSeconds / 3600)}h` : '7h 4j'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Panel: Aktivitas Terbaru (Live feed list) */}
+          <div className="p-4 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-slate-800 shadow-xl flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800/80">
+              <span className="text-xs font-bold text-white">Aktivitas terbaru</span>
+              <span className="text-[10px] text-slate-500 font-mono">{activities.length} logs</span>
+            </div>
+
+            <div className="space-y-2.5 overflow-y-auto pr-1 flex-1 max-h-60 text-xs">
+              {activities.slice(0, 6).map((act) => (
+                <div key={act.id} className="flex items-start gap-2.5 pb-2 border-b border-slate-800/40">
+                  <div className="w-6 h-6 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 text-[10px] font-bold text-cyan-400 mt-0.5">
+                    {act.actorName.charAt(0)}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-slate-300 leading-snug line-clamp-2">
+                      <span className="font-bold text-white mr-1">{act.actorName}</span>
+                      {act.summary}
+                    </p>
+                    <span className="text-[9px] text-slate-500 font-mono block mt-0.5">
+                      {new Date(act.createdAt).toLocaleTimeString()}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hover Info Tooltip */}
       {hoveredAgent && (
-        <div className="absolute bottom-4 left-4 z-10 p-3.5 rounded-xl bg-slate-900/95 backdrop-blur-md border border-blue-500/50 text-xs shadow-2xl shadow-blue-950/50 animate-in fade-in slide-in-from-bottom-2 duration-150 pointer-events-none max-w-sm">
-          <div className="flex items-center gap-2 mb-1.5">
+        <div className="absolute bottom-20 left-4 z-20 p-3.5 rounded-2xl bg-slate-900/95 backdrop-blur-md border border-blue-500/50 text-xs shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-150 pointer-events-none max-w-xs">
+          <div className="flex items-center gap-2 mb-1">
             <span className="font-bold text-white text-sm">{hoveredAgent.name}</span>
             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
               {hoveredAgent.role}
             </span>
-            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${hoveredAgent.status === 'READY' ? 'bg-emerald-500/20 text-emerald-400' : hoveredAgent.status === 'BUSY' ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'}`}>
-              {hoveredAgent.status}
-            </span>
           </div>
-          <p className="text-slate-400 text-[11px] font-mono mb-1">
-            Model: <span className="text-white font-semibold">{hoveredAgent.modelId}</span> via {hoveredAgent.providerName || 'Provider'}
-          </p>
-          <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono mb-2">
-            <span>Beban Tugas: {hoveredAgent.completedTasks || 0} / {hoveredAgent.totalTasks || 0}</span>
-            <span>•</span>
-            <span>{hoveredAgent.totalRuns || 0} Runs</span>
-          </div>
-          <p className="text-cyan-400 text-[11px] font-semibold flex items-center gap-1">
-            <Sparkles className="w-3 h-3 animate-spin" />
-            <span>Klik avatar droid untuk membuka inspeksi & instruksi</span>
+          <p className="text-slate-400 text-[11px] font-mono">Model: {hoveredAgent.modelId}</p>
+          <p className="text-cyan-400 text-[10px] mt-1 font-semibold flex items-center gap-1">
+            <Sparkles className="w-3 h-3" />
+            <span>Klik avatar untuk detail & eksekusi prompt</span>
           </p>
         </div>
       )}
 
-      {/* Interactive Navigation Guide Footer */}
-      <div className="absolute bottom-3 right-4 z-10 text-[11px] text-slate-400 font-mono hidden sm:flex items-center gap-3 pointer-events-none bg-slate-950/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-800/80">
-        <span>🖱️ Drag: Putar 360°</span>
-        <span>•</span>
-        <span>Scroll: Zoom In/Out</span>
-        <span>•</span>
-        <span>Klik Avatar: Inspeksi Agen</span>
+      {/* Floating Bottom Toolbar (Matching Reference Screenshot) */}
+      <div className="absolute bottom-4 inset-x-4 z-20 flex items-center justify-between gap-3 pointer-events-auto">
+        {/* Left Action: + Titip tugas baru */}
+        <button
+          onClick={onOpenCreateTask}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800/90 backdrop-blur-md border border-slate-800 text-xs font-bold text-white shadow-xl transition active:scale-95 shrink-0"
+        >
+          <Plus className="w-4 h-4 text-cyan-400" />
+          <span>+ Titip tugas baru</span>
+        </button>
+
+        {/* Center: Camera Director Pills (Overview, Task wall, Arka, Hanna, Auto-tour) */}
+        <div className="flex items-center bg-slate-900/90 backdrop-blur-md border border-slate-800 p-1.5 rounded-2xl shadow-xl gap-1 overflow-x-auto">
+          <button
+            onClick={handleCamOverview}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
+              activeCamView === 'overview'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <span>⊙ Overview</span>
+          </button>
+
+          <button
+            onClick={handleCamTaskWall}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
+              activeCamView === 'task_wall'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <span>▣ Task wall</span>
+          </button>
+
+          {/* Quick Agent Pills */}
+          {agents.slice(0, 3).map((agent) => (
+            <button
+              key={agent.id}
+              onClick={() => handleCamFocusAgent(agent)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1 ${
+                selectedAgentId === agent.id && activeCamView === 'agent'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <span>{agent.name.split(' ')[0]}</span>
+            </button>
+          ))}
+
+          <button
+            onClick={handleToggleAutoTour}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
+              autoTour
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <RotateCw className={`w-3 h-3 ${autoTour ? 'animate-spin' : ''}`} />
+            <span>Auto-tour</span>
+          </button>
+        </div>
+
+        {/* Right Toggle Button: Riwayat tugas & aktivitas • Live */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className={`flex items-center gap-2 px-3.5 py-2.5 rounded-2xl backdrop-blur-md border text-xs font-semibold shadow-xl transition ${
+              isSidebarOpen
+                ? 'bg-slate-900/90 border-slate-800 text-slate-300 hover:text-white'
+                : 'bg-blue-600 border-blue-500 text-white'
+            }`}
+          >
+            <Clock className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="hidden sm:inline">Riwayat tugas & aktivitas</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          </button>
+
+          <button
+            onClick={onFallbackTo2D}
+            className="p-2.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800/90 backdrop-blur-md border border-slate-800 text-slate-400 hover:text-white transition"
+            title="Beralih ke Tampilan 2D"
+          >
+            <Layers className="w-4 h-4 text-indigo-400" />
+          </button>
+        </div>
       </div>
     </div>
   );

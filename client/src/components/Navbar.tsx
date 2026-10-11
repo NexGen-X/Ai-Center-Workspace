@@ -12,13 +12,17 @@ import {
   BookOpen,
   Layers,
   Settings,
-  Users
+  Users,
+  CheckSquare,
+  Home,
+  CheckCircle2
 } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown.js';
 
 interface NavbarProps {
   onOpenAddAgent: () => void;
   onOpenManageTeam: () => void;
+  onOpenTasks: () => void;
   onOpenCreateTask: () => void;
   onOpenCalendar: () => void;
   onOpenReports: () => void;
@@ -36,6 +40,7 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({
   onOpenAddAgent,
   onOpenManageTeam,
+  onOpenTasks,
   onOpenCreateTask,
   onOpenCalendar,
   onOpenReports,
@@ -49,172 +54,169 @@ export const Navbar: React.FC<NavbarProps> = ({
   systemStatus,
   unreadActivityCount = 0
 }) => {
-  const [timeStr, setTimeStr] = useState<string>('');
+  const [dateStr, setDateStr] = useState<string>('');
 
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
-      setTimeStr(now.toLocaleTimeString('id-ID', { hour12: false }));
+      const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+      const dayName = days[now.getDay()];
+      const dayNum = String(now.getDate()).padStart(2, '0');
+      const monthName = months[now.getMonth()];
+      const year = now.getFullYear();
+      const time = now.toLocaleTimeString('id-ID', { hour12: false });
+      setDateStr(`${dayName}, ${dayNum} ${monthName} ${year} • ${time}`);
     };
     updateTime();
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
   }, []);
 
+  const operatorName = currentUser?.displayName || 'Yulian';
+
   return (
-    <header className="sticky top-0 z-40 w-full bg-[#0B0F17]/90 backdrop-blur-md border-b border-slate-800/80 px-4 lg:px-8 py-3">
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
-        {/* Brand & Workspace Title */}
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-400 p-0.5 shadow-lg shadow-blue-500/20 flex items-center justify-center">
+    <header className="sticky top-0 z-40 w-full bg-[#0B0F17]/95 backdrop-blur-md border-b border-slate-800/80 px-3 lg:px-6 py-2.5">
+      <div className="max-w-[1720px] mx-auto flex items-center justify-between gap-2">
+        {/* Brand: [M] Command Center */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-400 p-0.5 shadow-md shadow-blue-500/20 flex items-center justify-center">
             <div className="w-full h-full bg-[#0B0F17] rounded-[10px] flex items-center justify-center">
-              <Bot className="w-5 h-5 text-cyan-400 animate-pulse" />
+              <span className="font-black text-sm text-cyan-400">M</span>
             </div>
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold text-base tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-                AI COMMAND CENTER
+            <div className="flex items-center gap-1.5">
+              <span className="font-extrabold text-sm tracking-tight text-white">
+                Command Center
               </span>
-              <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full">
-                Antigravity v2.0
-              </span>
+              <span className={`w-2 h-2 rounded-full ${isRealtimeConnected ? 'bg-emerald-400' : 'bg-amber-400'}`} />
             </div>
-            <p className="text-xs text-slate-400 flex items-center gap-1.5">
-              <span>Center AI 3D Workspace via Web UI</span>
-              <span className="text-slate-600">•</span>
-              <span className="text-slate-300">Headquarters</span>
-            </p>
           </div>
         </div>
 
-        {/* Center / Right: Status badges & action buttons */}
-        <div className="flex items-center gap-2">
-          {/* Live Clock */}
-          <div className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 text-xs font-mono text-slate-300">
-            <Clock className="w-3.5 h-3.5 text-slate-400" />
-            <span>{timeStr || '00:00:00'}</span>
-          </div>
+        {/* Center: Sleek Pill Navigation Bar (Matching Screenshot) */}
+        <nav className="flex items-center bg-slate-900/90 border border-slate-800/90 rounded-2xl p-1 shadow-inner gap-0.5 overflow-x-auto max-w-full">
+          {/* Beranda (Active Tab) */}
+          <button
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold shadow-md shadow-blue-600/30 transition"
+          >
+            <Home className="w-3.5 h-3.5" />
+            <span>Beranda</span>
+          </button>
 
-          {/* Real-time SSE indicator */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 text-xs">
-            <Radio className={`w-3.5 h-3.5 ${isRealtimeConnected ? 'text-emerald-400 animate-pulse' : 'text-amber-400'}`} />
-            <span className="text-slate-400 hidden sm:inline">SSE:</span>
-            <span className={isRealtimeConnected ? 'text-emerald-400 font-medium' : 'text-amber-400 font-medium'}>
-              {isRealtimeConnected ? 'Live' : 'Polling'}
-            </span>
-          </div>
+          {/* Tugas */}
+          <button
+            onClick={onOpenTasks}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 text-xs font-medium transition"
+          >
+            <CheckSquare className="w-3.5 h-3.5 text-blue-400" />
+            <span>Tugas</span>
+          </button>
 
-          {/* System Status */}
-          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 text-xs">
-            <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-            <span className="text-slate-300 font-medium">{systemStatus}</span>
-          </div>
-
-          {/* Manage Team Button */}
+          {/* Tim */}
           <button
             onClick={onOpenManageTeam}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
-            title="Kelola Registry AI Team & Model"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 text-xs font-medium transition"
           >
-            <Users className="w-3.5 h-3.5 text-blue-400" />
-            <span className="hidden md:inline">Kelola Tim</span>
+            <Users className="w-3.5 h-3.5 text-purple-400" />
+            <span>Tim</span>
           </button>
 
-          {/* Projects Button */}
+          {/* Proyek */}
           <button
             onClick={onOpenProjects}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
-            title="Kelola Proyek & Milestone"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 text-xs font-medium transition"
           >
             <Layers className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden md:inline">Proyek</span>
+            <span>Proyek</span>
           </button>
 
-          {/* Calendar Button */}
+          {/* Kalender */}
           <button
             onClick={onOpenCalendar}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
-            title="Buka Kalender Tenggat Waktu"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 text-xs font-medium transition"
           >
-            <Calendar className="w-3.5 h-3.5 text-purple-400" />
-            <span className="hidden lg:inline">Kalender</span>
+            <Calendar className="w-3.5 h-3.5 text-pink-400" />
+            <span>Kalender</span>
           </button>
 
-          {/* FinOps & Analytics Button */}
-          <button
-            onClick={onOpenReports}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
-            title="Buka FinOps & Analisis Token"
-          >
-            <BarChart2 className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="hidden lg:inline">FinOps</span>
-          </button>
-
-          {/* Knowledge Base & SOP Button */}
+          {/* Dokumen */}
           <button
             onClick={onOpenDocuments}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
-            title="Knowledge Base & SOP Dokumen"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 text-xs font-medium transition"
           >
             <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
-            <span className="hidden lg:inline">SOP</span>
+            <span>Dokumen</span>
           </button>
 
-          {/* Settings Button */}
+          {/* Laporan */}
+          <button
+            onClick={onOpenReports}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 text-xs font-medium transition"
+          >
+            <BarChart2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Laporan</span>
+          </button>
+        </nav>
+
+        {/* Right Section: Time, Notifications, Settings & Operator Profile */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Settings */}
           <button
             onClick={onOpenSettings}
-            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition"
-            title="Pengaturan Workspace & Operator"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-transparent hover:border-slate-800 transition"
+            title="Pengaturan Workspace"
           >
-            <Settings className="w-4 h-4 text-slate-400 hover:text-cyan-400" />
+            <Settings className="w-4 h-4 text-slate-400" />
           </button>
 
-          {/* Notification Center Dropdown */}
+          {/* Notifications */}
           <NotificationDropdown />
 
-          {/* Quick Action: Buat Tugas */}
-          <button
-            onClick={onOpenCreateTask}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Tugas Baru</span>
-          </button>
+          {/* Live Clock / Date format: Rab, 07 Okt 2026 • 14:46:33 */}
+          <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900/80 border border-slate-800 text-[11px] font-mono text-slate-300">
+            <Clock className="w-3 h-3 text-slate-500" />
+            <span>{dateStr || 'Memuat...'}</span>
+          </div>
 
-          {/* Main Core Action: Tambah Anggota AI Team */}
-          <button
-            onClick={onOpenAddAgent}
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-xs font-bold shadow-md shadow-blue-600/25 transition active:scale-95"
-          >
-            <Bot className="w-4 h-4" />
-            <span className="hidden sm:inline">+ Tambah Anggota</span>
-            <span className="sm:hidden">+ Agent</span>
-          </button>
-
-          {/* Operator Auth Button */}
+          {/* User Profile Chip: Yulian • Online */}
           {currentUser ? (
-            <div className="flex items-center gap-1.5 pl-2 border-l border-slate-800">
-              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300">
-                <User className="w-3.5 h-3.5" />
-                <span className="font-semibold hidden xl:inline">{currentUser.displayName}</span>
+            <div className="flex items-center gap-1.5 pl-1.5">
+              <div className="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-xs">
+                <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-500 to-rose-400 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+                  {operatorName.charAt(0)}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-white hidden sm:inline">{operatorName}</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span className="text-[10px] text-emerald-400 font-semibold hidden md:inline">Online</span>
+                </div>
               </div>
               <button
                 onClick={onLogout}
-                className="p-1.5 rounded-lg bg-slate-800 hover:bg-red-500/20 hover:text-red-400 text-slate-400 transition"
-                title="Keluar (Logout)"
+                className="p-1.5 rounded-xl bg-slate-900 hover:bg-red-500/20 hover:text-red-400 text-slate-400 border border-slate-800 transition"
+                title="Keluar"
               >
                 <LogOut className="w-3.5 h-3.5" />
               </button>
             </div>
           ) : (
-            <button
-              onClick={onOpenLogin}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-700 transition"
-            >
-              <User className="w-3.5 h-3.5" />
-              <span>Login</span>
-            </button>
+            <div className="flex items-center gap-1.5 pl-1.5">
+              <div
+                onClick={onOpenLogin}
+                className="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-xs cursor-pointer hover:border-slate-700 transition"
+              >
+                <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-500 to-rose-400 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+                  Y
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-white hidden sm:inline">Yulian</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span className="text-[10px] text-emerald-400 font-semibold hidden md:inline">Online</span>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>

@@ -14,6 +14,7 @@ import { SettingsModal } from './features/settings/SettingsModal.js';
 import { TaskList } from './features/tasks/TaskList.js';
 import { CreateTaskModal } from './features/tasks/CreateTaskModal.js';
 import { TaskDetailModal } from './features/tasks/TaskDetailModal.js';
+import { TasksModal } from './features/tasks/TasksModal.js';
 import { Workspace3D } from './features/workspace3d/Workspace3D.js';
 import { Workspace2DView } from './features/workspace3d/Workspace2DView.js';
 import { ActivityFeed } from './components/ActivityFeed.js';
@@ -36,6 +37,7 @@ export const App: React.FC = () => {
   const [viewMode, setViewMode] = useState<'3D' | '2D'>('3D');
 
   // Modals state
+  const [isTasksModalOpen, setIsTasksModalOpen] = useState(false);
   const [isManageTeamOpen, setIsManageTeamOpen] = useState(false);
   const [isAddAgentOpen, setIsAddAgentOpen] = useState(false);
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
@@ -206,6 +208,7 @@ export const App: React.FC = () => {
       <Navbar
         onOpenAddAgent={() => setIsAddAgentOpen(true)}
         onOpenManageTeam={() => setIsManageTeamOpen(true)}
+        onOpenTasks={() => setIsTasksModalOpen(true)}
         onOpenCreateTask={() => {
           setSelectedProjectIdForTask(undefined);
           setIsCreateTaskOpen(true);
@@ -224,21 +227,24 @@ export const App: React.FC = () => {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6 space-y-6">
-        {/* Metric Summary Cards */}
-        <StatCards
-          summary={summary}
-          loading={loading}
-          onOpenProjects={() => setIsProjectsOpen(true)}
-          onOpenManageTeam={() => setIsManageTeamOpen(true)}
-        />
-
-        {/* 3D Virtual Workspace & 2D Fallback */}
+      <main className="flex-1 max-w-[1720px] w-full mx-auto px-3 lg:px-6 py-4 space-y-6">
+        {/* 3D Virtual Workspace Cockpit & 2D Fallback */}
         <section aria-label="Virtual Workspace">
           {viewMode === '3D' ? (
             <Workspace3D
               agents={agents}
+              summary={summary}
+              serverMetrics={metrics}
+              activities={activities}
+              currentUser={currentUser}
               onSelectAgent={(agent) => setSelectedAgent(agent)}
+              onOpenCreateTask={() => {
+                setSelectedProjectIdForTask(undefined);
+                setIsCreateTaskOpen(true);
+              }}
+              onOpenTasks={() => setIsTasksModalOpen(true)}
+              onOpenProjects={() => setIsProjectsOpen(true)}
+              onOpenManageTeam={() => setIsManageTeamOpen(true)}
               onFallbackTo2D={() => setViewMode('2D')}
             />
           ) : (
@@ -371,6 +377,20 @@ export const App: React.FC = () => {
         agents={agents}
         projects={projects}
         onTaskUpdated={refreshAllData}
+      />
+
+      <TasksModal
+        isOpen={isTasksModalOpen}
+        onClose={() => setIsTasksModalOpen(false)}
+        tasks={tasks}
+        agents={agents}
+        projects={projects}
+        onTaskUpdated={refreshAllData}
+        onOpenCreateTask={() => {
+          setSelectedProjectIdForTask(undefined);
+          setIsCreateTaskOpen(true);
+        }}
+        onSelectTask={handleSelectTask}
       />
 
       <AgentDetailModal
