@@ -20,17 +20,23 @@ import authRouter from './routes/auth.js';
 import reportsRouter from './routes/reports.js';
 import notificationsRouter from './routes/notifications.js';
 import documentsRouter from './routes/documents.js';
+import orchestratorRouter from './routes/orchestrator.js';
+import systemRouter from './routes/system.js';
+import { systemLogger } from './services/logger.js';
 
 export const app = express();
 
 // Middlewares
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '15mb' }));
 
 // Request logging (sanitized, zero secret leaking)
 app.use((req: Request, _res: Response, next: NextFunction) => {
   const sanitizedUrl = req.originalUrl.split('?')[0];
   console.log(`[API] ${req.method} ${sanitizedUrl}`);
+  if (!sanitizedUrl.startsWith('/api/realtime') && !sanitizedUrl.startsWith('/api/monitoring/logs')) {
+    systemLogger.debug('API', `${req.method} ${sanitizedUrl}`);
+  }
   next();
 });
 
@@ -57,6 +63,8 @@ app.use('/api/dashboard', dashboardRouter);
 app.use('/api/reports', reportsRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/documents', documentsRouter);
+app.use('/api/orchestrator', orchestratorRouter);
+app.use('/api/system', systemRouter);
 
 // Root healthcheck
 app.get('/healthz', (_req: Request, res: Response) => {

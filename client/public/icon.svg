@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0B0F17"/>
+      <stop offset="100%" stop-color="#080C14"/>
+    </linearGradient>
+    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="100%" stop-color="#3B82F6"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#06B6D4" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#0B0F17" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="220" fill="url(#glow)"/>
+
+  <!-- Outer Orbit Rings -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="#1E293B" stroke-width="4"/>
+  <circle cx="256" cy="256" r="180" fill="none" stroke="#06B6D4" stroke-width="4" stroke-dasharray="100 40 20 40"/>
+
+  <circle cx="256" cy="256" r="130" fill="none" stroke="#334155" stroke-width="2"/>
+  <circle cx="256" cy="256" r="130" fill="none" stroke="#3B82F6" stroke-width="3" stroke-dasharray="40 80"/>
+
+  <!-- Core Hexagon Command Nexus -->
+  <polygon points="256,150 350,204 350,308 256,362 162,308 162,204" 
+           fill="#0F172A" stroke="url(#cyanGrad)" stroke-width="6"/>
+
+  <!-- Node Dots & Telemetry Links -->
+  <circle cx="256" cy="150" r="10" fill="#06B6D4"/>
+  <circle cx="350" cy="204" r="10" fill="#06B6D4"/>
+  <circle cx="350" cy="308" r="10" fill="#3B82F6"/>
+  <circle cx="256" cy="362" r="10" fill="#3B82F6"/>
+  <circle cx="162" cy="308" r="10" fill="#06B6D4"/>
+  <circle cx="162" cy="204" r="10" fill="#06B6D4"/>
+
+  <!-- Central Pulse Eye -->
+  <circle cx="256" cy="256" r="38" fill="url(#cyanGrad)"/>
+  <circle cx="256" cy="256" r="18" fill="#FFFFFF"/>
+</svg>

@@ -20,8 +20,10 @@ import { Workspace3D } from './features/workspace3d/Workspace3D.js';
 import { Workspace2DView } from './features/workspace3d/Workspace2DView.js';
 import { ActivityFeed } from './components/ActivityFeed.js';
 import { ServerMonitoringWidget } from './components/ServerMonitoringWidget.js';
+import { ConsoleDrawer } from './components/terminal/ConsoleDrawer.js';
+import { useFeedback } from './components/common/FeedbackContext.js';
 import { api } from './services/api.js';
-import { AIAgent, Task, Activity, DashboardSummary, ServerMetrics, Project } from '../../shared/types.js';
+import { AIAgent, Task, Activity, DashboardSummary, ServerMetrics, Project, OrchestratorStatus } from '../../shared/types.js';
 import { Bot, Plus, RefreshCw, Zap, Layers, Users } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -49,9 +51,13 @@ export const App: React.FC = () => {
   const [isDocumentsOpen, setIsDocumentsOpen] = useState(false);
   const [isProjectsOpen, setIsProjectsOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isConsoleOpen, setIsConsoleOpen] = useState(false);
+  const [orchestratorStatus, setOrchestratorStatus] = useState<OrchestratorStatus | undefined>(undefined);
   const [selectedAgent, setSelectedAgent] = useState<AIAgent | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [selectedProjectIdForTask, setSelectedProjectIdForTask] = useState<string | undefined>(undefined);
+
+  const { toast } = useFeedback();
 
   const refreshAllData = useCallback(async () => {
     try {
@@ -68,12 +74,28 @@ export const App: React.FC = () => {
       setProjects(projsData);
       setActivities(actsData);
       setMetrics(sumData.serverMetrics);
+
+      api.getOrchestratorStatus().then(st => setOrchestratorStatus(st)).catch(() => {});
     } catch (err) {
       console.error('Failed to load initial data:', err);
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const handleToggleOrchestrator = async () => {
+    try {
+      const res = await api.toggleOrchestrator();
+      setOrchestratorStatus(res.status);
+      if (res.enabled) {
+        toast.success('⚡ Auto-Orchestrator diaktifkan: tugas antrean akan diproses otomatis.');
+      } else {
+        toast.info('Auto-Orchestrator beralih ke mode standby.');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal mengubah status orchestrator.');
+    }
+  };
 
   // Check auth session
   useEffect(() => {
@@ -165,6 +187,19 @@ export const App: React.FC = () => {
         refreshAllData();
       });
 
+      eventSource.addEventListener('orchestrator.status', (e: MessageEvent) => {
+        try {
+          const data = JSON.parse(e.data);
+          setOrchestratorStatus(data);
+        } catch {
+          // ignore
+        }
+      });
+
+      eventSource.addEventListener('system.restored', () => {
+        refreshAllData();
+      });
+
       eventSource.addEventListener('activity.created', (e: MessageEvent) => {
         const data = JSON.parse(e.data);
         setActivities((prev) => [
@@ -239,6 +274,10 @@ export const App: React.FC = () => {
         isRealtimeConnected={isRealtimeConnected}
         systemStatus={summary?.systemStatus || 'OPERATIONAL'}
         unreadActivityCount={activities.length}
+        orchestratorStatus={orchestratorStatus}
+        onToggleOrchestrator={handleToggleOrchestrator}
+        onToggleConsole={() => setIsConsoleOpen(!isConsoleOpen)}
+        isConsoleOpen={isConsoleOpen}
       />
 
       {/* Main Content Area */}
@@ -458,12 +497,20 @@ export const App: React.FC = () => {
         currentUser={currentUser}
         onLogout={handleLogout}
         onOpenManageProviders={() => setIsProvidersModalOpen(true)}
+        onWorkspaceRestored={refreshAllData}
       />
 
       <ManageProvidersModal
         isOpen={isProvidersModalOpen}
         onClose={() => setIsProvidersModalOpen(false)}
         onProvidersUpdated={refreshAllData}
+      />
+
+      <ConsoleDrawer
+        isOpen={isConsoleOpen}
+        onClose={() => setIsConsoleOpen(false)}
+        orchestratorStatus={orchestratorStatus}
+        onRefreshOrchestrator={refreshAllData}
       />
     </div>
   );

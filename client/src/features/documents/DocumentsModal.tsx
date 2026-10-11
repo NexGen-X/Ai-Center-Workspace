@@ -9,9 +9,9 @@ import {
   Edit3,
   Save,
   Tag,
-  Folder,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Download
 } from 'lucide-react';
 import { api } from '../../services/api.js';
 import { DocumentItem, DocumentCategory, Project } from '../../../../shared/types.js';
@@ -167,6 +167,37 @@ export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose,
     }
   };
 
+  const handleDownloadMarkdown = (doc: DocumentItem) => {
+    const header = `# ${doc.title}\n\n- **Kategori**: ${doc.category}\n- **Tags**: ${doc.tags.join(', ') || 'None'}\n- **Diperbarui**: ${new Date(doc.updatedAt).toISOString()}\n\n---\n\n`;
+    const blob = new Blob([header + doc.content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${doc.title.toLowerCase().replace(/[^a-z0-9_-]+/g, '-')}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success(`Dokumen "${doc.title}" berhasil diunduh sebagai file Markdown (.md).`);
+  };
+
+  const handleExportAllDocs = () => {
+    if (documents.length === 0) {
+      toast.warning('Tidak ada dokumen untuk diekspor.');
+      return;
+    }
+    const blob = new Blob([JSON.stringify(documents, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ai-center-docs-export-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success(`${documents.length} dokumen berhasil diekspor ke file JSON.`);
+  };
+
   const filteredDocs = documents.filter((d) => {
     const matchesSearch =
       d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -197,7 +228,15 @@ export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose,
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <button
+              onClick={handleExportAllDocs}
+              className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 sm:py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition"
+              title="Ekspor Semua Dokumen ke file JSON"
+            >
+              <Download className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="hidden sm:inline">Export Semua</span>
+            </button>
             <button
               onClick={handleStartCreate}
               className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs shadow-md transition-all active:scale-95"
@@ -485,6 +524,13 @@ export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose,
                   </div>
 
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleDownloadMarkdown(selectedDoc)}
+                      className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-400 hover:text-cyan-300 transition-colors"
+                      title="Unduh sebagai Markdown (.md)"
+                    >
+                      <Download className="w-4 h-4" />
+                    </button>
                     <button
                       onClick={() => handleStartEdit(selectedDoc)}
                       className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-colors"

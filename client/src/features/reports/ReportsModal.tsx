@@ -9,10 +9,13 @@ import {
   AlertOctagon,
   RefreshCw,
   BarChart2,
-  Users
+  Users,
+  Download,
+  FileSpreadsheet
 } from 'lucide-react';
 import { api } from '../../services/api.js';
 import { FinOpsReportsSummary } from '../../../../shared/types.js';
+import { useFeedback } from '../../components/common/FeedbackContext.js';
 
 interface ReportsModalProps {
   isOpen: boolean;
@@ -20,10 +23,72 @@ interface ReportsModalProps {
 }
 
 export const ReportsModal: React.FC<ReportsModalProps> = ({ isOpen, onClose }) => {
+  const { toast } = useFeedback();
   const [days, setDays] = useState<number>(30);
   const [data, setData] = useState<FinOpsReportsSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleExportCSV = () => {
+    if (!data) return;
+    const rows = [
+      ['Metric', 'Nilai'],
+      ['Periode (Hari)', String(data.periodDays)],
+      ['Total Eksekusi', String(data.totalRuns)],
+      ['Sukses', String(data.successfulRuns)],
+      ['Gagal', String(data.failedRuns)],
+      ['Tingkat Sukses (%)', String(data.successRatePercent)],
+      ['Total Tokens', String(data.totalTokens)],
+      ['Prompt Tokens', String(data.totalPromptTokens)],
+      ['Completion Tokens', String(data.totalCompletionTokens)],
+      ['Estimasi Biaya (USD)', `$${data.estimatedTotalCostUsd.toFixed(4)}`],
+      ['Rata-rata Latensi (ms)', String(data.averageLatencyMs)],
+      [],
+      ['Agent Name', 'Role', 'Total Runs', 'Success', 'Failure', 'Avg Latency (ms)', 'Total Tokens'],
+      ...data.agentMetrics.map(a => [
+        `"${a.agentName}"`,
+        `"${a.role}"`,
+        String(a.totalRuns),
+        String(a.successCount),
+        String(a.failureCount),
+        String(a.avgDurationMs),
+        String(a.totalTokens)
+      ]),
+      [],
+      ['Model ID', 'Total Runs', 'Prompt Tokens', 'Completion Tokens', 'Total Tokens', 'Avg Latency (ms)', 'Est Cost (USD)'],
+      ...data.modelMetrics.map(m => [
+        `"${m.modelId}"`,
+        String(m.totalRuns),
+        String(m.totalPromptTokens),
+        String(m.totalCompletionTokens),
+        String(m.totalTokens),
+        String(m.avgDurationMs),
+        `$${m.estimatedCostUsd.toFixed(4)}`
+      ])
+    ];
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(e => e.join(',')).join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `finops-report-${data.periodDays}d-${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Laporan FinOps berhasil diekspor ke format CSV.');
+  };
+
+  const handleExportJSON = () => {
+    if (!data) return;
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `finops-telemetry-${data.periodDays}d-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Data analitik FinOps berhasil diekspor ke JSON.');
+  };
 
   const fetchReports = async (period: number) => {
     try {
@@ -82,6 +147,28 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({ isOpen, onClose }) =
                 </button>
               ))}
             </div>
+
+            {/* Export Actions */}
+            {data && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={handleExportCSV}
+                  className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/40 text-emerald-300 text-xs font-semibold transition"
+                  title="Unduh Laporan FinOps (.csv)"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">CSV</span>
+                </button>
+                <button
+                  onClick={handleExportJSON}
+                  className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition"
+                  title="Unduh Telemetri (.json)"
+                >
+                  <Download className="w-3.5 h-3.5 text-cyan-400" />
+                  <span className="hidden sm:inline">JSON</span>
+                </button>
+              </div>
+            )}
 
             <button
               onClick={() => fetchReports(days)}

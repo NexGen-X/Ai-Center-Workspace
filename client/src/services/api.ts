@@ -20,7 +20,10 @@ import {
   DocumentItem,
   CreateDocumentRequest,
   NotificationItem,
-  FinOpsReportsSummary
+  FinOpsReportsSummary,
+  OrchestratorStatus,
+  SystemLogEntry,
+  WorkspaceBackup
 } from '../../../shared/types.js';
 
 const BASE_URL = '/api';
@@ -190,5 +193,38 @@ export const api = {
   }),
   deleteDocument: (id: string) => request<{ success: boolean; message: string }>(`/documents/${id}`, {
     method: 'DELETE'
+  }),
+
+  // Autonomous Orchestrator Daemon
+  getOrchestratorStatus: () => request<OrchestratorStatus>('/orchestrator/status'),
+  toggleOrchestrator: (enabled?: boolean) => request<{ success: boolean; enabled: boolean; status: OrchestratorStatus }>('/orchestrator/toggle', {
+    method: 'POST',
+    body: JSON.stringify({ enabled })
+  }),
+  runOrchestratorNow: () => request<{ success: boolean; message: string; status: OrchestratorStatus }>('/orchestrator/run-now', {
+    method: 'POST'
+  }),
+  configOrchestrator: (intervalSeconds: number) => request<{ success: boolean; status: OrchestratorStatus }>('/orchestrator/config', {
+    method: 'POST',
+    body: JSON.stringify({ intervalSeconds })
+  }),
+
+  // Live System Telemetry Logs
+  getSystemLogs: (limit = 100, category?: string, level?: string) => {
+    const params = new URLSearchParams();
+    if (limit) params.set('limit', String(limit));
+    if (category) params.set('category', category);
+    if (level) params.set('level', level);
+    return request<{ logs: SystemLogEntry[] }>(`/monitoring/logs?${params.toString()}`);
+  },
+  clearSystemLogs: () => request<{ success: boolean; message: string }>('/monitoring/logs/clear', {
+    method: 'POST'
+  }),
+
+  // Workspace Backup & Restore
+  getSystemBackup: () => request<WorkspaceBackup>('/system/backup'),
+  restoreSystemBackup: (backup: WorkspaceBackup) => request<{ success: boolean; message: string; restoredEntities: any }>('/system/restore', {
+    method: 'POST',
+    body: JSON.stringify(backup)
   })
 };

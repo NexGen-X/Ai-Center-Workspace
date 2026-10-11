@@ -326,3 +326,42 @@ export interface FinOpsReportsSummary {
     tokens: number;
   }[];
 }
+
+export interface OrchestratorStatus {
+  enabled: boolean;
+  isRunning: boolean;
+  intervalSeconds: number;
+  activeTasksCount: number;
+  completedTasksToday: number;
+  lastTickAt: string | null;
+  lastDispatchedTaskId?: string;
+  lastDispatchedAgentName?: string;
+}
+
+export interface OrchestratorConfig {
+  enabled: boolean;
+  intervalSeconds?: number;
+}
+
+export interface SystemLogEntry {
+  id: string;
+  timestamp: string;
+  level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
+  category: 'ORCHESTRATOR' | 'INFERENCE' | 'API' | 'SYSTEM' | 'SECURITY';
+  message: string;
+  meta?: any;
+}
+
+export interface WorkspaceBackup {
+  version: string;
+  exportedAt: string;
+  workspaceId: string;
+  data: {
+    projects: Project[];
+    tasks: Task[];
+    agents: AIAgent[];
+    documents: DocumentItem[];
+    providers: ModelProviderConfig[];
+    activities: Activity[];
+  };
+}

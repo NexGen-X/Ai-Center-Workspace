@@ -6,8 +6,9 @@ import { pool } from '../db/index.js';
 import { ConnectionRouter } from '../adapters/router.js';
 import { decryptSecret } from '../utils/crypto.js';
 import { realtimeHub } from './realtime.js';
+import { systemLogger } from './logger.js';
 import { v4 as uuidv4 } from 'uuid';
-import { AgentRun } from '../../../shared/types.js';
+import { AgentRun, OrchestratorStatus } from '../../../shared/types.js';
 
 export async function executeAgentTask(
   agentId: string,
@@ -33,6 +34,12 @@ export async function executeAgentTask(
 
   const row = res.rows[0];
   const apiKey = row.api_key_encrypted ? decryptSecret(row.api_key_encrypted) : undefined;
+
+  systemLogger.info('INFERENCE', `Memulai eksekusi agen [${row.name}] menggunakan model ${row.model_id} (${row.provider_name}).`, {
+    runId,
+    agentId,
+    taskId
+  });
 
   // 2. Insert initial AgentRun record with QUEUED/RUNNING status
   await pool.query(`
@@ -140,6 +147,21 @@ export async function executeAgentTask(
     runId
   ]);
 
+  if (result.success) {
+    systemLogger.info('INFERENCE', `Agen [${row.name}] berhasil menyelesaikan tugas (${result.tokensUsed?.totalTokens || 0} tokens, ${result.durationMs}ms).`, {
+      runId,
+      agentId,
+      taskId,
+      tokensUsed: result.tokensUsed
+    });
+  } else {
+    systemLogger.warn('INFERENCE', `Agen [${row.name}] gagal mengeksekusi tugas: ${result.errorMessage || 'Error tidak diketahui'}.`, {
+      runId,
+      agentId,
+      taskId
+    });
+  }
+
   realtimeHub.broadcast('agent.status_changed', { agentId, status: 'READY' });
   realtimeHub.broadcast('activity.created', {
     actorName: row.name,
@@ -163,3 +185,172 @@ export async function executeAgentTask(
     createdAt: startedAt
   };
 }
+
+/**
+ * Autonomous Task Runner Daemon
+ * Secara otonom memantau antrean tugas TODO, memetakan ke agen yang siap, dan menjalankan inferensi di latar belakang.
+ */
+class AutonomousTaskRunner {
+  private enabled: boolean = false;
+  private isRunning: boolean = false;
+  private intervalSeconds: number = 10;
+  private timer: NodeJS.Timeout | null = null;
+  private lastTickAt: string | null = null;
+  private lastDispatchedTaskId?: string;
+  private lastDispatchedAgentName?: string;
+
+  constructor() {
+    // Diinisialisasi dalam status standby
+  }
+
+  public start() {
+    this.enabled = true;
+    if (!this.timer) {
+      this.timer = setInterval(() => this.tick(), this.intervalSeconds * 1000);
+      systemLogger.info('ORCHESTRATOR', `Autonomous Orchestrator diaktifkan (interval: ${this.intervalSeconds}s).`);
+      this.broadcastStatus();
+    }
+  }
+
+  public stop() {
+    this.enabled = false;
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+    systemLogger.info('ORCHESTRATOR', 'Autonomous Orchestrator dinonaktifkan (standby).');
+    this.broadcastStatus();
+  }
+
+  public toggle(enable?: boolean): boolean {
+    const target = enable !== undefined ? enable : !this.enabled;
+    if (target) {
+      this.start();
+    } else {
+      this.stop();
+    }
+    return this.enabled;
+  }
+
+  public setIntervalSeconds(sec: number) {
+    this.intervalSeconds = Math.max(5, Math.min(120, sec));
+    if (this.enabled) {
+      this.stop();
+      this.start();
+    }
+  }
+
+  public async tick() {
+    if (this.isRunning) return;
+    this.isRunning = true;
+    this.lastTickAt = new Date().toISOString();
+
+    try {
+      // 1. Cari tugas status TODO teratas berdasarkan prioritas
+      const taskQuery = `
+        SELECT t.id, t.title, t.description, t.priority, t.assigned_agent_id
+        FROM tasks t
+        WHERE t.status = 'TODO'
+        ORDER BY 
+          CASE t.priority 
+            WHEN 'CRITICAL' THEN 1 
+            WHEN 'HIGH' THEN 2 
+            WHEN 'MEDIUM' THEN 3 
+            ELSE 4 
+          END ASC,
+          t.created_at ASC
+        LIMIT 10;
+      `;
+      const taskRes = await pool.query(taskQuery);
+      if (taskRes.rows.length === 0) {
+        this.isRunning = false;
+        return;
+      }
+
+      // 2. Cari agen yang aktif dan siap (READY)
+      const agentQuery = `
+        SELECT id, name, role, status, enabled 
+        FROM ai_agents 
+        WHERE enabled = TRUE AND status = 'READY';
+      `;
+      const agentRes = await pool.query(agentQuery);
+      if (agentRes.rows.length === 0) {
+        this.isRunning = false;
+        return;
+      }
+
+      const availableAgents = agentRes.rows;
+
+      // 3. Cocokkan tugas dengan agen yang sesuai
+      let taskToRun: any = null;
+      let agentToRun: any = null;
+
+      for (const t of taskRes.rows) {
+        if (t.assigned_agent_id) {
+          const match = availableAgents.find((a: any) => a.id === t.assigned_agent_id);
+          if (match) {
+            taskToRun = t;
+            agentToRun = match;
+            break;
+          }
+        } else {
+          // Jika tugas belum memiliki assignee, tugaskan ke agen pertama yang siap
+          taskToRun = t;
+          agentToRun = availableAgents[0];
+          await pool.query('UPDATE tasks SET assigned_agent_id = $1 WHERE id = $2', [agentToRun.id, taskToRun.id]);
+          break;
+        }
+      }
+
+      if (taskToRun && agentToRun) {
+        this.lastDispatchedTaskId = taskToRun.id;
+        this.lastDispatchedAgentName = agentToRun.name;
+
+        systemLogger.info(
+          'ORCHESTRATOR',
+          `Auto-dispatch: Menjalankan tugas "${taskToRun.title}" via agen "${agentToRun.name}".`,
+          { taskId: taskToRun.id, agentId: agentToRun.id }
+        );
+
+        this.broadcastStatus();
+
+        // Eksekusi secara asynchronous
+        executeAgentTask(
+          agentToRun.id,
+          taskToRun.description || taskToRun.title,
+          taskToRun.id
+        ).catch(err => {
+          systemLogger.error('ORCHESTRATOR', `Error eksekusi otomatis task ${taskToRun.id}: ${err.message}`);
+        });
+      }
+    } catch (err: any) {
+      systemLogger.error('ORCHESTRATOR', `Tick runner error: ${err.message}`);
+    } finally {
+      this.isRunning = false;
+    }
+  }
+
+  public async getStatus(): Promise<OrchestratorStatus> {
+    const activeTasksRes = await pool.query("SELECT COUNT(*) as count FROM tasks WHERE status IN ('TODO', 'IN_PROGRESS')");
+    const todayRes = await pool.query("SELECT COUNT(*) as count FROM tasks WHERE status = 'DONE' AND completed_at::date = CURRENT_DATE");
+
+    return {
+      enabled: this.enabled,
+      isRunning: this.isRunning,
+      intervalSeconds: this.intervalSeconds,
+      activeTasksCount: parseInt(activeTasksRes.rows[0]?.count || '0', 10),
+      completedTasksToday: parseInt(todayRes.rows[0]?.count || '0', 10),
+      lastTickAt: this.lastTickAt,
+      lastDispatchedTaskId: this.lastDispatchedTaskId,
+      lastDispatchedAgentName: this.lastDispatchedAgentName
+    };
+  }
+
+  private broadcastStatus() {
+    this.getStatus().then(st => {
+      realtimeHub.broadcast('orchestrator.status', st);
+    }).catch(() => {});
+  }
+}
+
+export const taskRunner = new AutonomousTaskRunner();

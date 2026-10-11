@@ -16,9 +16,12 @@ import {
   CheckSquare,
   Home,
   CheckCircle2,
-  Cpu
+  Cpu,
+  Terminal,
+  Zap
 } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown.js';
+import { OrchestratorStatus } from '../../../shared/types.js';
 
 interface NavbarProps {
   onOpenAddAgent: () => void;
@@ -37,6 +40,10 @@ interface NavbarProps {
   isRealtimeConnected: boolean;
   systemStatus: 'OPERATIONAL' | 'DEGRADED' | 'MAINTENANCE';
   unreadActivityCount?: number;
+  orchestratorStatus?: OrchestratorStatus;
+  onToggleOrchestrator?: () => void;
+  onToggleConsole?: () => void;
+  isConsoleOpen?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -55,7 +62,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentUser,
   isRealtimeConnected,
   systemStatus,
-  unreadActivityCount = 0
+  unreadActivityCount = 0,
+  orchestratorStatus,
+  onToggleOrchestrator,
+  onToggleConsole,
+  isConsoleOpen
 }) => {
   const [dateStr, setDateStr] = useState<string>('');
 
@@ -102,6 +113,38 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Mobile Right Quick Action Icons (Visible only on < lg) */}
           <div className="flex lg:hidden items-center gap-1.5 shrink-0">
+            {/* Mobile Auto Orchestrator Toggle */}
+            {onToggleOrchestrator && (
+              <button
+                onClick={onToggleOrchestrator}
+                className={`p-1.5 rounded-xl border transition ${
+                  orchestratorStatus?.enabled
+                    ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400'
+                    : 'bg-slate-900 border-slate-800 text-slate-400'
+                }`}
+                title={orchestratorStatus?.enabled ? 'Auto-Orchestrator Aktif' : 'Auto-Orchestrator Standby'}
+                aria-label="Auto Orchestrator"
+              >
+                <Zap className={`w-4 h-4 ${orchestratorStatus?.enabled ? 'fill-emerald-400 text-emerald-400 animate-pulse' : ''}`} />
+              </button>
+            )}
+
+            {/* Mobile Terminal Console */}
+            {onToggleConsole && (
+              <button
+                onClick={onToggleConsole}
+                className={`p-1.5 rounded-xl border transition ${
+                  isConsoleOpen
+                    ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-400'
+                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                }`}
+                title="Buka Konsol Telemetri"
+                aria-label="Terminal Console"
+              >
+                <Terminal className="w-4 h-4" />
+              </button>
+            )}
+
             {/* Settings */}
             <button
               onClick={onOpenSettings}
@@ -224,6 +267,40 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Right Section: Time, Notifications, Settings & Operator Profile (Desktop lg:flex) */}
         <div className="hidden lg:flex items-center gap-2 shrink-0">
+          {/* Auto-Orchestrator Toggle Badge */}
+          {onToggleOrchestrator && (
+            <button
+              onClick={onToggleOrchestrator}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-xs font-mono font-bold transition ${
+                orchestratorStatus?.enabled
+                  ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 shadow-sm shadow-emerald-500/20'
+                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+              title={orchestratorStatus?.enabled ? 'Auto-Orchestrator Aktif. Klik untuk beralih ke Standby.' : 'Auto-Orchestrator Standby. Klik untuk aktifkan pemrosesan otomatis.'}
+            >
+              <Zap className={`w-3.5 h-3.5 ${orchestratorStatus?.enabled ? 'text-emerald-400 fill-emerald-400 animate-pulse' : 'text-slate-500'}`} />
+              <span className="text-[11px]">
+                AUTO: {orchestratorStatus?.enabled ? 'AKTIF' : 'STANDBY'}
+              </span>
+            </button>
+          )}
+
+          {/* Console Drawer Button */}
+          {onToggleConsole && (
+            <button
+              onClick={onToggleConsole}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-xs transition ${
+                isConsoleOpen
+                  ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300 font-bold'
+                  : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'
+              }`}
+              title="Buka / Tutup Konsol Telemetri Sistem"
+            >
+              <Terminal className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="text-[11px] font-mono">Console</span>
+            </button>
+          )}
+
           {/* Settings */}
           <button
             onClick={onOpenSettings}
