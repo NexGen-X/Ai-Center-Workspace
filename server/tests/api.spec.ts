@@ -95,4 +95,78 @@ describe('AI Agent Command Center API Endpoints', () => {
     expect(res.body.success).toBe(false);
     expect(res.body.status).toBe('CONNECTION_FAILED');
   });
+
+  it('GET /api/reports/summary should return FinOps analytics', async () => {
+    const res = await request(app).get('/api/reports/summary?days=7');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('periodDays', 7);
+    expect(res.body).toHaveProperty('totalRuns');
+    expect(res.body).toHaveProperty('successRatePercent');
+    expect(res.body).toHaveProperty('totalTokens');
+    expect(res.body).toHaveProperty('estimatedTotalCostUsd');
+    expect(res.body).toHaveProperty('agentMetrics');
+    expect(Array.isArray(res.body.agentMetrics)).toBe(true);
+  });
+
+  it('CRUD /api/notifications should manage real-time alerts', async () => {
+    // 1. Create notification
+    const createRes = await request(app)
+      .post('/api/notifications')
+      .send({
+        title: 'Uji Notifikasi Otomatis',
+        message: 'Pengujian integrasi endpoint notifikasi command center',
+        type: 'INFO'
+      });
+    expect(createRes.status).toBe(201);
+    expect(createRes.body).toHaveProperty('id');
+    const notifId = createRes.body.id;
+
+    // 2. Fetch list
+    const listRes = await request(app).get('/api/notifications');
+    expect(listRes.status).toBe(200);
+    expect(listRes.body).toHaveProperty('notifications');
+    expect(listRes.body.unreadCount).toBeGreaterThan(0);
+
+    // 3. Mark single as read
+    const readRes = await request(app).post(`/api/notifications/${notifId}/read`);
+    expect(readRes.status).toBe(200);
+    expect(readRes.body.success).toBe(true);
+
+    // 4. Mark all as read
+    const readAllRes = await request(app).post('/api/notifications/read-all');
+    expect(readAllRes.status).toBe(200);
+    expect(readAllRes.body.success).toBe(true);
+  });
+
+  it('CRUD /api/documents should manage SOP & Knowledge Base', async () => {
+    // 1. Create document
+    const createRes = await request(app)
+      .post('/api/documents')
+      .send({
+        title: 'SOP Deploy Kubernetes Cluster',
+        content: '# SOP Panduan Deployment K8s\nLangkah-langkah deployment aman...',
+        category: 'SOP',
+        tags: ['DevOps', 'Kubernetes']
+      });
+    expect(createRes.status).toBe(201);
+    const docId = createRes.body.id;
+    expect(docId).toBeDefined();
+
+    // 2. Get document by ID
+    const getRes = await request(app).get(`/api/documents/${docId}`);
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.title).toBe('SOP Deploy Kubernetes Cluster');
+
+    // 3. Update document
+    const updateRes = await request(app)
+      .put(`/api/documents/${docId}`)
+      .send({ title: 'SOP Deploy Kubernetes Cluster (Updated)' });
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.title).toContain('(Updated)');
+
+    // 4. Delete document
+    const delRes = await request(app).delete(`/api/documents/${docId}`);
+    expect(delRes.status).toBe(200);
+    expect(delRes.body.success).toBe(true);
+  });
 });

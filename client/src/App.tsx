@@ -6,6 +6,8 @@ import { AddAgentModal } from './features/team/AddAgentModal.js';
 import { AgentDetailModal } from './features/team/AgentDetailModal.js';
 import { LoginModal } from './components/LoginModal.js';
 import { CalendarModal } from './features/calendar/CalendarModal.js';
+import { ReportsModal } from './features/reports/ReportsModal.js';
+import { DocumentsModal } from './features/documents/DocumentsModal.js';
 import { TaskList } from './features/tasks/TaskList.js';
 import { CreateTaskModal } from './features/tasks/CreateTaskModal.js';
 import { Workspace3D } from './features/workspace3d/Workspace3D.js';
@@ -34,6 +36,8 @@ export const App: React.FC = () => {
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [isReportsOpen, setIsReportsOpen] = useState(false);
+  const [isDocumentsOpen, setIsDocumentsOpen] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<AIAgent | null>(null);
 
   const refreshAllData = useCallback(async () => {
@@ -165,6 +169,8 @@ export const App: React.FC = () => {
         onOpenAddAgent={() => setIsAddAgentOpen(true)}
         onOpenCreateTask={() => setIsCreateTaskOpen(true)}
         onOpenCalendar={() => setIsCalendarOpen(true)}
+        onOpenReports={() => setIsReportsOpen(true)}
+        onOpenDocuments={() => setIsDocumentsOpen(true)}
         onOpenLogin={() => setIsLoginOpen(true)}
         onLogout={handleLogout}
         currentUser={currentUser}
@@ -301,6 +307,16 @@ export const App: React.FC = () => {
         onClose={() => setIsCalendarOpen(false)}
         tasks={tasks}
         projects={projects}
+      />
+
+      <ReportsModal
+        isOpen={isReportsOpen}
+        onClose={() => setIsReportsOpen(false)}
+      />
+
+      <DocumentsModal
+        isOpen={isDocumentsOpen}
+        onClose={() => setIsDocumentsOpen(false)}
       />
     </div>
   );

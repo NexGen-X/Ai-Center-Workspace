@@ -14,7 +14,11 @@ import {
   ModelProviderConfig,
   TestConnectionRequest,
   TestConnectionResponse,
-  AgentRun
+  AgentRun,
+  DocumentItem,
+  CreateDocumentRequest,
+  NotificationItem,
+  FinOpsReportsSummary
 } from '../../../shared/types.js';
 
 const BASE_URL = '/api';
@@ -114,5 +118,28 @@ export const api = {
   discoverModels: (baseUrl: string, apiKey?: string, providerType?: string) => request<{ models: string[] }>('/providers/discover-models', {
     method: 'POST',
     body: JSON.stringify({ baseUrl, apiKey, providerType })
+  }),
+
+  // Reports & FinOps Analytics
+  getReportsSummary: (days = 30) => request<FinOpsReportsSummary>(`/reports/summary?days=${days}`),
+
+  // Notifications
+  getNotifications: (limit = 30) => request<{ notifications: NotificationItem[]; unreadCount: number }>(`/notifications?limit=${limit}`),
+  markNotificationRead: (id: string) => request<{ success: boolean }>(`/notifications/${id}/read`, { method: 'POST' }),
+  markAllNotificationsRead: () => request<{ success: boolean }>('/notifications/read-all', { method: 'POST' }),
+
+  // Documents & Knowledge Base
+  getDocuments: (category?: string) => request<DocumentItem[]>(`/documents${category ? `?category=${category}` : ''}`),
+  getDocument: (id: string) => request<DocumentItem>(`/documents/${id}`),
+  createDocument: (data: CreateDocumentRequest) => request<DocumentItem>('/documents', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+  updateDocument: (id: string, data: Partial<DocumentItem>) => request<DocumentItem>(`/documents/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  }),
+  deleteDocument: (id: string) => request<{ success: boolean; message: string }>(`/documents/${id}`, {
+    method: 'DELETE'
   })
 };

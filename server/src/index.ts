@@ -17,6 +17,9 @@ import activitiesRouter from './routes/activities.js';
 import monitoringRouter from './routes/monitoring.js';
 import dashboardRouter from './routes/dashboard.js';
 import authRouter from './routes/auth.js';
+import reportsRouter from './routes/reports.js';
+import notificationsRouter from './routes/notifications.js';
+import documentsRouter from './routes/documents.js';
 
 export const app = express();
 
@@ -51,6 +54,9 @@ app.use('/api/projects', projectsRouter);
 app.use('/api/activities', activitiesRouter);
 app.use('/api/monitoring', monitoringRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/reports', reportsRouter);
+app.use('/api/notifications', notificationsRouter);
+app.use('/api/documents', documentsRouter);
 
 // Root healthcheck
 app.get('/healthz', (_req: Request, res: Response) => {

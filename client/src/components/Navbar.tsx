@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, Plus, ShieldCheck, Clock, Radio, Calendar, User, LogOut, Bell } from 'lucide-react';
+import { Bot, Plus, ShieldCheck, Clock, Radio, Calendar, User, LogOut, BarChart2, BookOpen } from 'lucide-react';
+import { NotificationDropdown } from './NotificationDropdown.js';
 
 interface NavbarProps {
   onOpenAddAgent: () => void;
   onOpenCreateTask: () => void;
   onOpenCalendar: () => void;
+  onOpenReports: () => void;
+  onOpenDocuments: () => void;
   onOpenLogin: () => void;
   onLogout: () => void;
   currentUser: { displayName: string; email: string; role: string } | null;
@@ -17,6 +20,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAddAgent,
   onOpenCreateTask,
   onOpenCalendar,
+  onOpenReports,
+  onOpenDocuments,
   onOpenLogin,
   onLogout,
   currentUser,
@@ -93,8 +98,31 @@ export const Navbar: React.FC<NavbarProps> = ({
             title="Buka Kalender Tenggat Waktu"
           >
             <Calendar className="w-3.5 h-3.5 text-purple-400" />
-            <span className="hidden md:inline">Kalender</span>
+            <span className="hidden lg:inline">Kalender</span>
           </button>
+
+          {/* FinOps & Analytics Button */}
+          <button
+            onClick={onOpenReports}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+            title="Buka FinOps & Analisis Token"
+          >
+            <BarChart2 className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="hidden lg:inline">FinOps</span>
+          </button>
+
+          {/* Knowledge Base & SOP Button */}
+          <button
+            onClick={onOpenDocuments}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+            title="Knowledge Base & SOP Dokumen"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="hidden lg:inline">SOP</span>
+          </button>
+
+          {/* Notification Center Dropdown */}
+          <NotificationDropdown />
 
           {/* Quick Action: Buat Tugas */}
           <button

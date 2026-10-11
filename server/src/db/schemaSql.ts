@@ -136,8 +136,34 @@ CREATE TABLE IF NOT EXISTS server_metrics (
     observed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS documents (
+    id VARCHAR(64) PRIMARY KEY,
+    workspace_id VARCHAR(64) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    project_id VARCHAR(64) REFERENCES projects(id) ON DELETE SET NULL,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    category VARCHAR(64) NOT NULL DEFAULT 'SOP',
+    tags JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id VARCHAR(64) PRIMARY KEY,
+    workspace_id VARCHAR(64) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    type VARCHAR(32) NOT NULL DEFAULT 'INFO',
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    target_type VARCHAR(64),
+    target_id VARCHAR(64),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_tasks_workspace_status ON tasks(workspace_id, status);
 CREATE INDEX IF NOT EXISTS idx_agents_workspace ON ai_agents(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_runs_agent_created ON agent_runs(agent_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_activities_workspace_created ON activities(workspace_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_documents_workspace ON documents(workspace_id, category);
+CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(workspace_id, is_read, created_at DESC);
 `;

@@ -226,3 +226,80 @@ export interface ExecuteAgentRunRequest {
   taskId?: string;
   prompt: string;
 }
+
+export type DocumentCategory = 'SOP' | 'SPEC' | 'PROMPT_TEMPLATE' | 'ARCHITECTURE' | 'NOTE';
+
+export interface DocumentItem {
+  id: string;
+  workspaceId: string;
+  projectId?: string;
+  title: string;
+  content: string;
+  category: DocumentCategory;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateDocumentRequest {
+  title: string;
+  content: string;
+  category: DocumentCategory;
+  tags?: string[];
+  projectId?: string;
+}
+
+export type NotificationType = 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
+
+export interface NotificationItem {
+  id: string;
+  workspaceId: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  isRead: boolean;
+  targetType?: string;
+  targetId?: string;
+  createdAt: string;
+}
+
+export interface AgentMetric {
+  agentId: string;
+  agentName: string;
+  role: string;
+  totalRuns: number;
+  successCount: number;
+  failureCount: number;
+  avgDurationMs: number;
+  totalTokens: number;
+}
+
+export interface ModelMetric {
+  modelId: string;
+  totalRuns: number;
+  totalPromptTokens: number;
+  totalCompletionTokens: number;
+  totalTokens: number;
+  avgDurationMs: number;
+  estimatedCostUsd: number;
+}
+
+export interface FinOpsReportsSummary {
+  periodDays: number;
+  totalRuns: number;
+  successfulRuns: number;
+  failedRuns: number;
+  successRatePercent: number;
+  totalPromptTokens: number;
+  totalCompletionTokens: number;
+  totalTokens: number;
+  estimatedTotalCostUsd: number;
+  averageLatencyMs: number;
+  agentMetrics: AgentMetric[];
+  modelMetrics: ModelMetric[];
+  dailyUsage: {
+    date: string;
+    runs: number;
+    tokens: number;
+  }[];
+}
