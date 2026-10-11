@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { config } from '../config/index.js';
 import { encryptSecret } from '../utils/crypto.js';
+import { hashPassword } from '../utils/auth.js';
 import { SCHEMA_SQL } from './schemaSql.js';
 
 const { Pool } = pg;
@@ -35,11 +36,13 @@ export async function initializeDatabase(): Promise<void> {
     `, [config.defaultWorkspaceId, 'Command Center Headquarters']);
 
     // Seed default human operator user
+    const defaultPasswordHash = hashPassword('Admin#AiCenter2026!');
     await client.query(`
-      INSERT INTO human_users (id, email, display_name)
-      VALUES ($1, $2, $3)
-      ON CONFLICT (id) DO NOTHING;
-    `, ['user-admin', 'operator@ai-center.local', 'Lead Command Operator']);
+      INSERT INTO human_users (id, email, display_name, password_hash)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (id) DO UPDATE
+      SET password_hash = COALESCE(human_users.password_hash, EXCLUDED.password_hash);
+    `, ['user-admin', 'operator@ai-center.local', 'Lead Command Operator', defaultPasswordHash]);
 
     // Seed default Route-X provider if not exists
     const provRes = await client.query(`

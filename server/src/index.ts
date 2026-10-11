@@ -16,6 +16,7 @@ import projectsRouter from './routes/projects.js';
 import activitiesRouter from './routes/activities.js';
 import monitoringRouter from './routes/monitoring.js';
 import dashboardRouter from './routes/dashboard.js';
+import authRouter from './routes/auth.js';
 
 export const app = express();
 
@@ -42,6 +43,7 @@ app.get('/api/realtime', (req: Request, res: Response) => {
 });
 
 // Mount modular feature routes
+app.use('/api/auth', authRouter);
 app.use('/api/agents', agentsRouter);
 app.use('/api/providers', providersRouter);
 app.use('/api/tasks', tasksRouter);

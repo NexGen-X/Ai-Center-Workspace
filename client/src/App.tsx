@@ -4,6 +4,8 @@ import { StatCards } from './components/StatCards.js';
 import { AgentCard } from './features/team/AgentCard.js';
 import { AddAgentModal } from './features/team/AddAgentModal.js';
 import { AgentDetailModal } from './features/team/AgentDetailModal.js';
+import { LoginModal } from './components/LoginModal.js';
+import { CalendarModal } from './features/calendar/CalendarModal.js';
 import { TaskList } from './features/tasks/TaskList.js';
 import { CreateTaskModal } from './features/tasks/CreateTaskModal.js';
 import { Workspace3D } from './features/workspace3d/Workspace3D.js';
@@ -11,15 +13,17 @@ import { Workspace2DView } from './features/workspace3d/Workspace2DView.js';
 import { ActivityFeed } from './components/ActivityFeed.js';
 import { ServerMonitoringWidget } from './components/ServerMonitoringWidget.js';
 import { api } from './services/api.js';
-import { AIAgent, Task, Activity, DashboardSummary, ServerMetrics } from '../../shared/types.js';
+import { AIAgent, Task, Activity, DashboardSummary, ServerMetrics, Project } from '../../shared/types.js';
 import { Bot, Plus, RefreshCw, Zap, Layers } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [agents, setAgents] = useState<AIAgent[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [metrics, setMetrics] = useState<ServerMetrics | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   const [loading, setLoading] = useState(true);
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
@@ -28,19 +32,23 @@ export const App: React.FC = () => {
   // Modals state
   const [isAddAgentOpen, setIsAddAgentOpen] = useState(false);
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<AIAgent | null>(null);
 
   const refreshAllData = useCallback(async () => {
     try {
-      const [sumData, agentsData, tasksData, actsData] = await Promise.all([
+      const [sumData, agentsData, tasksData, projsData, actsData] = await Promise.all([
         api.getDashboardSummary(),
         api.getAgents(),
         api.getTasks(),
+        api.getProjects().catch(() => []),
         api.getActivities(30)
       ]);
       setSummary(sumData);
       setAgents(agentsData);
       setTasks(tasksData);
+      setProjects(projsData);
       setActivities(actsData);
       setMetrics(sumData.serverMetrics);
     } catch (err) {
@@ -49,6 +57,21 @@ export const App: React.FC = () => {
       setLoading(false);
     }
   }, []);
+
+  // Check auth session
+  useEffect(() => {
+    api.getMe()
+      .then((res) => {
+        if (res.authenticated) setCurrentUser(res.user);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleLogout = async () => {
+    await api.logout().catch(() => {});
+    localStorage.removeItem('ai_center_token');
+    setCurrentUser(null);
+  };
 
   // Initial load
   useEffect(() => {
@@ -141,8 +164,13 @@ export const App: React.FC = () => {
       <Navbar
         onOpenAddAgent={() => setIsAddAgentOpen(true)}
         onOpenCreateTask={() => setIsCreateTaskOpen(true)}
+        onOpenCalendar={() => setIsCalendarOpen(true)}
+        onOpenLogin={() => setIsLoginOpen(true)}
+        onLogout={handleLogout}
+        currentUser={currentUser}
         isRealtimeConnected={isRealtimeConnected}
         systemStatus={summary?.systemStatus || 'OPERATIONAL'}
+        unreadActivityCount={activities.length}
       />
 
       {/* Main Content Area */}
@@ -257,6 +285,22 @@ export const App: React.FC = () => {
         agent={selectedAgent}
         onClose={() => setSelectedAgent(null)}
         onRunFinished={refreshAllData}
+      />
+
+      <LoginModal
+        isOpen={isLoginOpen}
+        onClose={() => setIsLoginOpen(false)}
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+          refreshAllData();
+        }}
+      />
+
+      <CalendarModal
+        isOpen={isCalendarOpen}
+        onClose={() => setIsCalendarOpen(false)}
+        tasks={tasks}
+        projects={projects}
       />
     </div>
   );

@@ -19,10 +19,16 @@ import {
 
 const BASE_URL = '/api';
 
+function getAuthHeader(): Record<string, string> {
+  const token = localStorage.getItem('ai_center_token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${endpoint}`, {
     headers: {
       'Content-Type': 'application/json',
+      ...getAuthHeader(),
       ...options?.headers
     },
     ...options
@@ -37,6 +43,18 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  // Auth
+  login: (email: string, password: string) => request<{ token: string; user: any }>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password })
+  }),
+  getMe: () => request<{ authenticated: boolean; user?: any }>('/auth/me'),
+  logout: () => request<{ success: boolean }>('/auth/logout', { method: 'POST' }),
+  getSetupHint: () => request<{ defaultEmail: string; hint: string }>('/auth/setup-hint'),
+  changePassword: (currentPassword: string, newPassword: string) => request<{ success: boolean }>('/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword, newPassword })
+  }),
   // Dashboard
   getDashboardSummary: () => request<DashboardSummary>('/dashboard/summary'),
 

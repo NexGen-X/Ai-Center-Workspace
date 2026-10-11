@@ -1,18 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, Activity, Plus, ShieldCheck, Clock, Radio } from 'lucide-react';
+import { Bot, Plus, ShieldCheck, Clock, Radio, Calendar, User, LogOut, Bell } from 'lucide-react';
 
 interface NavbarProps {
   onOpenAddAgent: () => void;
   onOpenCreateTask: () => void;
+  onOpenCalendar: () => void;
+  onOpenLogin: () => void;
+  onLogout: () => void;
+  currentUser: { displayName: string; email: string; role: string } | null;
   isRealtimeConnected: boolean;
   systemStatus: 'OPERATIONAL' | 'DEGRADED' | 'MAINTENANCE';
+  unreadActivityCount?: number;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   onOpenAddAgent,
   onOpenCreateTask,
+  onOpenCalendar,
+  onOpenLogin,
+  onLogout,
+  currentUser,
   isRealtimeConnected,
-  systemStatus
+  systemStatus,
+  unreadActivityCount = 0
 }) => {
   const [timeStr, setTimeStr] = useState<string>('');
 
@@ -54,9 +64,9 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Center / Right: Status badges & action buttons */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           {/* Live Clock */}
-          <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 text-xs font-mono text-slate-300">
+          <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 text-xs font-mono text-slate-300">
             <Clock className="w-3.5 h-3.5 text-slate-400" />
             <span>{timeStr || '00:00:00'}</span>
           </div>
@@ -76,6 +86,16 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="text-slate-300 font-medium">{systemStatus}</span>
           </div>
 
+          {/* Calendar Button */}
+          <button
+            onClick={onOpenCalendar}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+            title="Buka Kalender Tenggat Waktu"
+          >
+            <Calendar className="w-3.5 h-3.5 text-purple-400" />
+            <span className="hidden md:inline">Kalender</span>
+          </button>
+
           {/* Quick Action: Buat Tugas */}
           <button
             onClick={onOpenCreateTask}
@@ -91,8 +111,34 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-xs font-bold shadow-md shadow-blue-600/25 transition active:scale-95"
           >
             <Bot className="w-4 h-4" />
-            <span>+ Tambah Anggota</span>
+            <span className="hidden sm:inline">+ Tambah Anggota</span>
+            <span className="sm:hidden">+ Agent</span>
           </button>
+
+          {/* Operator Auth Button */}
+          {currentUser ? (
+            <div className="flex items-center gap-1.5 pl-2 border-l border-slate-800">
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300">
+                <User className="w-3.5 h-3.5" />
+                <span className="font-semibold hidden xl:inline">{currentUser.displayName}</span>
+              </div>
+              <button
+                onClick={onLogout}
+                className="p-1.5 rounded-lg bg-slate-800 hover:bg-red-500/20 hover:text-red-400 text-slate-400 transition"
+                title="Keluar (Logout)"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={onOpenLogin}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-700 transition"
+            >
+              <User className="w-3.5 h-3.5" />
+              <span>Login</span>
+            </button>
+          )}
         </div>
       </div>
     </header>
