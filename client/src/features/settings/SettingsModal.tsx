@@ -29,6 +29,8 @@ import {
 import { ModelProviderConfig, WorkspaceBackup } from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
 import { useFeedback } from '../../components/common/FeedbackContext.js';
+import { CustomSelect } from '../../components/common/CustomSelect.js';
+import { CustomCheckbox } from '../../components/common/CustomCheckbox.js';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -751,33 +753,29 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
                     <div>
                       <label className="text-slate-400 block mb-1 font-medium">Tingkat Prioritas (priority)</label>
-                      <select
+                      <CustomSelect
                         value={webhookPriority}
-                        onChange={(e) => setWebhookPriority(e.target.value as any)}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-400"
-                      >
-                        <option value="LOW">LOW</option>
-                        <option value="MEDIUM">MEDIUM</option>
-                        <option value="HIGH">HIGH</option>
-                        <option value="CRITICAL">CRITICAL</option>
-                      </select>
+                        onChange={(val) => setWebhookPriority(val as any)}
+                        options={[
+                          { value: 'LOW', label: 'LOW', badge: 'LOW', badgeColor: 'bg-slate-800 text-slate-300 border-slate-700' },
+                          { value: 'MEDIUM', label: 'MEDIUM', badge: 'MED', badgeColor: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
+                          { value: 'HIGH', label: 'HIGH', badge: 'HIGH', badgeColor: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+                          { value: 'CRITICAL', label: 'CRITICAL', badge: 'CRIT', badgeColor: 'bg-rose-500/10 text-rose-400 border-rose-500/20' }
+                        ]}
+                      />
                     </div>
 
-                    <div className="flex items-center pt-5">
-                      <label className="flex items-center gap-2 cursor-pointer select-none">
-                        <input
-                          type="checkbox"
-                          checked={webhookAutoExecute}
-                          onChange={(e) => setWebhookAutoExecute(e.target.checked)}
-                          className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-cyan-500 focus:ring-0"
-                        />
-                        <span className="text-xs text-slate-300 font-semibold">
-                          Eksekusi otomatis seketika dengan AI Agent
-                        </span>
-                      </label>
+                    <div className="pt-5 sm:pt-4">
+                      <CustomCheckbox
+                        variant="switch"
+                        checked={webhookAutoExecute}
+                        onChange={(val) => setWebhookAutoExecute(val)}
+                        label="Eksekusi Otomatis Seketika"
+                        description="Tugaskan dan jalankan inferensi AI secara instan saat webhook tiba."
+                      />
                     </div>
                   </div>
 

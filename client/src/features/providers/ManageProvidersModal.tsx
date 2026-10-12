@@ -26,6 +26,8 @@ import {
 } from 'lucide-react';
 import { ModelProviderConfig, ProviderType, ProtocolType, TestConnectionResponse } from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
+import { CustomSelect } from '../../components/common/CustomSelect.js';
+import { CustomCheckbox } from '../../components/common/CustomCheckbox.js';
 
 interface ManageProvidersModalProps {
   isOpen: boolean;
@@ -855,35 +857,37 @@ export const ManageProvidersModal: React.FC<ManageProvidersModalProps> = ({
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
                     Tipe Provider
                   </label>
-                  <select
+                  <CustomSelect
                     value={formData.providerType}
-                    onChange={e => setFormData({ ...formData, providerType: e.target.value as ProviderType })}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500"
-                  >
-                    <option value="routex_local">Route-X Local</option>
-                    <option value="openai">OpenAI</option>
-                    <option value="anthropic">Anthropic</option>
-                    <option value="gemini">Google Gemini</option>
-                    <option value="groq">Groq</option>
-                    <option value="ollama">Ollama</option>
-                    <option value="custom_api">Custom API</option>
-                  </select>
+                    onChange={val => setFormData({ ...formData, providerType: val as ProviderType })}
+                    options={[
+                      { value: 'routex_local', label: 'Route-X Local' },
+                      { value: 'openai', label: 'OpenAI' },
+                      { value: 'anthropic', label: 'Anthropic' },
+                      { value: 'gemini', label: 'Google Gemini' },
+                      { value: 'groq', label: 'Groq' },
+                      { value: 'ollama', label: 'Ollama' },
+                      { value: 'custom_api', label: 'Custom API' },
+                    ]}
+                    fullWidth
+                  />
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
                     Protokol Komunikasi
                   </label>
-                  <select
+                  <CustomSelect
                     value={formData.protocol}
-                    onChange={e => setFormData({ ...formData, protocol: e.target.value as ProtocolType })}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500"
-                  >
-                    <option value="openai">OpenAI Compatible (/v1/chat/completions)</option>
-                    <option value="anthropic">Anthropic Messages API</option>
-                    <option value="gemini">Gemini API</option>
-                    <option value="ollama">Ollama Native API</option>
-                  </select>
+                    onChange={val => setFormData({ ...formData, protocol: val as ProtocolType })}
+                    options={[
+                      { value: 'openai', label: 'OpenAI Compatible (/v1/chat/completions)' },
+                      { value: 'anthropic', label: 'Anthropic Messages API' },
+                      { value: 'gemini', label: 'Gemini API' },
+                      { value: 'ollama', label: 'Ollama Native API' },
+                    ]}
+                    fullWidth
+                  />
                 </div>
               </div>
 
@@ -931,11 +935,10 @@ export const ManageProvidersModal: React.FC<ManageProvidersModalProps> = ({
                     Jika nonaktif, agen AI tidak akan merutekan panggilan ke endpoint ini.
                   </span>
                 </div>
-                <input
-                  type="checkbox"
+                <CustomCheckbox
+                  variant="switch"
                   checked={formData.enabled}
-                  onChange={e => setFormData({ ...formData, enabled: e.target.checked })}
-                  className="w-4 h-4 accent-cyan-500 rounded"
+                  onChange={checked => setFormData({ ...formData, enabled: checked })}
                 />
               </div>
 

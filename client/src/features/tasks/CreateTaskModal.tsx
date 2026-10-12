@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { X, Check, AlertCircle } from 'lucide-react';
 import { AIAgent, TaskPriority, Project } from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
+import { CustomSelect } from '../../components/common/CustomSelect.js';
+import { CustomDatePicker } from '../../components/common/CustomDatePicker.js';
 
 interface CreateTaskModalProps {
   isOpen: boolean;
@@ -109,62 +111,62 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">Prioritas</label>
-              <select
+              <CustomSelect
                 value={priority}
-                onChange={(e) => setPriority(e.target.value as TaskPriority)}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-blue-500"
-              >
-                <option value="LOW">Low</option>
-                <option value="MEDIUM">Medium</option>
-                <option value="HIGH">High</option>
-                <option value="CRITICAL">Critical</option>
-              </select>
+                onChange={(val) => setPriority(val as TaskPriority)}
+                options={[
+                  { value: 'LOW', label: 'Low', badge: 'LOW', badgeColor: 'bg-slate-800 text-slate-300 border-slate-700' },
+                  { value: 'MEDIUM', label: 'Medium', badge: 'MED', badgeColor: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
+                  { value: 'HIGH', label: 'High', badge: 'HIGH', badgeColor: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+                  { value: 'CRITICAL', label: 'Critical', badge: 'CRIT', badgeColor: 'bg-rose-500/10 text-rose-400 border-rose-500/20' }
+                ]}
+              />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">Tugaskan ke AI Agent</label>
-              <select
+              <CustomSelect
                 value={assignedAgentId}
-                onChange={(e) => setAssignedAgentId(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-blue-500"
-              >
-                <option value="">(Tanpa Assignee)</option>
-                {agents.map((ag) => (
-                  <option key={ag.id} value={ag.id}>
-                    {ag.name} ({ag.role})
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setAssignedAgentId(val)}
+                options={[
+                  { value: '', label: '(Tanpa Assignee)' },
+                  ...agents.map((ag) => ({
+                    value: ag.id,
+                    label: ag.name,
+                    description: ag.role
+                  }))
+                ]}
+                placeholder="Pilih AI Agent..."
+              />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">Hubungkan ke Proyek</label>
-              <select
+              <CustomSelect
                 value={projectId}
-                onChange={(e) => setProjectId(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-blue-500"
-              >
-                <option value="">(Tanpa Proyek)</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setProjectId(val)}
+                options={[
+                  { value: '', label: '(Tanpa Proyek)' },
+                  ...projects.map((p) => ({
+                    value: p.id,
+                    label: p.name
+                  }))
+                ]}
+                placeholder="Pilih Proyek..."
+              />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">Tenggat Waktu (Opsional)</label>
-              <input
-                type="date"
+              <CustomDatePicker
                 value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-blue-500"
+                onChange={(val) => setDueDate(val)}
+                placeholder="Pilih tenggat waktu..."
               />
             </div>
           </div>

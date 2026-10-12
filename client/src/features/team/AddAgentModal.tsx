@@ -4,6 +4,7 @@ import { PROVIDER_PRESETS, AGENT_ROLES, ProviderPresetDefinition } from '../../.
 import { AgentRole, ProtocolType, ProviderType, CreateAgentRequest, TestConnectionResponse } from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
 import { useFeedback } from '../../components/common/FeedbackContext.js';
+import { CustomSelect } from '../../components/common/CustomSelect.js';
 
 interface AddAgentModalProps {
   isOpen: boolean;
@@ -291,17 +292,16 @@ export const AddAgentModal: React.FC<AddAgentModalProps> = ({ isOpen, onClose, o
               <label className="block text-xs font-semibold text-slate-300 mb-1">
                 Peran Agent (Role) <span className="text-red-400">*</span>
               </label>
-              <select
+              <CustomSelect
                 value={role}
-                onChange={(e) => setRole(e.target.value as AgentRole)}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500 transition"
-              >
-                {AGENT_ROLES.map((r) => (
-                  <option key={r.role} value={r.role}>
-                    {r.role} — {r.description.slice(0, 40)}...
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setRole(val as AgentRole)}
+                options={AGENT_ROLES.map((r) => ({
+                  value: r.role,
+                  label: r.role,
+                  description: r.description,
+                }))}
+                fullWidth
+              />
             </div>
           </div>
 
@@ -437,14 +437,15 @@ export const AddAgentModal: React.FC<AddAgentModalProps> = ({ isOpen, onClose, o
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-300 mb-1">Protokol</label>
-                    <select
+                    <CustomSelect
                       value={customProtocol}
-                      onChange={(e) => setCustomProtocol(e.target.value as ProtocolType)}
-                      className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-blue-500"
-                    >
-                      <option value="openai">OpenAI Compatible (/v1)</option>
-                      <option value="anthropic">Anthropic Messages API</option>
-                    </select>
+                      onChange={(val) => setCustomProtocol(val as ProtocolType)}
+                      options={[
+                        { value: 'openai', label: 'OpenAI Compatible (/v1)' },
+                        { value: 'anthropic', label: 'Anthropic Messages API' },
+                      ]}
+                      fullWidth
+                    />
                   </div>
                 </div>
 
@@ -529,14 +530,15 @@ export const AddAgentModal: React.FC<AddAgentModalProps> = ({ isOpen, onClose, o
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">Pilih Model Hermes Target</label>
-                  <select
+                  <CustomSelect
                     value={hermesModel}
-                    onChange={(e) => setHermesModel(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs font-mono text-white focus:outline-none focus:border-blue-500"
-                  >
-                    <option value="nous-hermes-3-llama-3.1-8b">nous-hermes-3-llama-3.1-8b (General Reasoning)</option>
-                    <option value="hermes-3-70b">hermes-3-70b (Deep Agentic Architecture)</option>
-                  </select>
+                    onChange={(val) => setHermesModel(val)}
+                    options={[
+                      { value: 'nous-hermes-3-llama-3.1-8b', label: 'nous-hermes-3-llama-3.1-8b', description: 'General Reasoning' },
+                      { value: 'hermes-3-70b', label: 'hermes-3-70b', description: 'Deep Agentic Architecture' },
+                    ]}
+                    fullWidth
+                  />
                 </div>
               </div>
             )}

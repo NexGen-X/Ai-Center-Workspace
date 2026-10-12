@@ -24,6 +24,7 @@ import {
 import { SystemLogEntry, OrchestratorStatus } from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
 import { useFeedback } from '../common/FeedbackContext.js';
+import { CustomCheckbox } from '../common/CustomCheckbox.js';
 
 interface ConsoleDrawerProps {
   isOpen: boolean;
@@ -335,15 +336,12 @@ export const ConsoleDrawer: React.FC<ConsoleDrawerProps> = ({
           </div>
 
           {/* Auto-scroll toggle */}
-          <label className="flex items-center gap-1 text-[10px] text-slate-400 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={autoScroll}
-              onChange={e => setAutoScroll(e.target.checked)}
-              className="w-3 h-3 rounded bg-slate-800 border-slate-700 text-cyan-500 focus:ring-0"
-            />
-            <span className="hidden sm:inline">Auto-scroll</span>
-          </label>
+          <CustomCheckbox
+            variant="checkbox"
+            label={<span className="text-[10px] text-slate-400">Auto-scroll</span>}
+            checked={autoScroll}
+            onChange={checked => setAutoScroll(checked)}
+          />
         </div>
       </div>
 

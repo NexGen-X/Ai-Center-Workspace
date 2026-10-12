@@ -26,6 +26,7 @@ import {
 import { AIAgent, AgentStatus, AgentRole } from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
 import { useFeedback } from '../../components/common/FeedbackContext.js';
+import { CustomSelect } from '../../components/common/CustomSelect.js';
 
 interface ManageTeamModalProps {
   isOpen: boolean;
@@ -275,19 +276,20 @@ export const ManageTeamModal: React.FC<ManageTeamModalProps> = ({
             </div>
 
             {/* Role Filter */}
-            <select
+            <CustomSelect
               value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-blue-500 shrink-0"
-            >
-              <option value="ALL">Semua Peran</option>
-              <option value="Orchestrator">Orchestrator</option>
-              <option value="Planner">Planner</option>
-              <option value="Executor">Executor</option>
-              <option value="QA / Reviewer">QA / Reviewer</option>
-              <option value="DevOps">DevOps</option>
-              <option value="Domain Specialist">Domain Specialist</option>
-            </select>
+              onChange={(val) => setRoleFilter(val)}
+              options={[
+                { value: 'ALL', label: 'Semua Peran' },
+                { value: 'Orchestrator', label: 'Orchestrator' },
+                { value: 'Planner', label: 'Planner' },
+                { value: 'Executor', label: 'Executor' },
+                { value: 'QA / Reviewer', label: 'QA / Reviewer' },
+                { value: 'DevOps', label: 'DevOps' },
+                { value: 'Domain Specialist', label: 'Domain Specialist' },
+              ]}
+              className="w-40 shrink-0"
+            />
           </div>
 
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar max-w-full">

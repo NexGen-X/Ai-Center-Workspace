@@ -17,6 +17,8 @@ import {
 import { Project, Task } from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
 import { useFeedback } from '../../components/common/FeedbackContext.js';
+import { CustomSelect } from '../../components/common/CustomSelect.js';
+import { CustomDatePicker } from '../../components/common/CustomDatePicker.js';
 
 interface ProjectsModalProps {
   isOpen: boolean;
@@ -366,25 +368,24 @@ export const ProjectsModal: React.FC<ProjectsModalProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-400 mb-1">Status Proyek</label>
-                    <select
+                    <CustomSelect
                       value={formStatus}
-                      onChange={(e) => setFormStatus(e.target.value as any)}
-                      className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none focus:border-amber-500"
-                    >
-                      <option value="PLANNING">PLANNING</option>
-                      <option value="ACTIVE">ACTIVE</option>
-                      <option value="COMPLETED">COMPLETED</option>
-                      <option value="ON_HOLD">ON_HOLD</option>
-                    </select>
+                      onChange={(val) => setFormStatus(val as any)}
+                      options={[
+                        { value: 'PLANNING', label: 'PLANNING', badge: 'PLAN', badgeColor: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
+                        { value: 'ACTIVE', label: 'ACTIVE', badge: 'ACT', badgeColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+                        { value: 'COMPLETED', label: 'COMPLETED', badge: 'DONE', badgeColor: 'bg-purple-500/10 text-purple-400 border-purple-500/20' },
+                        { value: 'ON_HOLD', label: 'ON_HOLD', badge: 'HOLD', badgeColor: 'bg-amber-500/10 text-amber-400 border-amber-500/20' }
+                      ]}
+                    />
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-400 mb-1">Tenggat Waktu (Due Date)</label>
-                    <input
-                      type="date"
+                    <CustomDatePicker
                       value={formDueDate}
-                      onChange={(e) => setFormDueDate(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none focus:border-amber-500"
+                      onChange={(val) => setFormDueDate(val)}
+                      placeholder="Pilih tenggat waktu proyek..."
                     />
                   </div>
                 </div>

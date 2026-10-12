@@ -25,6 +25,7 @@ import {
 import { ModelProviderConfig, AIAgent } from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
 import { useFeedback } from '../../components/common/FeedbackContext.js';
+import { CustomSelect } from '../../components/common/CustomSelect.js';
 
 interface PlaygroundModalProps {
   isOpen: boolean;
@@ -240,20 +241,20 @@ export const PlaygroundModal: React.FC<PlaygroundModalProps> = ({
             </button>
 
             {/* Presets dropdown */}
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-slate-500 hidden sm:inline">Preset Prompt:</span>
-              <select
-                onChange={(e) => {
-                  const preset = PROMPT_PRESETS.find(p => p.name === e.target.value);
+            <div className="flex items-center gap-2 w-48 sm:w-56">
+              <span className="text-[10px] text-slate-500 hidden sm:inline shrink-0">Preset:</span>
+              <CustomSelect
+                value=""
+                onChange={(presetName) => {
+                  const preset = PROMPT_PRESETS.find(p => p.name === presetName);
                   if (preset) setPrompt(preset.prompt);
                 }}
-                className="bg-slate-800 border border-slate-700 text-slate-300 text-[11px] rounded-lg px-2 py-0.5"
-              >
-                <option value="">Pilih Contoh Uji...</option>
-                {PROMPT_PRESETS.map((p) => (
-                  <option key={p.name} value={p.name}>{p.name}</option>
-                ))}
-              </select>
+                options={[
+                  { value: '', label: 'Pilih Contoh Uji...' },
+                  ...PROMPT_PRESETS.map((p) => ({ value: p.name, label: p.name }))
+                ]}
+                placeholder="Pilih Contoh Uji..."
+              />
             </div>
           </div>
 
@@ -297,17 +298,16 @@ export const PlaygroundModal: React.FC<PlaygroundModalProps> = ({
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div>
                 <label className="block text-[10px] text-slate-500 font-semibold mb-1">Provider</label>
-                <select
+                <CustomSelect
                   value={slotAProviderId}
-                  onChange={(e) => setSlotAProviderId(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg p-1.5 text-xs text-slate-200 font-medium"
-                >
-                  {providers.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setSlotAProviderId(val)}
+                  options={providers.map((p) => ({
+                    value: p.id,
+                    label: p.name,
+                    description: p.providerType
+                  }))}
+                  placeholder="Pilih Provider..."
+                />
               </div>
 
               <div>
@@ -399,17 +399,16 @@ export const PlaygroundModal: React.FC<PlaygroundModalProps> = ({
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div>
                   <label className="block text-[10px] text-slate-500 font-semibold mb-1">Provider</label>
-                  <select
+                  <CustomSelect
                     value={slotBProviderId}
-                    onChange={(e) => setSlotBProviderId(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg p-1.5 text-xs text-slate-200 font-medium"
-                  >
-                    {providers.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setSlotBProviderId(val)}
+                    options={providers.map((p) => ({
+                      value: p.id,
+                      label: p.name,
+                      description: p.providerType
+                    }))}
+                    placeholder="Pilih Provider..."
+                  />
                 </div>
 
                 <div>

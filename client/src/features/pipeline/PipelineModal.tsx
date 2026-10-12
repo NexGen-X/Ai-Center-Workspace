@@ -21,6 +21,7 @@ import {
 import { AIAgent, Project, PipelineTemplate, PipelineExecutionResult } from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
 import { useFeedback } from '../../components/common/FeedbackContext.js';
+import { CustomSelect } from '../../components/common/CustomSelect.js';
 
 interface PipelineModalProps {
   isOpen: boolean;
@@ -201,33 +202,30 @@ export const PipelineModal: React.FC<PipelineModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div>
                 <label className="text-slate-400 block mb-1 font-medium">Pilih Template Swarm</label>
-                <select
+                <CustomSelect
                   value={selectedTemplateId}
-                  onChange={(e) => setSelectedTemplateId(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-medium focus:outline-none focus:border-purple-400"
-                >
-                  {templates.map((tpl) => (
-                    <option key={tpl.id} value={tpl.id}>
-                      {tpl.name} ({tpl.stages.length} Tahap)
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setSelectedTemplateId(val)}
+                  options={templates.map((tpl) => ({
+                    value: tpl.id,
+                    label: tpl.name,
+                    badge: `${tpl.stages.length} Tahap`,
+                    badgeColor: 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                  }))}
+                  placeholder="Pilih template swarm..."
+                />
               </div>
 
               <div>
                 <label className="text-slate-400 block mb-1 font-medium">Kaitkan ke Proyek (Opsional)</label>
-                <select
+                <CustomSelect
                   value={selectedProjectId}
-                  onChange={(e) => setSelectedProjectId(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-medium focus:outline-none focus:border-purple-400"
-                >
-                  <option value="">(Tanpa Proyek / Standalone Swarm)</option>
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setSelectedProjectId(val)}
+                  options={[
+                    { value: '', label: '(Tanpa Proyek / Standalone Swarm)' },
+                    ...projects.map((p) => ({ value: p.id, label: p.name }))
+                  ]}
+                  placeholder="Pilih Proyek..."
+                />
               </div>
             </div>
 
@@ -358,18 +356,19 @@ export const PipelineModal: React.FC<PipelineModalProps> = ({
 
                         {/* Stage Controls: Assign Agent Dropdown & Expand */}
                         <div className="flex items-center gap-2">
-                          <select
-                            disabled={isExecuting}
-                            value={stage.agentId}
-                            onChange={(e) => updateStageAgent(idx, e.target.value)}
-                            className="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-purple-400 font-medium"
-                          >
-                            {agents.map((ag) => (
-                              <option key={ag.id} value={ag.id}>
-                                🤖 {ag.name} ({ag.role})
-                              </option>
-                            ))}
-                          </select>
+                          <div className="w-56">
+                            <CustomSelect
+                              disabled={isExecuting}
+                              value={stage.agentId}
+                              onChange={(newAgentId) => updateStageAgent(idx, newAgentId)}
+                              options={agents.map((ag) => ({
+                                value: ag.id,
+                                label: `🤖 ${ag.name}`,
+                                description: ag.role
+                              }))}
+                              placeholder="Pilih Agen..."
+                            />
+                          </div>
 
                           <button
                             type="button"

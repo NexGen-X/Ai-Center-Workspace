@@ -32,6 +32,7 @@ interface FeedbackContextValue {
     success: (message: string, title?: string, duration?: number) => void;
     error: (message: string, title?: string, duration?: number) => void;
     warning: (message: string, title?: string, duration?: number) => void;
+    warn: (message: string, title?: string, duration?: number) => void;
     info: (message: string, title?: string, duration?: number) => void;
   };
   confirm: (options: ConfirmOptions) => Promise<boolean>;
@@ -73,6 +74,7 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     success: useCallback((msg: string, title?: string, dur?: number) => addToast('success', msg, title, dur), [addToast]),
     error: useCallback((msg: string, title?: string, dur?: number) => addToast('error', msg, title, dur), [addToast]),
     warning: useCallback((msg: string, title?: string, dur?: number) => addToast('warning', msg, title, dur), [addToast]),
+    warn: useCallback((msg: string, title?: string, dur?: number) => addToast('warning', msg, title, dur), [addToast]),
     info: useCallback((msg: string, title?: string, dur?: number) => addToast('info', msg, title, dur), [addToast])
   };
 

@@ -18,6 +18,7 @@ import {
 import { api } from '../../services/api.js';
 import { useFeedback } from '../../components/common/FeedbackContext.js';
 import { audioService } from '../../services/audio.js';
+import { CustomSelect } from '../../components/common/CustomSelect.js';
 
 interface TaskListProps {
   tasks: Task[];
@@ -218,19 +219,16 @@ export const TaskList: React.FC<TaskListProps> = ({
           </div>
 
           {projects.length > 0 && (
-            <div className="flex items-center gap-1.5">
-              <select
+            <div className="flex items-center gap-1.5 w-44 sm:w-48">
+              <CustomSelect
                 value={projectFilter}
-                onChange={(e) => setProjectFilter(e.target.value)}
-                className="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-blue-500"
-              >
-                <option value="ALL">Semua Proyek</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setProjectFilter(val)}
+                options={[
+                  { value: 'ALL', label: 'Semua Proyek' },
+                  ...projects.map((p) => ({ value: p.id, label: p.name }))
+                ]}
+                placeholder="Filter Proyek"
+              />
             </div>
           )}
 

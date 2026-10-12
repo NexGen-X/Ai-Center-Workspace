@@ -19,6 +19,8 @@ import {
 import { Task, TaskStatus, TaskPriority, AIAgent, Project, AgentRun } from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
 import { useFeedback } from '../../components/common/FeedbackContext.js';
+import { CustomSelect } from '../../components/common/CustomSelect.js';
+import { CustomDatePicker } from '../../components/common/CustomDatePicker.js';
 
 interface TaskDetailModalProps {
   taskId: string | null;
@@ -269,54 +271,58 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-400 mb-1">Prioritas</label>
-                  <select
+                  <CustomSelect
                     value={editPriority}
-                    onChange={(e) => setEditPriority(e.target.value as TaskPriority)}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white"
-                  >
-                    <option value="LOW">LOW</option>
-                    <option value="MEDIUM">MEDIUM</option>
-                    <option value="HIGH">HIGH</option>
-                    <option value="CRITICAL">CRITICAL</option>
-                  </select>
+                    onChange={(val) => setEditPriority(val as TaskPriority)}
+                    options={[
+                      { value: 'LOW', label: 'LOW', badge: 'LOW', badgeColor: 'bg-slate-800 text-slate-300 border-slate-700' },
+                      { value: 'MEDIUM', label: 'MEDIUM', badge: 'MED', badgeColor: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
+                      { value: 'HIGH', label: 'HIGH', badge: 'HIGH', badgeColor: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+                      { value: 'CRITICAL', label: 'CRITICAL', badge: 'CRIT', badgeColor: 'bg-rose-500/10 text-rose-400 border-rose-500/20' }
+                    ]}
+                  />
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-400 mb-1">Tugaskan ke Agent</label>
-                  <select
+                  <CustomSelect
                     value={editAssigneeId}
-                    onChange={(e) => setEditAssigneeId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white"
-                  >
-                    <option value="">(Tanpa Assignee)</option>
-                    {agents.map((a) => (
-                      <option key={a.id} value={a.id}>{a.name} ({a.role})</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setEditAssigneeId(val)}
+                    options={[
+                      { value: '', label: '(Tanpa Assignee)' },
+                      ...agents.map((a) => ({
+                        value: a.id,
+                        label: a.name,
+                        description: a.role
+                      }))
+                    ]}
+                    placeholder="Pilih Agent..."
+                  />
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-400 mb-1">Hubungkan ke Proyek</label>
-                  <select
+                  <CustomSelect
                     value={editProjectId}
-                    onChange={(e) => setEditProjectId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white"
-                  >
-                    <option value="">(Tanpa Proyek)</option>
-                    {projects.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setEditProjectId(val)}
+                    options={[
+                      { value: '', label: '(Tanpa Proyek)' },
+                      ...projects.map((p) => ({
+                        value: p.id,
+                        label: p.name
+                      }))
+                    ]}
+                    placeholder="Pilih Proyek..."
+                  />
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-400 mb-1">Tenggat Waktu (Due Date)</label>
-                <input
-                  type="date"
+                <CustomDatePicker
                   value={editDueDate}
-                  onChange={(e) => setEditDueDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white"
+                  onChange={(val) => setEditDueDate(val)}
+                  placeholder="Pilih tenggat waktu..."
                 />
               </div>
 

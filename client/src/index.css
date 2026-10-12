@@ -24,6 +24,18 @@ body {
   color: #FFFFFF;
 }
 
+/* Accessible In-App Focus Indicators (Eliminates Browser-Default Focus Clashes) */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[role="switch"]:focus-visible,
+[role="checkbox"]:focus-visible,
+[tabindex="0"]:focus-visible {
+  outline: 2px solid #06B6D4 !important;
+  outline-offset: 2px !important;
+}
+
 /* Custom in-app styled select dropdown (removes native OS arrow) */
 select {
   appearance: none;

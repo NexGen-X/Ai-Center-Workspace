@@ -16,6 +16,8 @@ import {
 import { AIAgent, AgentRun, AgentRole } from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
 import { useFeedback } from '../../components/common/FeedbackContext.js';
+import { CustomSelect } from '../../components/common/CustomSelect.js';
+import { CustomCheckbox } from '../../components/common/CustomCheckbox.js';
 
 interface AgentDetailModalProps {
   agent: AIAgent | null;
@@ -234,15 +236,15 @@ export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agent, onClo
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-400 mb-1">Peran (Role)</label>
-                  <select
+                  <CustomSelect
                     value={editRole}
-                    onChange={(e) => setEditRole(e.target.value as AgentRole)}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white"
-                  >
-                    {ROLES.map((r) => (
-                      <option key={r} value={r}>{r}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setEditRole(val as AgentRole)}
+                    options={ROLES.map((r) => ({
+                      value: r,
+                      label: r,
+                    }))}
+                    fullWidth
+                  />
                 </div>
               </div>
 
@@ -282,15 +284,12 @@ export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agent, onClo
               </div>
 
               <div className="flex items-center justify-between pt-2">
-                <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={editEnabled}
-                    onChange={(e) => setEditEnabled(e.target.checked)}
-                    className="rounded bg-slate-900 border-slate-700 text-blue-600"
-                  />
-                  <span>Aktifkan status keikutsertaan agen (Enabled)</span>
-                </label>
+                <CustomCheckbox
+                  variant="checkbox"
+                  label="Aktifkan status keikutsertaan agen (Enabled)"
+                  checked={editEnabled}
+                  onChange={(checked) => setEditEnabled(checked)}
+                />
 
                 <button
                   type="button"
