@@ -11,15 +11,32 @@ interface Client {
 
 class RealtimeHub {
   private clients: Map<string, Client> = new Map();
+  private heartbeatTimer: NodeJS.Timeout | null = null;
+
+  constructor() {
+    // Send periodic SSE keep-alive heartbeat every 25 seconds to prevent proxy/firewall timeouts
+    this.heartbeatTimer = setInterval(() => {
+      this.sendHeartbeat();
+    }, 25000);
+  }
 
   addClient(id: string, res: Response): void {
     this.clients.set(id, { id, res });
     
     // Send initial handshake event
-    res.write(`event: connected\ndata: ${JSON.stringify({ clientId: id, timestamp: new Date().toISOString() })}\n\n`);
+    try {
+      res.write(`event: connected\ndata: ${JSON.stringify({ clientId: id, timestamp: new Date().toISOString() })}\n\n`);
+    } catch {
+      this.clients.delete(id);
+      return;
+    }
 
     // Clean up on disconnect
     res.on('close', () => {
+      this.clients.delete(id);
+    });
+
+    res.on('error', () => {
       this.clients.delete(id);
     });
   }
@@ -29,7 +46,19 @@ class RealtimeHub {
     for (const [id, client] of this.clients.entries()) {
       try {
         client.res.write(payload);
-      } catch (err) {
+      } catch {
+        this.clients.delete(id);
+      }
+    }
+  }
+
+  private sendHeartbeat(): void {
+    if (this.clients.size === 0) return;
+    const heartbeatPayload = `: keepalive ${Date.now()}\n\n`;
+    for (const [id, client] of this.clients.entries()) {
+      try {
+        client.res.write(heartbeatPayload);
+      } catch {
         this.clients.delete(id);
       }
     }
@@ -37,6 +66,21 @@ class RealtimeHub {
 
   getClientCount(): number {
     return this.clients.size;
+  }
+
+  closeAll(): void {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+    for (const [id, client] of this.clients.entries()) {
+      try {
+        client.res.end();
+      } catch {
+        // ignore
+      }
+      this.clients.delete(id);
+    }
   }
 }
 

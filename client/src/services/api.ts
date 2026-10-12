@@ -36,21 +36,34 @@ function getAuthHeader(): Record<string, string> {
 }
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL}${endpoint}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthHeader(),
-      ...options?.headers
-    },
-    ...options
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-  if (!res.ok) {
-    const errorBody = await res.json().catch(() => ({}));
-    throw new Error(errorBody.error?.message || errorBody.message || `Request failed with status ${res.status}`);
+  try {
+    const res = await fetch(`${BASE_URL}${endpoint}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader(),
+        ...options?.headers
+      },
+      signal: options?.signal || controller.signal,
+      ...options
+    });
+
+    if (!res.ok) {
+      const errorBody = await res.json().catch(() => ({}));
+      throw new Error(errorBody.error?.message || errorBody.message || `Request failed with status ${res.status}`);
+    }
+
+    return await res.json();
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      throw new Error(`Permintaan ke ${endpoint} melebihi batas waktu (timeout 30 detik).`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  return res.json();
 }
 
 export const api = {

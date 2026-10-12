@@ -112,8 +112,47 @@ export async function startServer() {
   const server = app.listen(config.port, () => {
     console.log(`[Server] AI Agent Command Center backend listening on port ${config.port}`);
   });
+
+  // Graceful Shutdown Handler
+  const gracefulShutdown = async (signal: string) => {
+    console.log(`[Server] Received ${signal}. Initiating graceful shutdown...`);
+    try {
+      // 1. Close SSE clients
+      realtimeHub.closeAll();
+      // 2. Stop autonomous task runner
+      const { taskRunner } = await import('./services/orchestrator.js');
+      taskRunner.stop();
+      // 3. Stop accepting new HTTP requests
+      server.close(() => {
+        console.log('[Server] HTTP server closed.');
+      });
+      // 4. Close database pool
+      const { pool } = await import('./db/index.js');
+      await pool.end();
+      console.log('[Server] Database pool closed. Shutdown complete.');
+      process.exit(0);
+    } catch (shutdownErr) {
+      console.error('[Server] Error during graceful shutdown:', shutdownErr);
+      process.exit(1);
+    }
+  };
+
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
   return server;
 }
+
+// Global Process Stability Handlers
+process.on('uncaughtException', (err: Error) => {
+  console.error('[Process UncaughtException]', err);
+  systemLogger.error('SYSTEM', `Uncaught exception: ${err.message}`, { stack: err.stack });
+});
+
+process.on('unhandledRejection', (reason: any) => {
+  console.error('[Process UnhandledRejection]', reason);
+  systemLogger.error('SYSTEM', `Unhandled rejection: ${reason?.message || reason}`);
+});
 
 // Auto-start if executed directly
 if (process.env.NODE_ENV !== 'test') {

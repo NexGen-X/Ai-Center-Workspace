@@ -16,6 +16,11 @@ export const pool = new Pool({
   connectionTimeoutMillis: 5000,
 });
 
+// Prevent unhandled errors on idle clients from crashing the process
+pool.on('error', (err) => {
+  console.error('[PostgreSQL Pool Idle Client Error]', err);
+});
+
 /**
  * Run migrations and initial seeds idempotently
  */

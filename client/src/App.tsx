@@ -24,6 +24,7 @@ import { ConsoleDrawer } from './components/terminal/ConsoleDrawer.js';
 import { PlaygroundModal } from './features/playground/PlaygroundModal.js';
 import { PipelineModal } from './features/pipeline/PipelineModal.js';
 import { useFeedback } from './components/common/FeedbackContext.js';
+import { ErrorBoundary } from './components/common/ErrorBoundary.js';
 import { api } from './services/api.js';
 import { AIAgent, Task, Activity, DashboardSummary, ServerMetrics, Project, OrchestratorStatus, ModelProviderConfig } from '../../shared/types.js';
 import { Bot, Plus, RefreshCw, Zap, Layers, Users } from 'lucide-react';
@@ -128,12 +129,17 @@ export const App: React.FC = () => {
   useEffect(() => {
     let eventSource: EventSource | null = null;
     let reconnectTimeout: any = null;
+    let reconnectDelay = 1000;
 
     const connectSSE = () => {
+      if (eventSource) {
+        eventSource.close();
+      }
       eventSource = new EventSource('/api/realtime');
 
       eventSource.addEventListener('connected', () => {
         setIsRealtimeConnected(true);
+        reconnectDelay = 1000; // Reset backoff on successful connection
       });
 
       eventSource.addEventListener('agent.status_changed', (e: MessageEvent) => {
@@ -226,7 +232,10 @@ export const App: React.FC = () => {
       eventSource.onerror = () => {
         setIsRealtimeConnected(false);
         eventSource?.close();
-        reconnectTimeout = setTimeout(connectSSE, 5000);
+        reconnectTimeout = setTimeout(() => {
+          connectSSE();
+        }, reconnectDelay);
+        reconnectDelay = Math.min(reconnectDelay * 1.5, 10000);
       };
     };
 
@@ -294,22 +303,34 @@ export const App: React.FC = () => {
         {/* 3D Virtual Workspace Cockpit & 2D Fallback */}
         <section aria-label="Virtual Workspace">
           {viewMode === '3D' ? (
-            <Workspace3D
-              agents={agents}
-              summary={summary}
-              serverMetrics={metrics}
-              activities={activities}
-              currentUser={currentUser}
-              onSelectAgent={(agent) => setSelectedAgent(agent)}
-              onOpenCreateTask={() => {
-                setSelectedProjectIdForTask(undefined);
-                setIsCreateTaskOpen(true);
-              }}
-              onOpenTasks={() => setIsTasksModalOpen(true)}
-              onOpenProjects={() => setIsProjectsOpen(true)}
-              onOpenManageTeam={() => setIsManageTeamOpen(true)}
-              onFallbackTo2D={() => setViewMode('2D')}
-            />
+            <ErrorBoundary
+              fallbackTitle="3D Workspace Mengalami Kendala Grafis"
+              fallbackDescription="Gagal memuat visualisasi 3D WebGL. Menampilkan tampilan 2D alternatif untuk menjaga kelancaran operasi."
+              fallback={
+                <Workspace2DView
+                  agents={agents}
+                  onSelectAgent={(agent) => setSelectedAgent(agent)}
+                  onSwitchTo3D={() => setViewMode('3D')}
+                />
+              }
+            >
+              <Workspace3D
+                agents={agents}
+                summary={summary}
+                serverMetrics={metrics}
+                activities={activities}
+                currentUser={currentUser}
+                onSelectAgent={(agent) => setSelectedAgent(agent)}
+                onOpenCreateTask={() => {
+                  setSelectedProjectIdForTask(undefined);
+                  setIsCreateTaskOpen(true);
+                }}
+                onOpenTasks={() => setIsTasksModalOpen(true)}
+                onOpenProjects={() => setIsProjectsOpen(true)}
+                onOpenManageTeam={() => setIsManageTeamOpen(true)}
+                onFallbackTo2D={() => setViewMode('2D')}
+              />
+            </ErrorBoundary>
           ) : (
             <Workspace2DView
               agents={agents}

@@ -1148,6 +1148,21 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
       renderer.render(scene, camera);
     };
 
+    // WebGL Context Loss & Restoration Safeguards
+    const onContextLost = (e: Event) => {
+      e.preventDefault();
+      console.warn('[Workspace3D] WebGL context lost. Pausing rendering.');
+      cancelAnimationFrame(animationFrameId);
+    };
+
+    const onContextRestored = () => {
+      console.info('[Workspace3D] WebGL context restored.');
+      animate();
+    };
+
+    renderer.domElement.addEventListener('webglcontextlost', onContextLost, false);
+    renderer.domElement.addEventListener('webglcontextrestored', onContextRestored, false);
+
     animate();
 
     return () => {
@@ -1155,11 +1170,34 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
       window.removeEventListener('resize', handleResize);
       renderer.domElement.removeEventListener('pointermove', handlePointerMove);
       renderer.domElement.removeEventListener('click', handleClick);
+      renderer.domElement.removeEventListener('webglcontextlost', onContextLost);
+      renderer.domElement.removeEventListener('webglcontextrestored', onContextRestored);
 
-      floorGeo.dispose();
-      floorMat.dispose();
-      projCanvas.remove();
+      // Deep recursive disposal of all geometries, materials, and textures in the scene
+      scene.traverse((obj: any) => {
+        if (obj.geometry) {
+          obj.geometry.dispose();
+        }
+        if (obj.material) {
+          if (Array.isArray(obj.material)) {
+            obj.material.forEach((mat: any) => {
+              if (mat.map) mat.map.dispose();
+              mat.dispose();
+            });
+          } else {
+            if (obj.material.map) obj.material.map.dispose();
+            obj.material.dispose();
+          }
+        }
+      });
+
+      controls.dispose();
       renderer.dispose();
+      projCanvas.remove();
+      floorCanvas.remove();
+      rugCanvas.remove();
+      neonCanvas.remove();
+
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
       }
