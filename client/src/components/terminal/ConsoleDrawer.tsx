@@ -67,6 +67,21 @@ export const ConsoleDrawer: React.FC<ConsoleDrawerProps> = ({
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        const target = e.target as HTMLElement;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+          return;
+        }
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   // Connect to SSE for realtime logs
   useEffect(() => {
     if (!isOpen) return;
@@ -229,6 +244,7 @@ export const ConsoleDrawer: React.FC<ConsoleDrawerProps> = ({
         <div className="flex items-center gap-1 sm:gap-2">
           {/* Force Dispatch Cycle */}
           <button
+            type="button"
             onClick={handleRunCycle}
             disabled={runningCycle}
             className="flex items-center gap-1 px-2 py-1 rounded bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/40 text-[11px] font-sans font-semibold transition disabled:opacity-50"
@@ -240,6 +256,7 @@ export const ConsoleDrawer: React.FC<ConsoleDrawerProps> = ({
 
           {/* Copy Logs */}
           <button
+            type="button"
             onClick={handleCopyAll}
             className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
             title="Salin Semua Log"
@@ -249,6 +266,7 @@ export const ConsoleDrawer: React.FC<ConsoleDrawerProps> = ({
 
           {/* Download Logs */}
           <button
+            type="button"
             onClick={handleDownload}
             className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
             title="Unduh Log (.log)"
@@ -258,6 +276,7 @@ export const ConsoleDrawer: React.FC<ConsoleDrawerProps> = ({
 
           {/* Clear Buffer */}
           <button
+            type="button"
             onClick={handleClear}
             className="p-1 rounded bg-slate-800 hover:bg-red-500/20 hover:text-red-400 text-slate-400 border border-slate-700 transition"
             title="Bersihkan Log"
@@ -267,6 +286,7 @@ export const ConsoleDrawer: React.FC<ConsoleDrawerProps> = ({
 
           {/* Expand / Minimize Toggle */}
           <button
+            type="button"
             onClick={() => setIsExpanded(!isExpanded)}
             className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
             title={isExpanded ? 'Perkecil Konsol' : 'Perbesar Konsol'}
@@ -276,7 +296,9 @@ export const ConsoleDrawer: React.FC<ConsoleDrawerProps> = ({
 
           {/* Close Console */}
           <button
+            type="button"
             onClick={onClose}
+            aria-label="Tutup konsol telemetri"
             className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 transition"
             title="Tutup Konsol"
           >
@@ -292,6 +314,7 @@ export const ConsoleDrawer: React.FC<ConsoleDrawerProps> = ({
           {['ALL', 'ORCHESTRATOR', 'INFERENCE', 'API', 'SYSTEM', 'SECURITY'].map(cat => (
             <button
               key={cat}
+              type="button"
               onClick={() => setActiveCategory(cat)}
               className={`px-2 py-0.5 rounded text-[10px] font-mono transition ${
                 activeCategory === cat
@@ -311,6 +334,7 @@ export const ConsoleDrawer: React.FC<ConsoleDrawerProps> = ({
             {['ALL', 'INFO', 'WARN', 'ERROR'].map(lvl => (
               <button
                 key={lvl}
+                type="button"
                 onClick={() => setActiveLevel(lvl)}
                 className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition ${
                   activeLevel === lvl

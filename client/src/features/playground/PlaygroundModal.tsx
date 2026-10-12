@@ -116,6 +116,21 @@ export const PlaygroundModal: React.FC<PlaygroundModalProps> = ({
     }
   }, [providers, agents, slotAProviderId, slotBProviderId, slotAModelId]);
 
+  // Handle Escape key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleRunBenchmark = async () => {
@@ -181,8 +196,14 @@ export const PlaygroundModal: React.FC<PlaygroundModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-[#0B0F17] border border-cyan-500/30 rounded-2xl w-full max-w-6xl max-h-[94vh] flex flex-col shadow-2xl shadow-cyan-950/40 overflow-hidden font-sans">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="bg-[#0B0F17] border border-cyan-500/30 rounded-2xl w-full max-w-6xl max-h-[94vh] flex flex-col shadow-2xl shadow-cyan-950/40 overflow-hidden font-sans"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-3.5 sm:px-6 py-3 sm:py-4 border-b border-slate-800 bg-[#0E1424] gap-2">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
@@ -207,6 +228,7 @@ export const PlaygroundModal: React.FC<PlaygroundModalProps> = ({
           <div className="flex items-center gap-2 shrink-0">
             {/* Compare Mode Toggle */}
             <button
+              type="button"
               onClick={() => setIsCompareMode(!isCompareMode)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition ${
                 isCompareMode
@@ -219,9 +241,10 @@ export const PlaygroundModal: React.FC<PlaygroundModalProps> = ({
             </button>
 
             <button
+              type="button"
               onClick={onClose}
               className="p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
-              title="Tutup"
+              title="Tutup (Esc)"
             >
               <X className="w-5 h-5" />
             </button>
@@ -498,12 +521,21 @@ export const PlaygroundModal: React.FC<PlaygroundModalProps> = ({
           </div>
 
           <button
+            type="button"
             onClick={handleRunBenchmark}
             disabled={loading}
             className="flex items-center gap-2 px-4 sm:px-5 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs shadow-lg shadow-cyan-500/25 transition active:scale-95 disabled:opacity-50 shrink-0"
           >
             <Play className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             <span>{loading ? 'Menguji...' : 'Jalankan Benchmark'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-semibold text-xs transition shrink-0"
+          >
+            Tutup
           </button>
         </div>
       </div>

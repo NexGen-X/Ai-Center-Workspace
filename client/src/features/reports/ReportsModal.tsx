@@ -109,11 +109,28 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({ isOpen, onClose }) =
     }
   }, [isOpen, days]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-      <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-5xl max-h-[94vh] sm:max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-5xl max-h-[94vh] sm:max-h-[90vh] flex flex-col shadow-2xl overflow-hidden"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-3.5 sm:px-6 py-3 sm:py-4 border-b border-slate-800 bg-slate-800/40 flex-wrap gap-2.5">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
@@ -136,6 +153,7 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({ isOpen, onClose }) =
               {[7, 14, 30, 90].map((d) => (
                 <button
                   key={d}
+                  type="button"
                   onClick={() => setDays(d)}
                   className={`px-2 sm:px-2.5 py-1 rounded-md font-medium transition-all text-[11px] ${
                     days === d
@@ -152,6 +170,7 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({ isOpen, onClose }) =
             {data && (
               <div className="flex items-center gap-1">
                 <button
+                  type="button"
                   onClick={handleExportCSV}
                   className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/40 text-emerald-300 text-xs font-semibold transition"
                   title="Unduh Laporan FinOps (.csv)"
@@ -160,6 +179,7 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({ isOpen, onClose }) =
                   <span className="hidden sm:inline">CSV</span>
                 </button>
                 <button
+                  type="button"
                   onClick={handleExportJSON}
                   className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition"
                   title="Unduh Telemetri (.json)"
@@ -171,6 +191,7 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({ isOpen, onClose }) =
             )}
 
             <button
+              type="button"
               onClick={() => fetchReports(days)}
               disabled={loading}
               className="p-1.5 sm:p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-colors"
@@ -180,7 +201,9 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({ isOpen, onClose }) =
             </button>
 
             <button
+              type="button"
               onClick={onClose}
+              aria-label="Tutup laporan FinOps"
               className="p-1.5 sm:p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
             >
               <X className="w-5 h-5" />
@@ -389,6 +412,7 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({ isOpen, onClose }) =
         <div className="px-6 py-3 border-t border-slate-800 bg-slate-900/90 flex items-center justify-between text-xs text-slate-500">
           <span>Periode analitik: {days} hari terakhir</span>
           <button
+            type="button"
             onClick={onClose}
             className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium transition-colors"
           >

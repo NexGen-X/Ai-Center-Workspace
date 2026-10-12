@@ -70,8 +70,27 @@ export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agent, onClo
       setEditTemperature(agent.parameters?.temperature ?? 0.7);
       setEditMaxTokens(agent.parameters?.maxTokens ?? 2048);
       setEditEnabled(agent.enabled);
+    } else {
+      setCurrentAgent(null);
+      setIsEditing(false);
+      setExecutionResult(null);
     }
   }, [agent]);
+
+  // Handle Escape key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    if (agent) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [agent, onClose]);
 
   const loadRuns = async (agentId: string) => {
     setLoadingRuns(true);
@@ -85,7 +104,7 @@ export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agent, onClo
     }
   };
 
-  if (!currentAgent) return null;
+  if (!agent || !currentAgent) return null;
 
   const handleExecute = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,8 +175,14 @@ export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agent, onClo
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#111827] border border-slate-800 rounded-2xl w-full max-w-3xl max-h-[94vh] sm:max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="bg-[#111827] border border-slate-800 rounded-2xl w-full max-w-3xl max-h-[94vh] sm:max-h-[90vh] flex flex-col shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-3.5 sm:px-6 py-3 sm:py-4 border-b border-slate-800 bg-[#0B0F17]/60 gap-2">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
@@ -189,6 +214,7 @@ export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agent, onClo
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {!isEditing ? (
               <button
+                type="button"
                 onClick={() => setIsEditing(true)}
                 className="p-1.5 sm:p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition"
                 title="Edit Konfigurasi Agen"
@@ -197,6 +223,7 @@ export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agent, onClo
               </button>
             ) : (
               <button
+                type="button"
                 onClick={() => setIsEditing(false)}
                 className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 hover:text-white text-xs"
               >
@@ -205,6 +232,7 @@ export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agent, onClo
             )}
 
             <button
+              type="button"
               onClick={handleDeleteAgent}
               className="p-1.5 sm:p-2 rounded-lg bg-slate-800 hover:bg-rose-900/40 text-rose-400 transition"
               title="Hapus Agen"
@@ -212,7 +240,12 @@ export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agent, onClo
               <Trash2 className="w-4 h-4" />
             </button>
 
-            <button onClick={onClose} className="p-1.5 sm:p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 sm:p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              title="Tutup (Esc)"
+            >
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -422,6 +455,7 @@ export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agent, onClo
         {/* Footer */}
         <div className="px-6 py-3 border-t border-slate-800 bg-[#0B0F17]/60 flex justify-end">
           <button
+            type="button"
             onClick={onClose}
             className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition"
           >

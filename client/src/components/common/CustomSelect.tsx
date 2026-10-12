@@ -87,13 +87,24 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
       }
     };
 
+    const handleKeyDownCapture = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        setIsOpen(false);
+        setSearchQuery('');
+        setHighlightedIndex(-1);
+      }
+    };
+
     if (isOpen) {
       document.addEventListener('mousedown', handleOutsideClick);
       document.addEventListener('touchstart', handleOutsideClick);
+      window.addEventListener('keydown', handleKeyDownCapture, true);
     }
     return () => {
       document.removeEventListener('mousedown', handleOutsideClick);
       document.removeEventListener('touchstart', handleOutsideClick);
+      window.removeEventListener('keydown', handleKeyDownCapture, true);
     };
   }, [isOpen]);
 
@@ -121,6 +132,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
     switch (e.key) {
       case 'Escape':
         e.preventDefault();
+        e.stopPropagation();
         setIsOpen(false);
         setSearchQuery('');
         setHighlightedIndex(-1);

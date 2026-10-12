@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Calendar as CalendarIcon, ChevronLeft, ChevronRight, CheckCircle2, Clock } from 'lucide-react';
 import { Task, Project } from '../../../../shared/types.js';
 
@@ -12,6 +12,17 @@ interface CalendarModalProps {
 
 export const CalendarModal: React.FC<CalendarModalProps> = ({ isOpen, onClose, tasks, projects, onSelectTask }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -35,8 +46,14 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({ isOpen, onClose, t
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#111827] border border-slate-800 rounded-2xl w-full max-w-4xl max-h-[94vh] sm:max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-[#111827] border border-slate-800 rounded-2xl w-full max-w-4xl max-h-[94vh] sm:max-h-[90vh] flex flex-col shadow-2xl overflow-hidden"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-3.5 sm:px-6 py-3 sm:py-4 border-b border-slate-800 bg-[#0B0F17]/60 gap-2">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
@@ -48,7 +65,12 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({ isOpen, onClose, t
               <p className="text-[11px] sm:text-xs text-slate-400 hidden sm:block truncate">Jadwal target penyelesaian tugas dan milestone proyek.</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 sm:p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Tutup kalender"
+            className="p-1.5 sm:p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -62,12 +84,14 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({ isOpen, onClose, t
           </div>
           <div className="flex items-center gap-1">
             <button
+              type="button"
               onClick={prevMonth}
               className="p-1 sm:p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
+              type="button"
               onClick={nextMonth}
               className="p-1 sm:p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
             >
@@ -138,6 +162,17 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({ isOpen, onClose, t
               );
             })}
           </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-4 sm:px-6 py-3 border-t border-slate-800 bg-[#0B0F17]/80 flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition"
+          >
+            Tutup
+          </button>
         </div>
       </div>
     </div>

@@ -43,18 +43,26 @@ export const NotificationDropdown: React.FC = () => {
     };
   }, []);
 
-  // Close dropdown on outside click
+  // Close dropdown on outside click or Escape key
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      window.addEventListener('keydown', handleKeyDown);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen]);
 
@@ -97,6 +105,7 @@ export const NotificationDropdown: React.FC = () => {
   return (
     <div className="relative" ref={dropdownRef}>
       <button
+        type="button"
         onClick={() => {
           setIsOpen(!isOpen);
           if (!isOpen) fetchNotifications();
@@ -127,6 +136,7 @@ export const NotificationDropdown: React.FC = () => {
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (
                 <button
+                  type="button"
                   onClick={handleMarkAllRead}
                   className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors"
                   title="Tandai semua dibaca"
@@ -136,7 +146,9 @@ export const NotificationDropdown: React.FC = () => {
                 </button>
               )}
               <button
+                type="button"
                 onClick={() => setIsOpen(false)}
+                aria-label="Tutup notifikasi"
                 className="text-slate-400 hover:text-white transition-colors"
               >
                 <X className="w-4 h-4" />
@@ -174,6 +186,7 @@ export const NotificationDropdown: React.FC = () => {
                   </div>
                   {!item.isRead && (
                     <button
+                      type="button"
                       onClick={(e) => handleMarkAsRead(item.id, e)}
                       className="text-[10px] text-slate-500 hover:text-cyan-400 p-1 shrink-0"
                       title="Tandai dibaca"

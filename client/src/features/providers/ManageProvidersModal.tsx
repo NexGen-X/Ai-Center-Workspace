@@ -412,11 +412,36 @@ export const ManageProvidersModal: React.FC<ManageProvidersModalProps> = ({
     });
   }, [providers, searchQuery, statusFilter]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (providerToDelete) {
+          setProviderToDelete(null);
+        } else if (discoveryModalOpen) {
+          setDiscoveryModalOpen(false);
+        } else if (isAddEditOpen) {
+          setIsAddEditOpen(false);
+        } else {
+          onClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, providerToDelete, discoveryModalOpen, isAddEditOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md">
-      <div className="relative w-full max-w-6xl max-h-[94vh] flex flex-col bg-[#0B0F17] border border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-6xl max-h-[94vh] flex flex-col bg-[#0B0F17] border border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+      >
         {/* Header */}
         <div className="px-4 sm:px-6 py-4 border-b border-slate-800 bg-[#0E131F]/90 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
@@ -446,6 +471,7 @@ export const ManageProvidersModal: React.FC<ManageProvidersModalProps> = ({
 
           <div className="flex items-center gap-2 shrink-0">
             <button
+              type="button"
               onClick={fetchProviders}
               disabled={loading}
               className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white transition disabled:opacity-50"
@@ -454,6 +480,7 @@ export const ManageProvidersModal: React.FC<ManageProvidersModalProps> = ({
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-cyan-400' : ''}`} />
             </button>
             <button
+              type="button"
               onClick={onClose}
               className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white transition"
               aria-label="Tutup"
@@ -478,6 +505,7 @@ export const ManageProvidersModal: React.FC<ManageProvidersModalProps> = ({
               />
               {searchQuery && (
                 <button
+                  type="button"
                   onClick={() => setSearchQuery('')}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs"
                 >
@@ -497,6 +525,7 @@ export const ManageProvidersModal: React.FC<ManageProvidersModalProps> = ({
               ).map(tab => (
                 <button
                   key={tab.id}
+                  type="button"
                   onClick={() => setStatusFilter(tab.id)}
                   className={`px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
                     statusFilter === tab.id
@@ -512,6 +541,7 @@ export const ManageProvidersModal: React.FC<ManageProvidersModalProps> = ({
 
           {/* Add Provider Button */}
           <button
+            type="button"
             onClick={handleOpenAdd}
             className="flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold shadow-md shadow-cyan-600/20 transition shrink-0"
           >
@@ -748,6 +778,7 @@ export const ManageProvidersModal: React.FC<ManageProvidersModalProps> = ({
             <span className="sm:hidden">Enkripsi AES-256 Aktif</span>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition"
           >
@@ -760,8 +791,14 @@ export const ManageProvidersModal: React.FC<ManageProvidersModalProps> = ({
       {/* ADD / EDIT PROVIDER SUBMODAL                             */}
       {/* ======================================================== */}
       {isAddEditOpen && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-md">
-          <div className="relative w-full max-w-xl max-h-[92vh] flex flex-col bg-[#0F1420] border border-slate-700 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div
+          onClick={() => setIsAddEditOpen(false)}
+          className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-md"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-xl max-h-[92vh] flex flex-col bg-[#0F1420] border border-slate-700 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+          >
             {/* Header */}
             <div className="px-5 py-4 border-b border-slate-800 bg-slate-900/80 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
@@ -778,7 +815,9 @@ export const ManageProvidersModal: React.FC<ManageProvidersModalProps> = ({
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setIsAddEditOpen(false)}
+                aria-label="Tutup formulir provider"
                 className="p-1.5 rounded-xl bg-slate-800 text-slate-400 hover:text-white"
               >
                 <X className="w-4 h-4" />
@@ -1018,8 +1057,14 @@ export const ManageProvidersModal: React.FC<ManageProvidersModalProps> = ({
       {/* DISCOVERED MODELS SUBMODAL                               */}
       {/* ======================================================== */}
       {discoveryModalOpen && discoveryProvider && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-md">
-          <div className="relative w-full max-w-lg max-h-[85vh] flex flex-col bg-[#0F1420] border border-slate-700 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div
+          onClick={() => setDiscoveryModalOpen(false)}
+          className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-md"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-lg max-h-[85vh] flex flex-col bg-[#0F1420] border border-slate-700 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+          >
             {/* Header */}
             <div className="px-5 py-4 border-b border-slate-800 bg-slate-900/80 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
@@ -1036,7 +1081,9 @@ export const ManageProvidersModal: React.FC<ManageProvidersModalProps> = ({
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setDiscoveryModalOpen(false)}
+                aria-label="Tutup katalog model"
                 className="p-1.5 rounded-xl bg-slate-800 text-slate-400 hover:text-white"
               >
                 <X className="w-4 h-4" />
@@ -1078,6 +1125,7 @@ export const ManageProvidersModal: React.FC<ManageProvidersModalProps> = ({
                         <span className="font-mono text-purple-300 font-semibold">{modelId}</span>
                       </div>
                       <button
+                        type="button"
                         onClick={() => handleCopy(modelId, modelId)}
                         className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition text-[11px]"
                       >
@@ -1102,6 +1150,7 @@ export const ManageProvidersModal: React.FC<ManageProvidersModalProps> = ({
             <div className="px-5 py-3 border-t border-slate-800 bg-slate-900/90 flex items-center justify-between text-xs text-slate-400">
               <span>{discoveredModels.length} Model Ditemukan</span>
               <button
+                type="button"
                 onClick={() => setDiscoveryModalOpen(false)}
                 className="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold"
               >
@@ -1116,8 +1165,14 @@ export const ManageProvidersModal: React.FC<ManageProvidersModalProps> = ({
       {/* DELETE CONFIRMATION SUBMODAL                             */}
       {/* ======================================================== */}
       {providerToDelete && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-          <div className="relative w-full max-w-md bg-[#0F1420] border border-slate-700 rounded-2xl shadow-2xl p-5 animate-in fade-in zoom-in-95 duration-150">
+        <div
+          onClick={() => setProviderToDelete(null)}
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-md bg-[#0F1420] border border-slate-700 rounded-2xl shadow-2xl p-5 animate-in fade-in zoom-in-95 duration-150"
+          >
             <div className="flex items-start gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center shrink-0">
                 <Trash2 className="w-5 h-5 text-rose-400" />
@@ -1139,12 +1194,14 @@ export const ManageProvidersModal: React.FC<ManageProvidersModalProps> = ({
 
             <div className="flex items-center justify-end gap-2">
               <button
+                type="button"
                 onClick={() => setProviderToDelete(null)}
                 className="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
               >
                 Batal
               </button>
               <button
+                type="button"
                 onClick={handleDeleteProvider}
                 disabled={deleting}
                 className="px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition shadow-md shadow-rose-600/20 disabled:opacity-50"

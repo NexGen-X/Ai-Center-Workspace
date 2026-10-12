@@ -66,6 +66,21 @@ export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose,
     }
   }, [isOpen, selectedCategory]);
 
+  // Handle Escape key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   const handleSelectDoc = (doc: DocumentItem) => {
     setSelectedDoc(doc);
     setIsEditing(false);
@@ -211,8 +226,14 @@ export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose,
   const isMobileDetailView = Boolean(selectedDoc || isCreating || isEditing);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-      <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-6xl h-[92vh] sm:h-[88vh] flex flex-col shadow-2xl overflow-hidden">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in"
+      onClick={onClose}
+    >
+      <div
+        className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-6xl h-[92vh] sm:h-[88vh] flex flex-col shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-3.5 sm:px-6 py-3 sm:py-4 border-b border-slate-800 bg-slate-800/40 gap-2">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
@@ -231,6 +252,7 @@ export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose,
 
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
+              type="button"
               onClick={handleExportAllDocs}
               className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 sm:py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition"
               title="Ekspor Semua Dokumen ke file JSON"
@@ -239,6 +261,7 @@ export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose,
               <span className="hidden sm:inline">Export Semua</span>
             </button>
             <button
+              type="button"
               onClick={handleStartCreate}
               className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs shadow-md transition-all active:scale-95"
             >
@@ -247,8 +270,10 @@ export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose,
               <span className="sm:hidden">+ Dokumen</span>
             </button>
             <button
+              type="button"
               onClick={onClose}
               className="p-1.5 sm:p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+              title="Tutup (Esc)"
             >
               <X className="w-5 h-5" />
             </button>

@@ -89,12 +89,23 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   }, []);
 
-  const handleConfirmClose = (result: boolean) => {
+  const handleConfirmClose = useCallback((result: boolean) => {
     if (confirmState) {
       confirmState.resolve(result);
       setConfirmState(null);
     }
-  };
+  }, [confirmState]);
+
+  React.useEffect(() => {
+    if (!confirmState?.isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleConfirmClose(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [confirmState?.isOpen, handleConfirmClose]);
 
   return (
     <FeedbackContext.Provider value={{ toast, confirm }}>
@@ -133,9 +144,10 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 <div className="text-xs text-slate-200 leading-snug break-words">{t.message}</div>
               </div>
               <button
+                type="button"
                 onClick={() => removeToast(t.id)}
                 className="text-slate-400 hover:text-white p-0.5 rounded-lg hover:bg-white/10 transition shrink-0"
-                aria-label="Tutup"
+                aria-label="Tutup notifikasi"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -146,8 +158,14 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       {/* In-App Custom Confirmation Dialog */}
       {confirmState && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150">
-          <div className="relative w-full max-w-md bg-[#0D121F] border border-slate-700 rounded-2xl shadow-2xl p-5 sm:p-6 animate-in zoom-in-95 duration-150">
+        <div
+          onClick={() => handleConfirmClose(false)}
+          className="fixed inset-0 z-[10000] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-md bg-[#0D121F] border border-slate-700 rounded-2xl shadow-2xl p-5 sm:p-6 animate-in zoom-in-95 duration-150"
+          >
             <div className="flex items-start gap-3.5 mb-4">
               <div
                 className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${

@@ -24,11 +24,32 @@ export const TasksModal: React.FC<TasksModalProps> = ({
   onOpenCreateTask,
   onSelectTask
 }) => {
+  // Handle Escape key to close modal
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#0B0F17] border border-slate-800 rounded-2xl w-full max-w-6xl max-h-[94vh] sm:max-h-[90vh] flex flex-col shadow-2xl shadow-blue-950/40 overflow-hidden">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="bg-[#0B0F17] border border-slate-800 rounded-2xl w-full max-w-6xl max-h-[94vh] sm:max-h-[90vh] flex flex-col shadow-2xl shadow-blue-950/40 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-3.5 sm:px-6 py-3 sm:py-4 border-b border-slate-800 bg-slate-900/40 gap-2">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
@@ -50,6 +71,7 @@ export const TasksModal: React.FC<TasksModalProps> = ({
 
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             <button
+              type="button"
               onClick={() => {
                 onOpenCreateTask();
               }}
@@ -60,9 +82,10 @@ export const TasksModal: React.FC<TasksModalProps> = ({
               <span className="sm:hidden">+ Baru</span>
             </button>
             <button
+              type="button"
               onClick={onClose}
               className="p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
-              title="Tutup"
+              title="Tutup (Esc)"
             >
               <X className="w-5 h-5" />
             </button>
@@ -79,6 +102,17 @@ export const TasksModal: React.FC<TasksModalProps> = ({
             onOpenCreateTask={onOpenCreateTask}
             onSelectTask={onSelectTask}
           />
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-3 border-t border-slate-800 bg-[#0B0F17]/60 flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition"
+          >
+            Tutup
+          </button>
         </div>
       </div>
     </div>

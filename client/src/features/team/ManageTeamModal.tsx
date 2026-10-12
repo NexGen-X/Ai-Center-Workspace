@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Users,
@@ -71,6 +71,21 @@ export const ManageTeamModal: React.FC<ManageTeamModalProps> = ({
   const [pingResults, setPingResults] = useState<Record<string, { success: boolean; latencyMs: number; message?: string }>>({});
   const [togglingAgentId, setTogglingAgentId] = useState<string | null>(null);
   const [deletingAgentId, setDeletingAgentId] = useState<string | null>(null);
+
+  // Handle Escape key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -165,8 +180,14 @@ export const ManageTeamModal: React.FC<ManageTeamModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#0B0F17] border border-slate-800 rounded-2xl w-full max-w-6xl max-h-[94vh] sm:max-h-[92vh] flex flex-col shadow-2xl shadow-blue-950/40 overflow-hidden">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="bg-[#0B0F17] border border-slate-800 rounded-2xl w-full max-w-6xl max-h-[94vh] sm:max-h-[92vh] flex flex-col shadow-2xl shadow-blue-950/40 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-3.5 sm:px-6 py-3 sm:py-4 border-b border-slate-800/80 bg-slate-900/40 gap-2">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
@@ -188,6 +209,7 @@ export const ManageTeamModal: React.FC<ManageTeamModalProps> = ({
 
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             <button
+              type="button"
               onClick={() => {
                 onClose();
                 onOpenAddAgent();
@@ -199,6 +221,7 @@ export const ManageTeamModal: React.FC<ManageTeamModalProps> = ({
               <span className="sm:hidden">+ Anggota</span>
             </button>
             <button
+              type="button"
               onClick={onClose}
               className="p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
               title="Tutup (Esc)"
@@ -641,6 +664,7 @@ export const ManageTeamModal: React.FC<ManageTeamModalProps> = ({
             <span>Semua kredensial API Key dienkripsi aman dengan AES-256-GCM di backend server.</span>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold transition"
           >

@@ -29,7 +29,7 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
   // Normalize date string (YYYY-MM-DD)
   const normalizedValue = value ? value.split('T')[0] : '';
 
-  // Close on outside click
+  // Close on outside click or Escape
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -37,13 +37,22 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
       }
     };
 
+    const handleKeyDownCapture = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        setIsOpen(false);
+      }
+    };
+
     if (isOpen) {
       document.addEventListener('mousedown', handleOutsideClick);
       document.addEventListener('touchstart', handleOutsideClick);
+      window.addEventListener('keydown', handleKeyDownCapture, true);
     }
     return () => {
       document.removeEventListener('mousedown', handleOutsideClick);
       document.removeEventListener('touchstart', handleOutsideClick);
+      window.removeEventListener('keydown', handleKeyDownCapture, true);
     };
   }, [isOpen]);
 
