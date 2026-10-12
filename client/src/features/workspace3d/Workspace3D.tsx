@@ -23,8 +23,12 @@ import {
   User,
   Coffee,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Volume2,
+  VolumeX,
+  Server
 } from 'lucide-react';
+import { audioService } from '../../services/audio.js';
 
 interface Workspace3DProps {
   agents: AIAgent[];
@@ -55,7 +59,8 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const [autoTour, setAutoTour] = useState(false);
-  const [activeCamView, setActiveCamView] = useState<'overview' | 'task_wall' | 'agent' | 'tour'>('overview');
+  const [activeCamView, setActiveCamView] = useState<'overview' | 'task_wall' | 'server_rack' | 'isometric' | 'agent' | 'tour'>('overview');
+  const [isAudioMuted, setIsAudioMuted] = useState(() => audioService.isMuted());
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [hoveredAgent, setHoveredAgent] = useState<AIAgent | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
@@ -738,6 +743,7 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
 
   // Handle Camera Moves
   const handleCamOverview = () => {
+    audioService.playCameraSwitch();
     setActiveCamView('overview');
     setAutoTour(false);
     setSelectedAgentId(null);
@@ -746,6 +752,7 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
   };
 
   const handleCamTaskWall = () => {
+    audioService.playCameraSwitch();
     setActiveCamView('task_wall');
     setAutoTour(false);
     setSelectedAgentId(null);
@@ -753,7 +760,26 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
     targetLookAt.current.set(0, 7.2, -8.4);
   };
 
+  const handleCamServerRack = () => {
+    audioService.playCameraSwitch();
+    setActiveCamView('server_rack');
+    setAutoTour(false);
+    setSelectedAgentId(null);
+    targetCamPos.current.set(0, 4.2, 6.5);
+    targetLookAt.current.set(0, 1.8, -1.0);
+  };
+
+  const handleCamIsometric = () => {
+    audioService.playCameraSwitch();
+    setActiveCamView('isometric');
+    setAutoTour(false);
+    setSelectedAgentId(null);
+    targetCamPos.current.set(16, 16, 16);
+    targetLookAt.current.set(0, 1.5, 0);
+  };
+
   const handleCamFocusAgent = (agent: AIAgent) => {
+    audioService.playCameraSwitch();
     setActiveCamView('agent');
     setAutoTour(false);
     setSelectedAgentId(agent.id);
@@ -769,6 +795,7 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
   };
 
   const handleToggleAutoTour = () => {
+    audioService.playClick();
     const nextState = !autoTour;
     setAutoTour(nextState);
     if (nextState) {
@@ -776,6 +803,11 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
     } else {
       handleCamOverview();
     }
+  };
+
+  const handleToggleSound = () => {
+    const nextMuted = audioService.toggleMute();
+    setIsAudioMuted(nextMuted);
   };
 
   if (!webGlSupported) {
@@ -1014,6 +1046,32 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
             <span>▣ Task wall</span>
           </button>
 
+          <button
+            onClick={handleCamServerRack}
+            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold transition flex items-center gap-1 shrink-0 whitespace-nowrap ${
+              activeCamView === 'server_rack'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+            title="Fokus Kamera ke Server Rack"
+          >
+            <Server className="w-3 h-3 text-cyan-400" />
+            <span className="hidden sm:inline">Server Rack</span>
+            <span className="sm:hidden">Rack</span>
+          </button>
+
+          <button
+            onClick={handleCamIsometric}
+            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold transition flex items-center gap-1 shrink-0 whitespace-nowrap ${
+              activeCamView === 'isometric'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+            title="Sudut Pandang Isometrik 3D"
+          >
+            <span>📐 Isometrik</span>
+          </button>
+
           {/* Quick Agent Pills */}
           {agents.slice(0, 3).map((agent) => (
             <button
@@ -1045,6 +1103,20 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
 
         {/* Right Toggle Button: Riwayat tugas & aktivitas • Live */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Cybernetic SFX Toggle Button */}
+          <button
+            onClick={handleToggleSound}
+            className={`p-2 sm:p-2.5 rounded-xl sm:rounded-2xl backdrop-blur-md border text-xs font-semibold shadow-xl transition ${
+              isAudioMuted
+                ? 'bg-slate-900/90 border-slate-800 text-slate-500 hover:text-slate-300'
+                : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25 shadow-emerald-500/10'
+            }`}
+            title={isAudioMuted ? 'Suara SFX Nonaktif (Klik untuk Aktifkan)' : 'Suara SFX Aktif (Klik untuk Mute)'}
+            aria-label="Toggle SFX Audio"
+          >
+            {isAudioMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4 text-emerald-400 animate-pulse" />}
+          </button>
+
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl backdrop-blur-md border text-xs font-semibold shadow-xl transition ${

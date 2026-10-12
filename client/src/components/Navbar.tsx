@@ -18,7 +18,9 @@ import {
   CheckCircle2,
   Cpu,
   Terminal,
-  Zap
+  Zap,
+  FlaskConical,
+  Workflow
 } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown.js';
 import { OrchestratorStatus } from '../../../shared/types.js';
@@ -34,6 +36,8 @@ interface NavbarProps {
   onOpenDocuments: () => void;
   onOpenProjects: () => void;
   onOpenSettings: () => void;
+  onOpenPlayground: () => void;
+  onOpenPipeline?: () => void;
   onOpenLogin: () => void;
   onLogout: () => void;
   currentUser: { displayName: string; email: string; role: string } | null;
@@ -57,6 +61,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenDocuments,
   onOpenProjects,
   onOpenSettings,
+  onOpenPlayground,
+  onOpenPipeline,
   onOpenLogin,
   onLogout,
   currentUser,
@@ -144,6 +150,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <Terminal className="w-4 h-4" />
               </button>
             )}
+
+            {/* Mobile Playground */}
+            <button
+              onClick={onOpenPlayground}
+              className="p-1.5 rounded-xl bg-slate-900 border border-slate-800 text-amber-400 hover:text-amber-300 transition"
+              title="AI Playground & Benchmark"
+              aria-label="AI Playground"
+            >
+              <FlaskConical className="w-4 h-4" />
+            </button>
 
             {/* Settings */}
             <button
@@ -263,6 +279,26 @@ export const Navbar: React.FC<NavbarProps> = ({
             <BarChart2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
             <span>Laporan</span>
           </button>
+
+          {/* Playground & Benchmark */}
+          <button
+            onClick={onOpenPlayground}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 text-xs font-medium transition shrink-0 whitespace-nowrap"
+          >
+            <FlaskConical className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span>Playground</span>
+          </button>
+
+          {/* Swarm Pipeline */}
+          {onOpenPipeline && (
+            <button
+              onClick={onOpenPipeline}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 text-xs font-medium transition shrink-0 whitespace-nowrap"
+            >
+              <Workflow className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+              <span>Swarm</span>
+            </button>
+          )}
         </nav>
 
         {/* Right Section: Time, Notifications, Settings & Operator Profile (Desktop lg:flex) */}

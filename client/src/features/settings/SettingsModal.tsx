@@ -20,7 +20,11 @@ import {
   Download,
   Upload,
   RefreshCw,
-  FileCheck
+  FileCheck,
+  Copy,
+  Check,
+  Send,
+  Terminal
 } from 'lucide-react';
 import { ModelProviderConfig, WorkspaceBackup } from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
@@ -44,7 +48,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onWorkspaceRestored
 }) => {
   const { toast, confirm } = useFeedback();
-  const [activeTab, setActiveTab] = useState<'WORKSPACE' | 'SECURITY' | 'PROVIDERS' | 'BACKUP'>('WORKSPACE');
+  const [activeTab, setActiveTab] = useState<'WORKSPACE' | 'SECURITY' | 'PROVIDERS' | 'BACKUP' | 'WEBHOOKS'>('WORKSPACE');
   const [providers, setProviders] = useState<ModelProviderConfig[]>([]);
   const [loadingProviders, setLoadingProviders] = useState(false);
 
@@ -61,6 +65,48 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [selectedBackupFile, setSelectedBackupFile] = useState<File | null>(null);
   const [parsedBackupData, setParsedBackupData] = useState<WorkspaceBackup | null>(null);
   const [backupError, setBackupError] = useState<string | null>(null);
+
+  // Webhook Tester State
+  const [webhookTitle, setWebhookTitle] = useState('Verifikasi Build CI/CD & Vulnerability Scan');
+  const [webhookDesc, setWebhookDesc] = useState('Analisis log deployment dan verifikasi integrasi sistem dari pipeline GitHub Actions.');
+  const [webhookPriority, setWebhookPriority] = useState<'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'>('HIGH');
+  const [webhookAutoExecute, setWebhookAutoExecute] = useState(true);
+  const [dispatchingWebhook, setDispatchingWebhook] = useState(false);
+  const [webhookResult, setWebhookResult] = useState<any>(null);
+  const [copiedUrl, setCopiedUrl] = useState(false);
+
+  const handleTestDispatchWebhook = async () => {
+    if (!webhookTitle.trim()) {
+      toast.error('Judul pemicu webhook wajib diisi.');
+      return;
+    }
+    setDispatchingWebhook(true);
+    setWebhookResult(null);
+    try {
+      const res = await api.dispatchWebhookTask({
+        title: webhookTitle,
+        description: webhookDesc,
+        priority: webhookPriority,
+        autoExecute: webhookAutoExecute
+      });
+      setWebhookResult(res);
+      toast.success(res.message || 'Webhook berhasil dipicu!');
+      if (onWorkspaceRestored) onWorkspaceRestored();
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal mengirim pemicu webhook.');
+      setWebhookResult({ error: err.message });
+    } finally {
+      setDispatchingWebhook(false);
+    }
+  };
+
+  const handleCopyWebhookUrl = () => {
+    const url = `${window.location.origin}/api/webhooks/dispatch-task`;
+    navigator.clipboard.writeText(url);
+    setCopiedUrl(true);
+    toast.info('URL Webhook disalin ke clipboard.');
+    setTimeout(() => setCopiedUrl(false), 2000);
+  };
 
   const handleDownloadBackup = async () => {
     try {
@@ -257,6 +303,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           >
             <Database className="w-4 h-4" />
             <span>Backup & Restore</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('WEBHOOKS')}
+            className={`py-3 border-b-2 transition flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
+              activeTab === 'WEBHOOKS'
+                ? 'border-cyan-400 text-cyan-300'
+                : 'border-transparent text-slate-400 hover:text-white'
+            }`}
+          >
+            <Radio className="w-4 h-4 text-emerald-400" />
+            <span>Webhook & API</span>
           </button>
         </div>
 
@@ -602,6 +660,156 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <span>{restoringBackup ? 'Memulihkan Data...' : 'Konfirmasi Pulihkan Snapshot'}</span>
                       </button>
                     </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'WEBHOOKS' && (
+            <div className="space-y-6">
+              {/* Webhook Header & API Info */}
+              <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/60 space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                      <Radio className="w-4 h-4 text-emerald-400" />
+                      Inbound Webhook & Automation Trigger
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Integrasikan pemicu tugas otomatis dari CI/CD (GitHub Actions, GitLab CI), alert monitoring, Slack bot, n8n, atau Zapier.
+                    </p>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-mono font-bold">
+                    POST /api/webhooks/dispatch-task
+                  </span>
+                </div>
+
+                {/* Endpoint & Copy URL */}
+                <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex items-center justify-between gap-3 flex-wrap">
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[10px] text-slate-500 uppercase font-mono block">Webhook Endpoint URL</span>
+                    <span className="text-xs font-mono text-cyan-300 break-all select-all">
+                      {window.location.origin}/api/webhooks/dispatch-task
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleCopyWebhookUrl}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition shrink-0"
+                  >
+                    {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
+                    <span>{copiedUrl ? 'Tersalin' : 'Salin URL'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* cURL Example */}
+              <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/60 space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                  <Terminal className="w-3.5 h-3.5 text-cyan-400" />
+                  Contoh Request cURL
+                </h4>
+                <pre className="p-3 bg-[#070A0F] rounded-xl border border-slate-800/80 text-[11px] font-mono text-slate-300 overflow-x-auto leading-relaxed">
+{`curl -X POST "${window.location.origin}/api/webhooks/dispatch-task" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "title": "${webhookTitle}",
+    "description": "${webhookDesc}",
+    "priority": "${webhookPriority}",
+    "autoExecute": ${webhookAutoExecute}
+  }'`}
+                </pre>
+              </div>
+
+              {/* In-App Webhook Dispatch Simulator */}
+              <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/60 space-y-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                  <Send className="w-3.5 h-3.5 text-amber-400" />
+                  Webhook Trigger Simulator (Pengujian Langsung)
+                </h4>
+
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <label className="text-slate-400 block mb-1 font-medium">Judul Tugas (Payload: title) *</label>
+                    <input
+                      type="text"
+                      value={webhookTitle}
+                      onChange={(e) => setWebhookTitle(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-400"
+                      placeholder="Contoh: Otomatisasi deploy & verifikasi sistem"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-400 block mb-1 font-medium">Deskripsi / Konteks (Payload: description)</label>
+                    <textarea
+                      rows={2}
+                      value={webhookDesc}
+                      onChange={(e) => setWebhookDesc(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-400"
+                      placeholder="Detail instruksi atau payload event yang diterima"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-slate-400 block mb-1 font-medium">Tingkat Prioritas (priority)</label>
+                      <select
+                        value={webhookPriority}
+                        onChange={(e) => setWebhookPriority(e.target.value as any)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-400"
+                      >
+                        <option value="LOW">LOW</option>
+                        <option value="MEDIUM">MEDIUM</option>
+                        <option value="HIGH">HIGH</option>
+                        <option value="CRITICAL">CRITICAL</option>
+                      </select>
+                    </div>
+
+                    <div className="flex items-center pt-5">
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={webhookAutoExecute}
+                          onChange={(e) => setWebhookAutoExecute(e.target.checked)}
+                          className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-cyan-500 focus:ring-0"
+                        />
+                        <span className="text-xs text-slate-300 font-semibold">
+                          Eksekusi otomatis seketika dengan AI Agent
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      onClick={handleTestDispatchWebhook}
+                      disabled={dispatchingWebhook || !webhookTitle.trim()}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/30 transition disabled:opacity-50"
+                    >
+                      <Send className={`w-3.5 h-3.5 ${dispatchingWebhook ? 'animate-pulse' : ''}`} />
+                      <span>{dispatchingWebhook ? 'Mengirim Pemicu...' : 'Kirim Pemicu Webhook'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Webhook Response Viewer */}
+                {webhookResult && (
+                  <div className="mt-4 p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2 animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-white flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        Status Response: {webhookResult.error ? 'FAILED' : '200 OK'}
+                      </span>
+                      {webhookResult.taskId && (
+                        <span className="text-[10px] font-mono text-cyan-400">
+                          Task ID: {webhookResult.taskId}
+                        </span>
+                      )}
+                    </div>
+                    <pre className="p-2.5 bg-[#05070A] rounded-lg text-[11px] font-mono text-emerald-300 overflow-x-auto">
+                      {JSON.stringify(webhookResult, null, 2)}
+                    </pre>
                   </div>
                 )}
               </div>

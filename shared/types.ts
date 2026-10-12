@@ -365,3 +365,45 @@ export interface WorkspaceBackup {
     activities: Activity[];
   };
 }
+
+// Swarm & Multi-Agent Pipeline Types
+export interface PipelineStageConfig {
+  id: string;
+  name: string;
+  role: AgentRole;
+  agentId?: string;
+  agentName?: string;
+  stagePromptTemplate: string;
+}
+
+export interface PipelineTemplate {
+  id: string;
+  name: string;
+  description: string;
+  stages: PipelineStageConfig[];
+}
+
+export interface PipelineStageExecution {
+  stageId: string;
+  stageName: string;
+  agentId: string;
+  agentName: string;
+  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+  prompt: string;
+  output?: string;
+  durationMs?: number;
+  tokensUsed?: number;
+  error?: string;
+}
+
+export interface PipelineExecutionResult {
+  pipelineId: string;
+  masterTaskId: string;
+  title: string;
+  objective: string;
+  status: 'SUCCESS' | 'FAILED' | 'PARTIAL';
+  totalDurationMs: number;
+  stages: PipelineStageExecution[];
+  finalSummary: string;
+}
+

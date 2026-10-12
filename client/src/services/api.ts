@@ -23,7 +23,9 @@ import {
   FinOpsReportsSummary,
   OrchestratorStatus,
   SystemLogEntry,
-  WorkspaceBackup
+  WorkspaceBackup,
+  PipelineTemplate,
+  PipelineExecutionResult
 } from '../../../shared/types.js';
 
 const BASE_URL = '/api';
@@ -226,5 +228,63 @@ export const api = {
   restoreSystemBackup: (backup: WorkspaceBackup) => request<{ success: boolean; message: string; restoredEntities: any }>('/system/restore', {
     method: 'POST',
     body: JSON.stringify(backup)
-  })
+  }),
+
+  // AI Playground & Benchmark
+  executePlayground: (data: {
+    prompt: string;
+    globalSystemPrompt?: string;
+    targets: {
+      slotId: 'A' | 'B';
+      providerId: string;
+      modelId: string;
+      customSystemPrompt?: string;
+      temperature?: number;
+      maxTokens?: number;
+    }[];
+  }) => request<{
+    results: {
+      slotId: 'A' | 'B';
+      providerId: string;
+      providerName: string;
+      modelId: string;
+      success: boolean;
+      status: string;
+      outputResult?: string;
+      durationMs: number;
+      tokensUsed?: { promptTokens: number; completionTokens: number; totalTokens: number };
+      errorMessage?: string;
+    }[];
+  }>('/playground/execute', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+
+  // Webhooks
+  getWebhookInfo: () => request<{ status: string; endpoints: any }>('/webhooks/info'),
+  dispatchWebhookTask: (data: any) => request<{ success: boolean; taskId: string; message: string }>('/webhooks/dispatch-task', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+
+  // Multi-Agent Swarm Pipeline
+  getPipelineTemplates: () => request<{ templates: PipelineTemplate[] }>('/pipeline/templates'),
+  decomposePipeline: (data: { title?: string; objective: string; templateId?: string; projectId?: string }) =>
+    request<{
+      pipelineId: string;
+      title: string;
+      objective: string;
+      templateId: string;
+      templateName: string;
+      projectId?: string;
+      stages: any[];
+    }>('/pipeline/decompose', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+  executePipeline: (data: { title?: string; objective: string; projectId?: string; stages: any[] }) =>
+    request<PipelineExecutionResult>('/pipeline/execute', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    })
 };

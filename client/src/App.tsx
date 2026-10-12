@@ -21,9 +21,11 @@ import { Workspace2DView } from './features/workspace3d/Workspace2DView.js';
 import { ActivityFeed } from './components/ActivityFeed.js';
 import { ServerMonitoringWidget } from './components/ServerMonitoringWidget.js';
 import { ConsoleDrawer } from './components/terminal/ConsoleDrawer.js';
+import { PlaygroundModal } from './features/playground/PlaygroundModal.js';
+import { PipelineModal } from './features/pipeline/PipelineModal.js';
 import { useFeedback } from './components/common/FeedbackContext.js';
 import { api } from './services/api.js';
-import { AIAgent, Task, Activity, DashboardSummary, ServerMetrics, Project, OrchestratorStatus } from '../../shared/types.js';
+import { AIAgent, Task, Activity, DashboardSummary, ServerMetrics, Project, OrchestratorStatus, ModelProviderConfig } from '../../shared/types.js';
 import { Bot, Plus, RefreshCw, Zap, Layers, Users } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -32,6 +34,7 @@ export const App: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [providers, setProviders] = useState<ModelProviderConfig[]>([]);
   const [metrics, setMetrics] = useState<ServerMetrics | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
@@ -43,6 +46,8 @@ export const App: React.FC = () => {
   const [isTasksModalOpen, setIsTasksModalOpen] = useState(false);
   const [isManageTeamOpen, setIsManageTeamOpen] = useState(false);
   const [isProvidersModalOpen, setIsProvidersModalOpen] = useState(false);
+  const [isPlaygroundOpen, setIsPlaygroundOpen] = useState(false);
+  const [isPipelineOpen, setIsPipelineOpen] = useState(false);
   const [isAddAgentOpen, setIsAddAgentOpen] = useState(false);
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -61,18 +66,20 @@ export const App: React.FC = () => {
 
   const refreshAllData = useCallback(async () => {
     try {
-      const [sumData, agentsData, tasksData, projsData, actsData] = await Promise.all([
+      const [sumData, agentsData, tasksData, projsData, actsData, provData] = await Promise.all([
         api.getDashboardSummary(),
         api.getAgents(),
         api.getTasks(),
         api.getProjects().catch(() => []),
-        api.getActivities(30)
+        api.getActivities(30),
+        api.getProviders().catch(() => [])
       ]);
       setSummary(sumData);
       setAgents(agentsData);
       setTasks(tasksData);
       setProjects(projsData);
       setActivities(actsData);
+      setProviders(provData);
       setMetrics(sumData.serverMetrics);
 
       api.getOrchestratorStatus().then(st => setOrchestratorStatus(st)).catch(() => {});
@@ -268,6 +275,8 @@ export const App: React.FC = () => {
         onOpenDocuments={() => setIsDocumentsOpen(true)}
         onOpenProjects={() => setIsProjectsOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenPlayground={() => setIsPlaygroundOpen(true)}
+        onOpenPipeline={() => setIsPipelineOpen(true)}
         onOpenLogin={() => setIsLoginOpen(true)}
         onLogout={handleLogout}
         currentUser={currentUser}
@@ -504,6 +513,21 @@ export const App: React.FC = () => {
         isOpen={isProvidersModalOpen}
         onClose={() => setIsProvidersModalOpen(false)}
         onProvidersUpdated={refreshAllData}
+      />
+
+      <PlaygroundModal
+        isOpen={isPlaygroundOpen}
+        onClose={() => setIsPlaygroundOpen(false)}
+        providers={providers}
+        agents={agents}
+      />
+
+      <PipelineModal
+        isOpen={isPipelineOpen}
+        onClose={() => setIsPipelineOpen(false)}
+        agents={agents}
+        projects={projects}
+        onPipelineCompleted={refreshAllData}
       />
 
       <ConsoleDrawer

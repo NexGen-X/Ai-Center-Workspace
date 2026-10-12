@@ -22,6 +22,9 @@ import notificationsRouter from './routes/notifications.js';
 import documentsRouter from './routes/documents.js';
 import orchestratorRouter from './routes/orchestrator.js';
 import systemRouter from './routes/system.js';
+import playgroundRouter from './routes/playground.js';
+import webhooksRouter from './routes/webhooks.js';
+import { pipelineRouter } from './routes/pipeline.js';
 import { systemLogger } from './services/logger.js';
 
 export const app = express();
@@ -65,6 +68,9 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/documents', documentsRouter);
 app.use('/api/orchestrator', orchestratorRouter);
 app.use('/api/system', systemRouter);
+app.use('/api/playground', playgroundRouter);
+app.use('/api/webhooks', webhooksRouter);
+app.use('/api/pipeline', pipelineRouter);
 
 // Root healthcheck
 app.get('/healthz', (_req: Request, res: Response) => {
