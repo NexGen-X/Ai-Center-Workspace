@@ -660,6 +660,42 @@ export interface UpdateScheduleDTO {
   isActive?: boolean;
 }
 
+// Swarm Artifact Bundler & Git PR Generator Types
+export interface SwarmExtractedFile {
+  filePath: string;
+  language: string;
+  content: string;
+  sourceSubtaskTitle: string;
+  sourceAgentRole: AgentRole;
+}
+
+export interface SwarmArtifactBundle {
+  missionId: string;
+  missionTitle: string;
+  objective: string;
+  status: SwarmMissionStatus;
+  markdownReport: string;
+  extractedFiles: SwarmExtractedFile[];
+  unifiedPatch: string;
+  gitBranchCreated?: string;
+  gitCommitHash?: string;
+  generatedAt: string;
+}
+
+export interface CreateGitBranchRequest {
+  branchName?: string;
+  commitMessage?: string;
+}
+
+export interface CreateGitBranchResponse {
+  success: boolean;
+  branchName: string;
+  commitHash: string;
+  filesCommitted: string[];
+  message: string;
+}
+
+
 
 
 

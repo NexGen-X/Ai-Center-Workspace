@@ -193,4 +193,104 @@ describe('Autonomous Multi-Agent Swarm & Hierarchical Delegation Mesh', () => {
       await pool.query(`DELETE FROM swarm_missions WHERE id = $1`, [crashMissionId]);
     });
   });
+
+  describe('4. Swarm Artifact Bundler & Git PR Generator', () => {
+    let completedMissionId: string;
+
+    beforeAll(async () => {
+      // Create a completed swarm mission with code snippets
+      completedMissionId = `swarm-artifact-test-${Date.now()}`;
+      const sampleSubtasks = [
+        {
+          id: 'st-arch',
+          title: 'Design API Schema',
+          role: 'Planner',
+          status: 'COMPLETED',
+          dependencies: [],
+          outputResult: 'Berikut adalah arsitektur endpoint:\n```typescript\n// File: src/api/user.ts\nexport interface UserDto { id: string; name: string; }\n```'
+        },
+        {
+          id: 'st-dev',
+          title: 'Implement Controller',
+          role: 'Executor',
+          status: 'COMPLETED',
+          dependencies: ['st-arch'],
+          outputResult: 'Controller berhasil dibangun:\n```typescript\n// File: src/controllers/userController.ts\nexport const getUser = (id: string) => ({ id, name: "Antigravity" });\n```'
+        },
+        {
+          id: 'st-qa',
+          title: 'QA Empirical Verification',
+          role: 'QA / Reviewer',
+          status: 'COMPLETED',
+          dependencies: ['st-dev'],
+          outputResult: 'Hasil test lulus 100% tanpa regresi.',
+          revisions: [{ iteration: 1, critique: 'Minor typings fixed', patchResult: 'Fixed', timestamp: new Date().toISOString() }]
+        }
+      ];
+
+      await pool.query(`
+        INSERT INTO swarm_missions (
+          id, workspace_id, title, objective, status, subtasks_json, final_synthesis, total_duration_ms, total_tokens
+        ) VALUES ($1, $2, 'User Management Service', 'Build user service with clean architecture', 'COMPLETED', $3, 'Synthesis complete.', 5200, 1420);
+      `, [completedMissionId, testWorkspaceId, JSON.stringify(sampleSubtasks)]);
+    });
+
+    afterAll(async () => {
+      await pool.query(`DELETE FROM swarm_missions WHERE id = $1`, [completedMissionId]);
+    });
+
+    it('GET /api/swarm/missions/:id/artifacts should return structured bundle with extracted files and patch', async () => {
+      const res = await request(app).get(`/api/swarm/missions/${completedMissionId}/artifacts`);
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.missionId).toBe(completedMissionId);
+      expect(res.body.data.markdownReport).toContain('# Executive Mission Deliverables: User Management Service');
+      expect(res.body.data.markdownReport).toContain('Autonomous Self-Correction & QA Audits');
+
+      // Extracted files
+      expect(Array.isArray(res.body.data.extractedFiles)).toBe(true);
+      expect(res.body.data.extractedFiles.length).toBe(2);
+      expect(res.body.data.extractedFiles[0].filePath).toBe('src/api/user.ts');
+      expect(res.body.data.extractedFiles[1].filePath).toBe('src/controllers/userController.ts');
+
+      // Unified patch
+      expect(res.body.data.unifiedPatch).toContain('diff --git a/src/api/user.ts b/src/api/user.ts');
+      expect(res.body.data.unifiedPatch).toContain('diff --git a/src/controllers/userController.ts b/src/controllers/userController.ts');
+    });
+
+    it('GET /api/swarm/missions/:id/artifacts/markdown should serve raw markdown file with attachment headers', async () => {
+      const res = await request(app).get(`/api/swarm/missions/${completedMissionId}/artifacts/markdown`);
+      expect(res.status).toBe(200);
+      expect(res.headers['content-type']).toContain('text/markdown');
+      expect(res.headers['content-disposition']).toContain(`attachment; filename="swarm-report-${completedMissionId}.md"`);
+      expect(res.text).toContain('Topological Subtask DAG Breakdown');
+    });
+
+    it('POST /api/swarm/missions/:id/artifacts/git-branch should create Git branch and commit report', async () => {
+      const testBranch = `test/swarm-${Date.now()}`;
+      const res = await request(app)
+        .post(`/api/swarm/missions/${completedMissionId}/artifacts/git-branch`)
+        .send({
+          branchName: testBranch,
+          commitMessage: 'test: automated commit of swarm mission deliverables'
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.branchName).toBe(testBranch);
+      expect(res.body.commitHash).toBeDefined();
+      expect(res.body.filesCommitted).toContain(`docs/swarm-reports/mission-${completedMissionId}.md`);
+
+      // Cleanup created test git branch
+      const { execFile } = await import('child_process');
+      const { promisify } = await import('util');
+      const exec = promisify(execFile);
+      try {
+        await exec('git', ['branch', '-D', testBranch]);
+      } catch {
+        // ignore
+      }
+    });
+  });
 });
+

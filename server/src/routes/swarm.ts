@@ -118,4 +118,56 @@ router.post('/missions/:id/resume', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/swarm/missions/:id/artifacts
+ * Retrieve the full compiled artifact bundle (markdown report, extracted files, patch)
+ */
+router.get('/missions/:id/artifacts', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { SwarmArtifactService } = await import('../services/swarmArtifactService.js');
+    const bundle = await SwarmArtifactService.generateArtifactBundle(id);
+    return res.json({ success: true, data: bundle });
+  } catch (err: any) {
+    systemLogger.error('API', `Gagal memuat artefak misi swarm [${req.params.id}]: ${err.message}`);
+    return res.status(500).json({ error: { message: err.message || 'Gagal menghasilkan artefak misi swarm.' } });
+  }
+});
+
+/**
+ * GET /api/swarm/missions/:id/artifacts/markdown
+ * Download or retrieve the executive markdown report
+ */
+router.get('/missions/:id/artifacts/markdown', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { SwarmArtifactService } = await import('../services/swarmArtifactService.js');
+    const bundle = await SwarmArtifactService.generateArtifactBundle(id);
+    res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="swarm-report-${id}.md"`);
+    return res.send(bundle.markdownReport);
+  } catch (err: any) {
+    systemLogger.error('API', `Gagal mengunduh laporan markdown [${req.params.id}]: ${err.message}`);
+    return res.status(500).json({ error: { message: err.message || 'Gagal mengunduh laporan.' } });
+  }
+});
+
+/**
+ * POST /api/swarm/missions/:id/artifacts/git-branch
+ * Automate Git branch creation and commit of mission deliverables
+ */
+router.post('/missions/:id/artifacts/git-branch', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { branchName, commitMessage } = req.body || {};
+    const { SwarmArtifactService } = await import('../services/swarmArtifactService.js');
+    const result = await SwarmArtifactService.createGitBranch(id, { branchName, commitMessage });
+    return res.json(result);
+  } catch (err: any) {
+    systemLogger.error('API', `Gagal membuat branch Git untuk misi [${req.params.id}]: ${err.message}`);
+    return res.status(500).json({ error: { message: err.message || 'Gagal membuat branch Git.' } });
+  }
+});
+
 export default router;
+

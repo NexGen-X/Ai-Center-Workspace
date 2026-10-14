@@ -24,14 +24,20 @@ import {
   Share2,
   RotateCw,
   TrendingUp,
-  LayoutGrid
+  LayoutGrid,
+  Download,
+  GitPullRequest,
+  FileCode,
+  Terminal
 } from 'lucide-react';
 import {
   AIAgent,
   SwarmMission,
   SwarmSubtask,
   SwarmMessage,
-  SwarmMissionStatus
+  SwarmMissionStatus,
+  SwarmArtifactBundle,
+  CreateGitBranchResponse
 } from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
 import { useFeedback } from '../../components/common/FeedbackContext.js';
@@ -318,8 +324,8 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
 }) => {
   const { toast } = useFeedback();
 
-  // Active Tab: 'planner' | 'monitor' | 'feed' | 'archive'
-  const [activeTab, setActiveTab] = useState<'planner' | 'monitor' | 'feed' | 'archive'>('planner');
+  // Active Tab: 'planner' | 'monitor' | 'feed' | 'artifacts' | 'archive'
+  const [activeTab, setActiveTab] = useState<'planner' | 'monitor' | 'feed' | 'artifacts' | 'archive'>('planner');
 
   // View modes
   const [plannerViewMode, setPlannerViewMode] = useState<'graph' | 'cards'>('graph');
@@ -340,6 +346,18 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
   const [loadingPastMissions, setLoadingPastMissions] = useState(false);
   const [isResuming, setIsResuming] = useState(false);
 
+  // Swarm Artifacts State
+  const [artifactBundle, setArtifactBundle] = useState<SwarmArtifactBundle | null>(null);
+  const [loadingArtifacts, setLoadingArtifacts] = useState(false);
+  const [artifactSubTab, setArtifactSubTab] = useState<'report' | 'files' | 'patch'>('report');
+  const [copiedPatch, setCopiedPatch] = useState(false);
+  const [copiedFileIndex, setCopiedFileIndex] = useState<number | null>(null);
+  const [isCreatingBranch, setIsCreatingBranch] = useState(false);
+  const [gitBranchResult, setGitBranchResult] = useState<CreateGitBranchResponse | null>(null);
+  const [customBranchName, setCustomBranchName] = useState('');
+  const [customCommitMessage, setCustomCommitMessage] = useState('');
+  const [isBranchModalOpen, setIsBranchModalOpen] = useState(false);
+
   // Subtask accordion expansion in monitor
   const [expandedSubtasks, setExpandedSubtasks] = useState<Record<string, boolean>>({});
   const [copiedSynthesis, setCopiedSynthesis] = useState(false);
@@ -358,6 +376,60 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
     } finally {
       setLoadingPastMissions(false);
     }
+  };
+
+  const fetchArtifacts = async (missionId: string) => {
+    setLoadingArtifacts(true);
+    setGitBranchResult(null);
+    try {
+      const res = await api.getSwarmArtifacts(missionId);
+      if (res && res.data) {
+        setArtifactBundle(res.data);
+      }
+    } catch (err: any) {
+      console.error('Failed to load artifacts:', err);
+      toast.error('Gagal memuat artefak: ' + (err.message || err));
+    } finally {
+      setLoadingArtifacts(false);
+    }
+  };
+
+  const handleCreateGitBranch = async () => {
+    if (!activeMission) return;
+    try {
+      setIsCreatingBranch(true);
+      const res = await api.createSwarmGitBranch(activeMission.id, {
+        branchName: customBranchName.trim() || undefined,
+        commitMessage: customCommitMessage.trim() || undefined
+      });
+      setGitBranchResult(res);
+      setIsBranchModalOpen(false);
+      toast.success(`Branch Git "${res.branchName}" berhasil dibuat (${res.commitHash.slice(0, 7)})!`);
+    } catch (err: any) {
+      toast.error(`Gagal membuat branch Git: ${err.message || err}`);
+    } finally {
+      setIsCreatingBranch(false);
+    }
+  };
+
+  const handleDownloadMarkdown = () => {
+    if (!activeMission) return;
+    window.open(`/api/swarm/missions/${activeMission.id}/artifacts/markdown`, '_blank');
+  };
+
+  const handleCopyPatch = () => {
+    if (!artifactBundle?.unifiedPatch) return;
+    navigator.clipboard.writeText(artifactBundle.unifiedPatch);
+    setCopiedPatch(true);
+    setTimeout(() => setCopiedPatch(false), 2000);
+    toast.success('Unified patch disalin ke clipboard!');
+  };
+
+  const handleCopyFileContent = (content: string, index: number) => {
+    navigator.clipboard.writeText(content);
+    setCopiedFileIndex(index);
+    setTimeout(() => setCopiedFileIndex(null), 2000);
+    toast.success('Kode berhasil disalin!');
   };
 
   useEffect(() => {
@@ -716,6 +788,28 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
             {missionMessages.length > 0 && (
               <span className="px-1.5 py-0.2 rounded-full bg-slate-800 text-[10px] text-indigo-300 font-mono">
                 {missionMessages.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveTab('artifacts');
+              if (activeMission) {
+                fetchArtifacts(activeMission.id);
+              }
+            }}
+            className={`flex items-center gap-2 py-3 px-3.5 text-xs font-semibold border-b-2 transition whitespace-nowrap ${
+              activeTab === 'artifacts'
+                ? 'border-indigo-500 text-indigo-400'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <GitBranch className="w-4 h-4" />
+            <span>Artefak & Ekspor Git</span>
+            {artifactBundle?.extractedFiles && artifactBundle.extractedFiles.length > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-mono">
+                {artifactBundle.extractedFiles.length}
               </span>
             )}
           </button>
@@ -1260,7 +1354,231 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
             </div>
           )}
 
-          {/* TAB 4: ARCHIVE & SYNTHESIS REPORT */}
+          {/* TAB 4: ARTIFACTS & GIT PR GENERATOR */}
+          {activeTab === 'artifacts' && (
+            <div className="space-y-4">
+              {!activeMission ? (
+                <div className="text-center py-16 border border-dashed border-slate-800 rounded-2xl p-6 bg-slate-950/20 space-y-3">
+                  <GitBranch className="w-10 h-10 text-slate-600 mx-auto" />
+                  <h3 className="text-sm font-semibold text-slate-300">Belum ada Misi Swarm yang dipilih</h3>
+                  <p className="text-xs text-slate-500 max-w-md mx-auto">
+                    Jalankan misi baru di tab Perencana atau pilih salah satu misi yang telah selesai di tab Arsip untuk meninjau laporan eksekutif, mengekstrak kode, dan membuat Git branch otomatis.
+                  </p>
+                  {pastMissions.length > 0 && (
+                    <div className="pt-2">
+                      <button
+                        onClick={() => {
+                          const latest = pastMissions[0];
+                          handleSelectPastMission(latest);
+                          fetchArtifacts(latest.id);
+                        }}
+                        className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold inline-flex items-center gap-1.5 shadow-lg"
+                      >
+                        <Layers className="w-3.5 h-3.5" />
+                        <span>Pilih Misi Terakhir: "{pastMissions[0].title.slice(0, 30)}..."</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : loadingArtifacts ? (
+                <div className="py-16 flex flex-col items-center justify-center text-slate-400 gap-3">
+                  <RotateCw className="w-7 h-7 animate-spin text-indigo-400" />
+                  <span className="text-xs font-medium">Mengompilasi artefak & mengekstrak file kode dari subtask...</span>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Top Header Card */}
+                  <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                          {activeMission.status}
+                        </span>
+                        <h3 className="text-sm font-bold text-white">{activeMission.title}</h3>
+                      </div>
+                      <p className="text-xs text-slate-400 font-mono text-[11px]">
+                        ID: {activeMission.id} | Subtask: {activeMission.subtasks?.length || 0} | File Terekstraksi: {artifactBundle?.extractedFiles?.length || 0}
+                      </p>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        onClick={handleDownloadMarkdown}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition shadow-sm"
+                        title="Unduh laporan markdown"
+                      >
+                        <Download className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>Unduh .md</span>
+                      </button>
+
+                      <button
+                        onClick={handleCopyPatch}
+                        disabled={!artifactBundle?.unifiedPatch}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition shadow-sm disabled:opacity-50"
+                        title="Salin unified diff patch ke clipboard"
+                      >
+                        {copiedPatch ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-purple-400" />}
+                        <span>Salin .patch</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setCustomBranchName(`feature/swarm-${activeMission.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 25)}`);
+                          setCustomCommitMessage(`feat(swarm): automated deliverables for "${activeMission.title}"`);
+                          setIsBranchModalOpen(true);
+                        }}
+                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-semibold transition shadow-md"
+                      >
+                        <GitPullRequest className="w-3.5 h-3.5" />
+                        <span>Commit ke Git Branch</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Git Branch Created Callout */}
+                  {gitBranchResult && (
+                    <div className="p-3.5 rounded-xl bg-emerald-950/30 border border-emerald-500/40 text-emerald-300 text-xs space-y-1.5 animate-in fade-in">
+                      <div className="flex items-center gap-2 font-bold text-white">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        <span>Branch Git Berhasil Dibuat & Di-commit!</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] font-mono text-emerald-300/90">
+                        <span>Branch: <code className="bg-black/40 px-1.5 py-0.5 rounded text-white">{gitBranchResult.branchName}</code></span>
+                        <span>Commit: <code className="bg-black/40 px-1.5 py-0.5 rounded text-white">{gitBranchResult.commitHash.slice(0, 7)}</code></span>
+                      </div>
+                      <div className="flex items-center gap-2 pt-1 font-mono text-[10px] text-slate-400">
+                        <Terminal className="w-3 h-3 text-slate-500" />
+                        <span>Perintah lokal: <code className="text-indigo-300">git checkout {gitBranchResult.branchName}</code></span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sub-tab Navigation */}
+                  <div className="flex items-center gap-1 border-b border-slate-800 pb-2">
+                    <button
+                      onClick={() => setArtifactSubTab('report')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                        artifactSubTab === 'report'
+                          ? 'bg-indigo-600 text-white'
+                          : 'text-slate-400 hover:text-white bg-slate-900/60'
+                      }`}
+                    >
+                      <FileText className="w-3.5 h-3.5 inline mr-1" />
+                      Laporan Eksekutif (Markdown)
+                    </button>
+                    <button
+                      onClick={() => setArtifactSubTab('files')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                        artifactSubTab === 'files'
+                          ? 'bg-indigo-600 text-white'
+                          : 'text-slate-400 hover:text-white bg-slate-900/60'
+                      }`}
+                    >
+                      <FileCode className="w-3.5 h-3.5 inline mr-1" />
+                      File Kode ({artifactBundle?.extractedFiles?.length || 0})
+                    </button>
+                    <button
+                      onClick={() => setArtifactSubTab('patch')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                        artifactSubTab === 'patch'
+                          ? 'bg-indigo-600 text-white'
+                          : 'text-slate-400 hover:text-white bg-slate-900/60'
+                      }`}
+                    >
+                      <GitBranch className="w-3.5 h-3.5 inline mr-1" />
+                      Unified Git Patch
+                    </button>
+                  </div>
+
+                  {/* Sub-tab Content: Report */}
+                  {artifactSubTab === 'report' && (
+                    <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 text-slate-200 text-xs font-mono whitespace-pre-wrap leading-relaxed max-h-[500px] overflow-y-auto">
+                      {artifactBundle?.markdownReport || 'Tidak ada konten laporan.'}
+                    </div>
+                  )}
+
+                  {/* Sub-tab Content: Extracted Code Files */}
+                  {artifactSubTab === 'files' && (
+                    <div className="space-y-3">
+                      {!artifactBundle?.extractedFiles || artifactBundle.extractedFiles.length === 0 ? (
+                        <div className="py-12 text-center text-xs text-slate-500">
+                          Tidak ada file kode terpisah yang terdeteksi dalam artefak misi ini.
+                        </div>
+                      ) : (
+                        artifactBundle.extractedFiles.map((file, idx) => (
+                          <div key={idx} className="rounded-xl border border-slate-800 bg-[#0B0F17] overflow-hidden">
+                            <div className="flex items-center justify-between px-3.5 py-2 border-b border-slate-800 bg-slate-900/80">
+                              <div className="flex items-center gap-2">
+                                <FileCode className="w-4 h-4 text-indigo-400" />
+                                <span className="text-xs font-bold text-white font-mono">{file.filePath}</span>
+                                <span className="px-1.5 py-0.2 rounded text-[10px] font-mono uppercase bg-slate-800 text-slate-400">
+                                  {file.language}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-slate-400">
+                                  {file.sourceAgentRole}
+                                </span>
+                                <button
+                                  onClick={() => handleCopyFileContent(file.content, idx)}
+                                  className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition"
+                                  title="Salin kode"
+                                >
+                                  {copiedFileIndex === idx ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                                </button>
+                              </div>
+                            </div>
+                            <pre className="p-3 text-[11px] font-mono text-slate-200 overflow-x-auto max-h-72 leading-relaxed bg-black/40">
+                              <code>{file.content}</code>
+                            </pre>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+
+                  {/* Sub-tab Content: Unified Patch */}
+                  {artifactSubTab === 'patch' && (
+                    <div className="rounded-xl border border-slate-800 bg-black/60 p-4 max-h-[500px] overflow-y-auto">
+                      {!artifactBundle?.unifiedPatch ? (
+                        <div className="py-8 text-center text-xs text-slate-500">
+                          Tidak ada perubahan diff yang tersedia.
+                        </div>
+                      ) : (
+                        <pre className="text-[11px] font-mono leading-relaxed overflow-x-auto">
+                          {artifactBundle.unifiedPatch.split('\n').map((line, lidx) => {
+                            const isAdded = line.startsWith('+') && !line.startsWith('+++');
+                            const isRemoved = line.startsWith('-') && !line.startsWith('---');
+                            const isHeader = line.startsWith('diff --git') || line.startsWith('@@');
+
+                            return (
+                              <div
+                                key={lidx}
+                                className={
+                                  isAdded
+                                    ? 'text-emerald-400 bg-emerald-950/20'
+                                    : isRemoved
+                                    ? 'text-rose-400 bg-rose-950/20'
+                                    : isHeader
+                                    ? 'text-indigo-400 font-bold'
+                                    : 'text-slate-400'
+                                }
+                              >
+                                {line || ' '}
+                              </div>
+                            );
+                          })}
+                        </pre>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 5: ARCHIVE & SYNTHESIS REPORT */}
           {activeTab === 'archive' && (
             <div className="space-y-5">
               {activeMission?.finalSynthesis && (
@@ -1311,7 +1629,10 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
                     {pastMissions.map(m => (
                       <div
                         key={m.id}
-                        onClick={() => handleSelectPastMission(m)}
+                        onClick={() => {
+                          handleSelectPastMission(m);
+                          fetchArtifacts(m.id);
+                        }}
                         className="p-3.5 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-indigo-500/40 transition cursor-pointer space-y-2 group"
                       >
                         <div className="flex items-center justify-between">
@@ -1352,6 +1673,79 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
           )}
         </div>
 
+        {/* Modal: Git Branch Creation Dialog */}
+        {isBranchModalOpen && (
+          <div
+            onClick={() => setIsBranchModalOpen(false)}
+            className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in"
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#101726] border border-slate-700 rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl"
+            >
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <GitPullRequest className="w-5 h-5 text-indigo-400" />
+                  <h3 className="text-sm font-bold text-white">Buat Git Branch & Commit Deliverables</h3>
+                </div>
+                <button
+                  onClick={() => setIsBranchModalOpen(false)}
+                  className="text-slate-400 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="text-slate-300 font-semibold block mb-1">Nama Branch Git</label>
+                  <input
+                    type="text"
+                    value={customBranchName}
+                    onChange={(e) => setCustomBranchName(e.target.value)}
+                    placeholder="feature/swarm-task-name"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white font-mono focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-slate-300 font-semibold block mb-1">Pesan Commit</label>
+                  <input
+                    type="text"
+                    value={customCommitMessage}
+                    onChange={(e) => setCustomCommitMessage(e.target.value)}
+                    placeholder="feat(swarm): automated deliverables"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <p className="text-[11px] text-slate-500">
+                  Sistem akan membuat branch baru secara lokal, menulis laporan deliverables ke <code className="text-indigo-300">docs/swarm-reports/</code>, membuat commit git otomatis, dan kembali ke branch aktif.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsBranchModalOpen(false)}
+                  className="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  disabled={isCreatingBranch}
+                  onClick={handleCreateGitBranch}
+                  className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-semibold shadow-md flex items-center gap-1.5"
+                >
+                  {isCreatingBranch && <RotateCw className="w-3.5 h-3.5 animate-spin" />}
+                  <span>Buat Branch & Commit</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Modal Footer */}
         <div className="px-5 py-3 border-t border-slate-800 bg-slate-900/90 flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs text-slate-400">
@@ -1370,3 +1764,4 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
     </div>
   );
 };
+

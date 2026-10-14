@@ -41,7 +41,10 @@ import {
   AgentSchedule,
   ScheduleExecution,
   CreateScheduleDTO,
-  UpdateScheduleDTO
+  UpdateScheduleDTO,
+  SwarmArtifactBundle,
+  CreateGitBranchRequest,
+  CreateGitBranchResponse
 } from '../../../shared/types.js';
 
 const BASE_URL = '/api';
@@ -382,6 +385,11 @@ export const api = {
   }),
   resumeSwarmMission: (id: string) => request<{ success: boolean; mission: SwarmMission }>(`/swarm/missions/${id}/resume`, {
     method: 'POST'
+  }),
+  getSwarmArtifacts: (id: string) => request<{ success: boolean; data: SwarmArtifactBundle }>(`/swarm/missions/${id}/artifacts`),
+  createSwarmGitBranch: (id: string, data?: CreateGitBranchRequest) => request<CreateGitBranchResponse>(`/swarm/missions/${id}/artifacts/git-branch`, {
+    method: 'POST',
+    body: JSON.stringify(data || {})
   }),
 
   // Proactive Autonomous Routines & Cron Schedules
