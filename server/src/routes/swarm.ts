@@ -103,4 +103,19 @@ router.post('/missions/:id/cancel', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * POST /api/swarm/missions/:id/resume
+ * Resume an interrupted or paused swarm mission
+ */
+router.post('/missions/:id/resume', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const mission = await SwarmService.resumeMission(id);
+    return res.json({ success: true, mission });
+  } catch (err: any) {
+    systemLogger.error('API', `Gagal melanjutkan misi swarm [${req.params.id}]: ${err.message}`);
+    return res.status(500).json({ error: { message: err.message || 'Gagal melanjutkan misi swarm.' } });
+  }
+});
+
 export default router;

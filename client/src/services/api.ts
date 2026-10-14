@@ -375,6 +375,9 @@ export const api = {
   getSwarmMission: (id: string) => request<{ mission: SwarmMission; messages: SwarmMessage[] }>(`/swarm/missions/${id}`),
   cancelSwarmMission: (id: string) => request<{ success: boolean; message: string }>(`/swarm/missions/${id}/cancel`, {
     method: 'POST'
+  }),
+  resumeSwarmMission: (id: string) => request<{ success: boolean; mission: SwarmMission }>(`/swarm/missions/${id}/resume`, {
+    method: 'POST'
   })
 };
 

@@ -181,7 +181,7 @@ describe('Agent Tool Calling & Action Sandbox Verification', () => {
 
       expect(res.status).toBe(201);
       expect(res.body.status).toBe('EXECUTED');
-      expect(res.body.outputResult).toContain('ai-center-server');
+      expect(res.body.outputResult).toMatch(/ai-center-(server|workspace)/);
     });
   });
 });

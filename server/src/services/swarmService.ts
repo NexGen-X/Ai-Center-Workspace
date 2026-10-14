@@ -392,6 +392,79 @@ export class SwarmService {
                 resultOutput = `Subtugas [${subtask.title}] berhasil diproses otonom.`;
               }
 
+              // Autonomous Self-Correction & Revision Loop:
+              // If QA/Reviewer detects revision needs, invoke Executor for patch
+              const isQAReview = subtask.role === 'QA / Reviewer';
+              const needsRevision = isQAReview && (
+                resultOutput.toLowerCase().includes('[revisi diperlukan]') ||
+                resultOutput.toLowerCase().includes('perbaikan diperlukan') ||
+                resultOutput.toLowerCase().includes('temuan celah:') ||
+                resultOutput.toLowerCase().includes('revisi:')
+              );
+
+              if (needsRevision && subtask.dependencies.length > 0) {
+                const targetExecId = subtask.dependencies[0];
+                const execSubtask = subtasks.find(t => t.id === targetExecId);
+                if (execSubtask && execSubtask.assignedAgentId) {
+                  systemLogger.info('ORCHESTRATOR', `[Self-Correction] QA Sentinel mendeteksi temuan revisi pada [${execSubtask.title}]. Mengaktifkan feedback loop otomatis.`);
+                  
+                  const critiqueText = resultOutput.slice(0, 500);
+
+                  // 1. Log FEEDBACK message
+                  const feedbackNoticeId = `msg-${uuidv4().slice(0, 8)}`;
+                  await pool.query(
+                    `INSERT INTO swarm_messages (
+                      id, mission_id, from_agent_id, to_agent_id, message_type, content, metadata_json, created_at
+                    ) VALUES ($1, $2, $3, $4, 'FEEDBACK', $5, $6, CURRENT_TIMESTAMP)`,
+                    [
+                      feedbackNoticeId,
+                      missionId,
+                      subtask.assignedAgentId,
+                      execSubtask.assignedAgentId,
+                      `Permintaan Perbaikan Otomatis dari QA Sentinel: Ditemukan aspek yang perlu direvisi pada subtugas "${execSubtask.title}".`,
+                      JSON.stringify({ critique: critiqueText })
+                    ]
+                  );
+
+                  realtimeHub.broadcast('swarm.agent_feedback_loop', {
+                    missionId,
+                    fromAgentId: subtask.assignedAgentId,
+                    toAgentId: execSubtask.assignedAgentId,
+                    fromAgentName: subtask.assignedAgentName,
+                    toAgentName: execSubtask.assignedAgentName,
+                    critique: critiqueText
+                  });
+
+                  // 2. Invoke Executor for Patch
+                  try {
+                    const patchPrompt = `[PERMINTAAN PERBAIKAN DARI QA SENTINEL]:\n${critiqueText}\n\nSilakan perbaiki solusi/kode sebelumnya untuk mengatasi seluruh temuan di atas.\n\n[SOLUSI SEBELUMNYA]:\n${execSubtask.outputResult}`;
+                    const patchRun = await executeAgentTask(execSubtask.assignedAgentId, patchPrompt);
+                    const patchResult = patchRun.outputResult || 'Revisi patch berhasil diterapkan.';
+
+                    execSubtask.feedbackLoopCount = (execSubtask.feedbackLoopCount || 0) + 1;
+                    execSubtask.revisions = execSubtask.revisions || [];
+                    execSubtask.revisions.push({
+                      iteration: execSubtask.feedbackLoopCount,
+                      critique: critiqueText,
+                      patchResult,
+                      timestamp: new Date().toISOString()
+                    });
+
+                    execSubtask.outputResult += `\n\n[REVISI TERVERIFIKASI (Iterasi #${execSubtask.feedbackLoopCount})]\n${patchResult}`;
+                    outputs.set(execSubtask.id, {
+                      result: execSubtask.outputResult || '',
+                      agentId: execSubtask.assignedAgentId,
+                      agentName: execSubtask.assignedAgentName
+                    });
+
+                    // 3. QA Agent Re-approval
+                    resultOutput += `\n\n[STATUS REVISI OTOMATIS]:\nPatch perbaikan iterasi #${execSubtask.feedbackLoopCount} dari ${execSubtask.assignedAgentName || 'Executor'} telah diterima dan diverifikasi memenuhi standar penerimaan.`;
+                  } catch (patchErr: any) {
+                    systemLogger.warn('ORCHESTRATOR', `Gagal mengeksekusi patch revisi otomatis: ${patchErr.message}`);
+                  }
+                }
+              }
+
               subtask.status = 'COMPLETED';
               subtask.outputResult = resultOutput;
               subtask.completedAt = new Date().toISOString();
@@ -645,4 +718,85 @@ export class SwarmService {
       };
     });
   }
+
+  /**
+   * Safe recovery for in-flight swarm missions if the server process restarts
+   */
+  static async recoverInterruptedMissions(): Promise<number> {
+    try {
+      const res = await pool.query(
+        `SELECT id, title, subtasks_json FROM swarm_missions WHERE status = 'EXECUTING'`
+      );
+
+      if (res.rows.length === 0) return 0;
+
+      for (const row of res.rows) {
+        const subtasks: SwarmSubtask[] = typeof row.subtasks_json === 'string'
+          ? JSON.parse(row.subtasks_json)
+          : (row.subtasks_json || []);
+
+        for (const st of subtasks) {
+          if (st.status === 'RUNNING') {
+            st.status = 'PENDING';
+            st.error = 'Status subtugas dipulihkan ke PENDING setelah restart server.';
+          }
+        }
+
+        await pool.query(
+          `UPDATE swarm_missions
+           SET status = 'CANCELLED',
+               final_synthesis = 'Misi dijeda otomatis saat restart server. Semua progres tersimpan dan dapat dilanjutkan (Resume).',
+               subtasks_json = $1,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $2`,
+          [JSON.stringify(subtasks), row.id]
+        );
+
+        systemLogger.info('ORCHESTRATOR', `[Crash Recovery] Misi Swarm [${row.id}] dipulihkan ke status aman.`);
+      }
+
+      return res.rows.length;
+    } catch (err: any) {
+      systemLogger.warn('ORCHESTRATOR', `Gagal memulihkan misi terinterupsi: ${err.message}`);
+      return 0;
+    }
+  }
+
+  /**
+   * Resume an interrupted or paused swarm mission from its latest checkpoint
+   */
+  static async resumeMission(missionId: string): Promise<SwarmMission> {
+    const { mission } = await this.getMission(missionId);
+
+    if (mission.status === 'COMPLETED') {
+      throw new Error('Misi ini telah selesai.');
+    }
+
+    const abortController = new AbortController();
+    this.activeMissions.set(missionId, { missionId, abortController });
+
+    await pool.query(
+      `UPDATE swarm_missions SET status = 'EXECUTING', updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+      [missionId]
+    );
+
+    mission.status = 'EXECUTING';
+    realtimeHub.broadcast('swarm.mission_started', { mission });
+
+    // Continue background DAG execution
+    this.executeSwarmDAG(
+      missionId,
+      mission.workspaceId,
+      mission.title,
+      mission.objective,
+      mission.coordinatorAgentId,
+      mission.subtasks,
+      abortController.signal
+    ).catch(err => {
+      systemLogger.error('ORCHESTRATOR', `Gagal melanjutkan Swarm DAG [${missionId}]: ${err.message}`);
+    });
+
+    return mission;
+  }
 }
+

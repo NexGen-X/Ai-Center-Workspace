@@ -130,6 +130,18 @@ describe('Autonomous Multi-Agent Swarm & Hierarchical Delegation Mesh', () => {
       expect(detailRes.body.mission.status).toBe('CANCELLED');
     });
 
+    it('POST /api/swarm/missions/:id/resume should resume a cancelled or interrupted mission', async () => {
+      const res = await request(app).post(`/api/swarm/missions/${createdMissionId}/resume`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('success', true);
+      expect(res.body).toHaveProperty('mission');
+      expect(res.body.mission.status).toBe('EXECUTING');
+
+      // Cancel again to keep test clean
+      await request(app).post(`/api/swarm/missions/${createdMissionId}/cancel`);
+    });
+
     it('GET /api/swarm/missions/:id should return 404 for non-existent mission', async () => {
       const res = await request(app).get('/api/swarm/missions/non-existent-mission-id');
       expect(res.status).toBe(404);
@@ -152,6 +164,33 @@ describe('Autonomous Multi-Agent Swarm & Hierarchical Delegation Mesh', () => {
     it('SwarmService.cancelMission on non-existent ID should return false gracefully', async () => {
       const result = await SwarmService.cancelMission('invalid-dummy-id');
       expect(result).toBe(false);
+    });
+
+    it('SwarmService.recoverInterruptedMissions should safely checkpoint in-flight missions', async () => {
+      // Simulate an interrupted mission left in EXECUTING state
+      const crashMissionId = `swarm-crash-test-${Date.now()}`;
+      await pool.query(`
+        INSERT INTO swarm_missions (id, workspace_id, title, objective, status, subtasks_json)
+        VALUES ($1, $2, 'Interrupted Mission', 'Crash recovery test', 'EXECUTING', $3)
+      `, [
+        crashMissionId,
+        testWorkspaceId,
+        JSON.stringify([{ id: 'subtask-1', title: 'Task 1', status: 'RUNNING', dependencies: [] }])
+      ]);
+
+      const recoveredCount = await SwarmService.recoverInterruptedMissions();
+      expect(recoveredCount).toBeGreaterThanOrEqual(1);
+
+      // Verify mission status was transitioned to CANCELLED with saved checkpoint
+      const checkRes = await pool.query(`SELECT status, subtasks_json FROM swarm_missions WHERE id = $1`, [crashMissionId]);
+      expect(checkRes.rows[0].status).toBe('CANCELLED');
+      const subtasks = typeof checkRes.rows[0].subtasks_json === 'string'
+        ? JSON.parse(checkRes.rows[0].subtasks_json)
+        : checkRes.rows[0].subtasks_json;
+      expect(subtasks[0].status).toBe('PENDING');
+
+      // Cleanup
+      await pool.query(`DELETE FROM swarm_missions WHERE id = $1`, [crashMissionId]);
     });
   });
 });

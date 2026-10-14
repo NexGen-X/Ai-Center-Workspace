@@ -115,6 +115,8 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 
 export async function startServer() {
   await initializeDatabase();
+  const { SwarmService } = await import('./services/swarmService.js');
+  await SwarmService.recoverInterruptedMissions();
   const server = app.listen(config.port, () => {
     console.log(`[Server] AI Agent Command Center backend listening on port ${config.port}`);
   });

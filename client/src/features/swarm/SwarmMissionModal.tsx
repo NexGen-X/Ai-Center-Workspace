@@ -21,7 +21,10 @@ import {
   StopCircle,
   MessageSquare,
   FileText,
-  Share2
+  Share2,
+  RotateCw,
+  TrendingUp,
+  LayoutGrid
 } from 'lucide-react';
 import {
   AIAgent,
@@ -40,6 +43,273 @@ interface SwarmMissionModalProps {
   onMissionLaunched?: () => void;
 }
 
+/**
+ * Interactive Topological DAG Visual Canvas Component
+ * Renders hierarchical dependency nodes with directional dynamic vectors
+ */
+const TopologicalDAGCanvas: React.FC<{
+  subtasks: SwarmSubtask[];
+  activeSubtaskId?: string | null;
+  onSelectSubtask?: (subtask: SwarmSubtask) => void;
+}> = ({ subtasks, activeSubtaskId, onSelectSubtask }) => {
+  if (!subtasks || subtasks.length === 0) return null;
+
+  // 1. Calculate topological rank / depth for each subtask
+  const ranks = new Map<string, number>();
+  const getRank = (stId: string, visited = new Set<string>()): number => {
+    if (ranks.has(stId)) return ranks.get(stId)!;
+    if (visited.has(stId)) return 0;
+    visited.add(stId);
+
+    const st = subtasks.find(t => t.id === stId);
+    if (!st || !st.dependencies || st.dependencies.length === 0) {
+      ranks.set(stId, 0);
+      return 0;
+    }
+
+    let maxDepRank = 0;
+    for (const depId of st.dependencies) {
+      maxDepRank = Math.max(maxDepRank, getRank(depId, visited));
+    }
+    const r = maxDepRank + 1;
+    ranks.set(stId, r);
+    return r;
+  };
+
+  subtasks.forEach(st => getRank(st.id));
+
+  // 2. Group subtasks by rank
+  const rankGroups = new Map<number, SwarmSubtask[]>();
+  subtasks.forEach(st => {
+    const r = ranks.get(st.id) || 0;
+    if (!rankGroups.has(r)) rankGroups.set(r, []);
+    rankGroups.get(r)!.push(st);
+  });
+
+  const maxRank = Math.max(...Array.from(rankGroups.keys()), 0);
+
+  // 3. Compute coordinates
+  const nodeCoords = new Map<string, { x: number; y: number }>();
+  const nodeWidth = 160;
+  const nodeHeight = 68;
+  const colSpacing = 210;
+  const rowSpacing = 95;
+
+  Array.from(rankGroups.entries()).forEach(([r, tasksInRank]) => {
+    const totalInCol = tasksInRank.length;
+    const startY = Math.max(25, (290 - (totalInCol * rowSpacing)) / 2);
+
+    tasksInRank.forEach((st, i) => {
+      const x = 30 + r * colSpacing;
+      const y = startY + i * rowSpacing;
+      nodeCoords.set(st.id, { x, y });
+    });
+  });
+
+  const canvasWidth = Math.max(720, (maxRank + 1) * colSpacing + 60);
+  const canvasHeight = 310;
+
+  return (
+    <div className="w-full overflow-x-auto bg-slate-950/80 border border-slate-800/90 rounded-2xl p-4 relative shadow-inner">
+      <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800/60 text-[11px] text-slate-400">
+        <span className="flex items-center gap-1.5 font-semibold text-slate-300">
+          <GitBranch className="w-3.5 h-3.5 text-indigo-400" />
+          <span>Topological DAG Graph Visualizer</span>
+        </span>
+        <span className="text-[10px] text-slate-500">Klik node untuk melihat detail</span>
+      </div>
+
+      <svg
+        width={canvasWidth}
+        height={canvasHeight}
+        className="w-full h-auto min-w-[680px] select-none"
+        viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}
+      >
+        <defs>
+          <marker
+            id="dag-arrow"
+            viewBox="0 0 10 10"
+            refX="6"
+            refY="5"
+            markerWidth="6"
+            markerHeight="6"
+            orient="auto-start-reverse"
+          >
+            <path d="M 0 1 L 9 5 L 0 9 z" fill="#6366f1" />
+          </marker>
+          <marker
+            id="dag-arrow-active"
+            viewBox="0 0 10 10"
+            refX="6"
+            refY="5"
+            markerWidth="6"
+            markerHeight="6"
+            orient="auto-start-reverse"
+          >
+            <path d="M 0 1 L 9 5 L 0 9 z" fill="#38bdf8" />
+          </marker>
+        </defs>
+
+        {/* 1. Connecting Vector Paths */}
+        {subtasks.map(st => {
+          const targetCoord = nodeCoords.get(st.id);
+          if (!targetCoord) return null;
+
+          return st.dependencies.map(depId => {
+            const srcCoord = nodeCoords.get(depId);
+            if (!srcCoord) return null;
+
+            const x1 = srcCoord.x + nodeWidth;
+            const y1 = srcCoord.y + nodeHeight / 2;
+            const x2 = targetCoord.x;
+            const y2 = targetCoord.y + nodeHeight / 2;
+            const cx1 = x1 + (x2 - x1) * 0.45;
+            const cx2 = x1 + (x2 - x1) * 0.55;
+
+            const pathD = `M ${x1} ${y1} C ${cx1} ${y1}, ${cx2} ${y2}, ${x2} ${y2}`;
+            const isTargetRunning = st.status === 'RUNNING';
+            const isTargetDone = st.status === 'COMPLETED';
+
+            return (
+              <g key={`${depId}->${st.id}`}>
+                <path
+                  d={pathD}
+                  fill="none"
+                  stroke={isTargetRunning ? '#38bdf8' : isTargetDone ? '#10b981' : '#334155'}
+                  strokeWidth={isTargetRunning ? 2.5 : 1.5}
+                  strokeDasharray={isTargetRunning ? '6,4' : 'none'}
+                  markerEnd={isTargetRunning ? 'url(#dag-arrow-active)' : 'url(#dag-arrow)'}
+                  className={isTargetRunning ? 'animate-pulse' : ''}
+                />
+              </g>
+            );
+          });
+        })}
+
+        {/* 2. Interactive SVG Nodes */}
+        {subtasks.map((st, idx) => {
+          const coord = nodeCoords.get(st.id);
+          if (!coord) return null;
+
+          const isRunning = st.status === 'RUNNING';
+          const isDone = st.status === 'COMPLETED';
+          const isFailed = st.status === 'FAILED';
+          const hasRevisions = (st.feedbackLoopCount || 0) > 0;
+          const isSelected = activeSubtaskId === st.id;
+
+          return (
+            <g
+              key={st.id}
+              transform={`translate(${coord.x}, ${coord.y})`}
+              className="cursor-pointer group"
+              onClick={() => onSelectSubtask?.(st)}
+            >
+              {/* Outer Glow Halo for Active / Running */}
+              {isRunning && (
+                <rect
+                  x="-3"
+                  y="-3"
+                  width={nodeWidth + 6}
+                  height={nodeHeight + 6}
+                  rx="14"
+                  fill="none"
+                  stroke="#6366f1"
+                  strokeWidth="2"
+                  className="animate-ping opacity-40"
+                />
+              )}
+
+              {/* Node Card Rectangle */}
+              <rect
+                x="0"
+                y="0"
+                width={nodeWidth}
+                height={nodeHeight}
+                rx="12"
+                fill="#0f172a"
+                stroke={
+                  isSelected
+                    ? '#818cf8'
+                    : isRunning
+                    ? '#6366f1'
+                    : isDone
+                    ? '#10b981'
+                    : isFailed
+                    ? '#ef4444'
+                    : '#1e293b'
+                }
+                strokeWidth={isSelected || isRunning ? 2 : 1}
+                className="transition-colors group-hover:stroke-indigo-400 shadow-md"
+              />
+
+              {/* Step Number Circle */}
+              <circle
+                cx="16"
+                cy="18"
+                r="8"
+                fill={isDone ? '#065f46' : isRunning ? '#312e81' : '#1e293b'}
+              />
+              <text
+                x="16"
+                y="21.5"
+                fill={isDone ? '#34d399' : isRunning ? '#a5b4fc' : '#94a3b8'}
+                fontSize="9"
+                fontWeight="bold"
+                textAnchor="middle"
+              >
+                {idx + 1}
+              </text>
+
+              {/* Role Badge */}
+              <text
+                x="30"
+                y="21"
+                fill="#94a3b8"
+                fontSize="9"
+                fontFamily="monospace"
+                fontWeight="bold"
+              >
+                {st.role.slice(0, 15)}
+              </text>
+
+              {/* Title */}
+              <text
+                x="12"
+                y="39"
+                fill="#f1f5f9"
+                fontSize="10"
+                fontWeight="bold"
+              >
+                {st.title.length > 21 ? `${st.title.slice(0, 20)}…` : st.title}
+              </text>
+
+              {/* Assigned Agent Name */}
+              <text
+                x="12"
+                y="55"
+                fill="#818cf8"
+                fontSize="9"
+              >
+                ✦ {st.assignedAgentName || 'Spesialis'}
+              </text>
+
+              {/* Self-Correction Badge */}
+              {hasRevisions && (
+                <g transform="translate(112, 5)">
+                  <rect x="0" y="0" width="42" height="13" rx="4" fill="#78350f" />
+                  <text x="21" y="9.5" fill="#fde68a" fontSize="7.5" fontWeight="bold" textAnchor="middle">
+                    Rev #{st.feedbackLoopCount}
+                  </text>
+                </g>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+};
+
 export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
   isOpen,
   onClose,
@@ -50,6 +320,10 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
 
   // Active Tab: 'planner' | 'monitor' | 'feed' | 'archive'
   const [activeTab, setActiveTab] = useState<'planner' | 'monitor' | 'feed' | 'archive'>('planner');
+
+  // View modes
+  const [plannerViewMode, setPlannerViewMode] = useState<'graph' | 'cards'>('graph');
+  const [monitorViewMode, setMonitorViewMode] = useState<'graph' | 'cards'>('graph');
 
   // Planner form state
   const [objective, setObjective] = useState('');
@@ -64,6 +338,7 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
   const [missionMessages, setMissionMessages] = useState<SwarmMessage[]>([]);
   const [pastMissions, setPastMissions] = useState<SwarmMission[]>([]);
   const [loadingPastMissions, setLoadingPastMissions] = useState(false);
+  const [isResuming, setIsResuming] = useState(false);
 
   // Subtask accordion expansion in monitor
   const [expandedSubtasks, setExpandedSubtasks] = useState<Record<string, boolean>>({});
@@ -155,6 +430,25 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
         } catch {}
       });
 
+      eventSource.addEventListener('swarm.agent_feedback_loop', (e: MessageEvent) => {
+        try {
+          const data = JSON.parse(e.data);
+          const feedbackMsg: SwarmMessage = {
+            id: `feedback-loop-${Date.now()}`,
+            missionId: data.missionId,
+            fromAgentId: data.fromAgentId,
+            fromAgentName: data.fromAgentName,
+            toAgentId: data.toAgentId,
+            toAgentName: data.toAgentName,
+            messageType: 'FEEDBACK',
+            content: `🔄 [SELF-CORRECTION LOOP] QA Sentinel meminta perbaikan: "${data.critique}"`,
+            createdAt: new Date().toISOString()
+          };
+          setMissionMessages(prev => [...prev, feedbackMsg]);
+          toast.info(`🔄 Self-Correction: ${data.fromAgentName} meminta revisi ke ${data.toAgentName}`);
+        } catch {}
+      });
+
       eventSource.addEventListener('swarm.subtask_completed', (e: MessageEvent) => {
         try {
           const data = JSON.parse(e.data);
@@ -166,7 +460,6 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
             return { ...prev, subtasks: updated };
           });
 
-          // Also reload messages to get the feedback message
           if (data.missionId) {
             api.getSwarmMission(data.missionId).then(res => {
               setMissionMessages(res.messages || []);
@@ -199,7 +492,7 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
             if (!prev || prev.id !== data.missionId) return prev;
             return { ...prev, status: 'CANCELLED' };
           });
-          toast.info('Misi Swarm dibatalkan.');
+          toast.info('Misi Swarm dijeda atau dibatalkan.');
         } catch {}
       });
     } catch {}
@@ -279,7 +572,6 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
       onMissionLaunched?.();
       toast.success('🚀 Autonomous Multi-Agent Swarm berhasil diluncurkan!');
 
-      // Load initial messages
       api.getSwarmMission(mission.id).then(res => {
         setMissionMessages(res.messages || []);
       }).catch(() => {});
@@ -298,6 +590,21 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
       toast.info('Permintaan pembatalan misi telah dikirim.');
     } catch (err: any) {
       toast.error(err.message || 'Gagal membatalkan misi.');
+    }
+  };
+
+  // Resume paused or interrupted mission
+  const handleResumeMission = async () => {
+    if (!activeMission) return;
+    setIsResuming(true);
+    try {
+      const res = await api.resumeSwarmMission(activeMission.id);
+      setActiveMission(res.mission);
+      toast.success('Misi Swarm dilanjutkan kembali dari checkpoint!');
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal melanjutkan misi swarm.');
+    } finally {
+      setIsResuming(false);
     }
   };
 
@@ -349,9 +656,12 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
                 <span className="px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                   Dynamic DAG
                 </span>
+                <span className="px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  Self-Correction Loop
+                </span>
               </div>
               <p className="text-xs text-slate-400">
-                Dekomposisi tugas otonom, koordinasi multi-spesialis terdistribusi, dan serah terima konteks antar-agen real-time.
+                Dekomposisi tugas otonom, siklus perbaikan mandiri (self-correction), dan koordinasi visual multi-agen real-time.
               </p>
             </div>
           </div>
@@ -452,7 +762,7 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
                 />
               </div>
 
-              {/* Title Input (Optional) */}
+              {/* Title Input */}
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-slate-300">
                   Judul Misi (Opsional)
@@ -466,7 +776,7 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
                 />
               </div>
 
-              {/* Quick Presets */}
+              {/* Presets */}
               <div className="space-y-2">
                 <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                   Preset Misi Populer:
@@ -514,10 +824,10 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
                 </button>
               </div>
 
-              {/* Planned Subtasks Preview */}
+              {/* Planned Subtasks Preview with Mode Toggle */}
               {plannedSubtasks.length > 0 && (
                 <div className="space-y-3 pt-3 border-t border-slate-800">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2">
                       <GitBranch className="w-4 h-4 text-indigo-400" />
                       <h3 className="text-xs font-bold text-slate-200">
@@ -527,56 +837,81 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
                         {plannedSubtasks.length} Subtugas
                       </span>
                     </div>
-                    {coordinatorAgent && (
-                      <span className="text-[11px] text-slate-400">
-                        Koordinator: <strong className="text-indigo-300">{coordinatorAgent.name}</strong> ({coordinatorAgent.role})
-                      </span>
-                    )}
-                  </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {plannedSubtasks.map((st, idx) => (
-                      <div
-                        key={st.id}
-                        className="p-3.5 rounded-xl bg-slate-900 border border-slate-800/90 space-y-2 relative"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="w-5 h-5 rounded-lg bg-indigo-500/20 text-indigo-400 text-[11px] font-bold flex items-center justify-center">
-                            {idx + 1}
-                          </span>
-                          <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">
-                            {st.role}
-                          </span>
-                        </div>
-
-                        <div className="text-xs font-bold text-slate-200">
-                          {st.title}
-                        </div>
-
-                        <div className="flex items-center justify-between text-[11px] text-slate-400">
-                          <span>
-                            Agen:{' '}
-                            <strong className="text-slate-300">
-                              {st.assignedAgentName || 'Spesialis'}
-                            </strong>
-                          </span>
-                          {st.dependencies.length > 0 ? (
-                            <span className="text-amber-400/90 text-[10px]">
-                              Tergantung: {st.dependencies.join(', ')}
-                            </span>
-                          ) : (
-                            <span className="text-emerald-400/90 text-[10px]">
-                              Tahap Awal (Root Node)
-                            </span>
-                          )}
-                        </div>
-
-                        <p className="text-[11px] text-slate-400 italic line-clamp-2 bg-slate-950/40 p-2 rounded-lg border border-slate-800/50">
-                          {st.promptTemplate}
-                        </p>
+                    <div className="flex items-center gap-2">
+                      {coordinatorAgent && (
+                        <span className="text-[11px] text-slate-400 hidden sm:inline">
+                          Koordinator: <strong className="text-indigo-300">{coordinatorAgent.name}</strong>
+                        </span>
+                      )}
+                      <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5">
+                        <button
+                          onClick={() => setPlannerViewMode('graph')}
+                          className={`px-2 py-1 rounded text-[10px] font-semibold transition ${
+                            plannerViewMode === 'graph' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          Graf DAG
+                        </button>
+                        <button
+                          onClick={() => setPlannerViewMode('cards')}
+                          className={`px-2 py-1 rounded text-[10px] font-semibold transition ${
+                            plannerViewMode === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          Kartu
+                        </button>
                       </div>
-                    ))}
+                    </div>
                   </div>
+
+                  {plannerViewMode === 'graph' ? (
+                    <TopologicalDAGCanvas subtasks={plannedSubtasks} />
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {plannedSubtasks.map((st, idx) => (
+                        <div
+                          key={st.id}
+                          className="p-3.5 rounded-xl bg-slate-900 border border-slate-800/90 space-y-2 relative"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="w-5 h-5 rounded-lg bg-indigo-500/20 text-indigo-400 text-[11px] font-bold flex items-center justify-center">
+                              {idx + 1}
+                            </span>
+                            <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">
+                              {st.role}
+                            </span>
+                          </div>
+
+                          <div className="text-xs font-bold text-slate-200">
+                            {st.title}
+                          </div>
+
+                          <div className="flex items-center justify-between text-[11px] text-slate-400">
+                            <span>
+                              Agen:{' '}
+                              <strong className="text-slate-300">
+                                {st.assignedAgentName || 'Spesialis'}
+                              </strong>
+                            </span>
+                            {st.dependencies.length > 0 ? (
+                              <span className="text-amber-400/90 text-[10px]">
+                                Tergantung: {st.dependencies.join(', ')}
+                              </span>
+                            ) : (
+                              <span className="text-emerald-400/90 text-[10px]">
+                                Root Node
+                              </span>
+                            )}
+                          </div>
+
+                          <p className="text-[11px] text-slate-400 italic line-clamp-2 bg-slate-950/40 p-2 rounded-lg border border-slate-800/50">
+                            {st.promptTemplate}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -639,7 +974,17 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-semibold transition"
                           >
                             <StopCircle className="w-3.5 h-3.5" />
-                            <span>Batalkan Misi</span>
+                            <span>Jeda / Batalkan</span>
+                          </button>
+                        )}
+                        {activeMission.status === 'CANCELLED' && (
+                          <button
+                            onClick={handleResumeMission}
+                            disabled={isResuming}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition"
+                          >
+                            <RotateCw className={`w-3.5 h-3.5 ${isResuming ? 'animate-spin' : ''}`} />
+                            <span>Lanjutkan Eksekusi</span>
                           </button>
                         )}
                         {activeMission.finalSynthesis && (
@@ -671,112 +1016,168 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
                     </div>
                   </div>
 
-                  {/* DAG Subtasks Flow */}
-                  <div className="space-y-3">
+                  {/* DAG View Mode Controls */}
+                  <div className="flex items-center justify-between">
                     <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                       Alur Eksekusi Subtugas Multi-Agen
                     </h4>
+                    <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5">
+                      <button
+                        onClick={() => setMonitorViewMode('graph')}
+                        className={`px-2 py-1 rounded text-[10px] font-semibold transition flex items-center gap-1 ${
+                          monitorViewMode === 'graph' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <GitBranch className="w-3 h-3" />
+                        <span>Graf DAG</span>
+                      </button>
+                      <button
+                        onClick={() => setMonitorViewMode('cards')}
+                        className={`px-2 py-1 rounded text-[10px] font-semibold transition flex items-center gap-1 ${
+                          monitorViewMode === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <LayoutGrid className="w-3 h-3" />
+                        <span>Daftar Subtugas</span>
+                      </button>
+                    </div>
+                  </div>
 
-                    <div className="space-y-2.5">
-                      {activeMission.subtasks.map((st, idx) => {
-                        const isExpanded = expandedSubtasks[st.id] ?? false;
-                        return (
+                  {/* Topological DAG Visual Canvas */}
+                  {monitorViewMode === 'graph' && (
+                    <TopologicalDAGCanvas
+                      subtasks={activeMission.subtasks}
+                      onSelectSubtask={st => toggleSubtaskAccordion(st.id)}
+                    />
+                  )}
+
+                  {/* Subtask Cards & Accordion */}
+                  <div className="space-y-2.5">
+                    {activeMission.subtasks.map((st, idx) => {
+                      const isExpanded = expandedSubtasks[st.id] ?? false;
+                      const hasRevisions = (st.feedbackLoopCount || 0) > 0;
+
+                      return (
+                        <div
+                          key={st.id}
+                          className={`rounded-xl border transition overflow-hidden ${
+                            st.status === 'RUNNING'
+                              ? 'bg-indigo-950/20 border-indigo-500/50 shadow-md shadow-indigo-950/50'
+                              : st.status === 'COMPLETED'
+                              ? 'bg-slate-900 border-emerald-500/30'
+                              : st.status === 'FAILED'
+                              ? 'bg-slate-900 border-rose-500/30'
+                              : 'bg-slate-900/60 border-slate-800 opacity-70'
+                          }`}
+                        >
+                          {/* Card Header */}
                           <div
-                            key={st.id}
-                            className={`rounded-xl border transition overflow-hidden ${
-                              st.status === 'RUNNING'
-                                ? 'bg-indigo-950/20 border-indigo-500/50 shadow-md shadow-indigo-950/50'
-                                : st.status === 'COMPLETED'
-                                ? 'bg-slate-900 border-emerald-500/30'
-                                : st.status === 'FAILED'
-                                ? 'bg-slate-900 border-rose-500/30'
-                                : 'bg-slate-900/60 border-slate-800 opacity-70'
-                            }`}
+                            onClick={() => toggleSubtaskAccordion(st.id)}
+                            className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-800/40 transition gap-2"
                           >
-                            {/* Card Header */}
-                            <div
-                              onClick={() => toggleSubtaskAccordion(st.id)}
-                              className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-800/40 transition gap-2"
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className="flex items-center justify-center">
-                                  {st.status === 'COMPLETED' ? (
-                                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                                  ) : st.status === 'RUNNING' ? (
-                                    <RefreshCw className="w-4 h-4 text-indigo-400 animate-spin shrink-0" />
-                                  ) : st.status === 'FAILED' ? (
-                                    <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-                                  ) : (
-                                    <Clock className="w-4 h-4 text-slate-500 shrink-0" />
-                                  )}
-                                </div>
-
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs font-bold text-slate-200">
-                                      #{idx + 1} {st.title}
-                                    </span>
-                                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 font-mono">
-                                      {st.role}
-                                    </span>
-                                  </div>
-                                  <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
-                                    <span>Agen: <strong className="text-indigo-300">{st.assignedAgentName || 'Spesialis'}</strong></span>
-                                    {st.durationMs ? (
-                                      <span>• {(st.durationMs / 1000).toFixed(1)} detik</span>
-                                    ) : null}
-                                  </div>
-                                </div>
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center justify-center">
+                                {st.status === 'COMPLETED' ? (
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                                ) : st.status === 'RUNNING' ? (
+                                  <RefreshCw className="w-4 h-4 text-indigo-400 animate-spin shrink-0" />
+                                ) : st.status === 'FAILED' ? (
+                                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                                ) : (
+                                  <Clock className="w-4 h-4 text-slate-500 shrink-0" />
+                                )}
                               </div>
 
-                              <div className="flex items-center gap-2">
-                                {st.status === 'RUNNING' && (
-                                  <span className="text-[10px] font-bold text-indigo-400 animate-pulse">
-                                    SEDANG BERJALAN...
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-bold text-slate-200">
+                                    #{idx + 1} {st.title}
                                   </span>
-                                )}
-                                {isExpanded ? (
-                                  <ChevronDown className="w-4 h-4 text-slate-400" />
-                                ) : (
-                                  <ChevronRight className="w-4 h-4 text-slate-400" />
-                                )}
+                                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 font-mono">
+                                    {st.role}
+                                  </span>
+                                  {hasRevisions && (
+                                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">
+                                      🔄 Self-Corrected ({st.feedbackLoopCount}x)
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
+                                  <span>Agen: <strong className="text-indigo-300">{st.assignedAgentName || 'Spesialis'}</strong></span>
+                                  {st.durationMs ? (
+                                    <span>• {(st.durationMs / 1000).toFixed(1)} detik</span>
+                                  ) : null}
+                                </div>
                               </div>
                             </div>
 
-                            {/* Card Details (Accordion) */}
-                            {isExpanded && (
-                              <div className="px-4 pb-4 pt-1 border-t border-slate-800/60 bg-slate-950/30 space-y-3">
-                                <div className="space-y-1">
-                                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                                    Instruksi / Prompt Subtugas:
-                                  </span>
-                                  <p className="text-[11px] font-mono text-slate-300 bg-slate-900 p-2.5 rounded-lg border border-slate-800 whitespace-pre-wrap">
-                                    {st.promptTemplate}
-                                  </p>
-                                </div>
-
-                                {st.outputResult && (
-                                  <div className="space-y-1">
-                                    <span className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider">
-                                      Hasil Keluaran Agen:
-                                    </span>
-                                    <div className="text-xs text-slate-200 bg-slate-900/90 p-3 rounded-lg border border-emerald-500/20 max-h-60 overflow-y-auto whitespace-pre-wrap leading-relaxed font-sans">
-                                      {st.outputResult}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {st.error && (
-                                  <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs">
-                                    <strong>Kendala:</strong> {st.error}
-                                  </div>
-                                )}
-                              </div>
-                            )}
+                            <div className="flex items-center gap-2">
+                              {st.status === 'RUNNING' && (
+                                <span className="text-[10px] font-bold text-indigo-400 animate-pulse">
+                                  SEDANG BERJALAN...
+                                </span>
+                              )}
+                              {isExpanded ? (
+                                <ChevronDown className="w-4 h-4 text-slate-400" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4 text-slate-400" />
+                              )}
+                            </div>
                           </div>
-                        );
-                      })}
-                    </div>
+
+                          {/* Card Details (Accordion) */}
+                          {isExpanded && (
+                            <div className="px-4 pb-4 pt-1 border-t border-slate-800/60 bg-slate-950/30 space-y-3">
+                              <div className="space-y-1">
+                                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                                  Instruksi / Prompt Subtugas:
+                                </span>
+                                <p className="text-[11px] font-mono text-slate-300 bg-slate-900 p-2.5 rounded-lg border border-slate-800 whitespace-pre-wrap">
+                                  {st.promptTemplate}
+                                </p>
+                              </div>
+
+                              {/* Revision History Box */}
+                              {st.revisions && st.revisions.length > 0 && (
+                                <div className="space-y-2 p-3 rounded-lg bg-amber-950/20 border border-amber-500/30">
+                                  <span className="text-[10px] font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                                    <RotateCw className="w-3 h-3 text-amber-400" />
+                                    <span>Siklus Perbaikan Mandiri (Self-Correction Audit Trail):</span>
+                                  </span>
+                                  {st.revisions.map((rev, rIdx) => (
+                                    <div key={rIdx} className="text-[11px] text-slate-300 space-y-1 pl-2 border-l-2 border-amber-500/40">
+                                      <p className="font-semibold text-amber-200">
+                                        Iterasi #{rev.iteration} — {new Date(rev.timestamp).toLocaleTimeString('id-ID')}
+                                      </p>
+                                      <p className="italic text-slate-400 bg-slate-900/60 p-2 rounded border border-slate-800">
+                                        Critique: {rev.critique}
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {st.outputResult && (
+                                <div className="space-y-1">
+                                  <span className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider">
+                                    Hasil Keluaran Agen:
+                                  </span>
+                                  <div className="text-xs text-slate-200 bg-slate-900/90 p-3 rounded-lg border border-emerald-500/20 max-h-60 overflow-y-auto whitespace-pre-wrap leading-relaxed font-sans">
+                                    {st.outputResult}
+                                  </div>
+                                </div>
+                              )}
+
+                              {st.error && (
+                                <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs">
+                                  <strong>Kendala:</strong> {st.error}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -793,7 +1194,7 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
                     <span>Transkrip Handoff & Komunikasi Antar-Agen</span>
                   </h3>
                   <p className="text-[11px] text-slate-400">
-                    Aliran pesan koordinasi real-time saat agen membagikan artefak dan menyerahkan subtugas.
+                    Aliran pesan koordinasi real-time saat agen membagikan artefak, feedback revisi, dan delegasi subtugas.
                   </p>
                 </div>
               </div>

@@ -538,6 +538,8 @@ export interface SwarmSubtask {
   startedAt?: string;
   completedAt?: string;
   durationMs?: number;
+  feedbackLoopCount?: number;
+  revisions?: { iteration: number; critique: string; patchResult: string; timestamp: string }[];
 }
 
 export interface SwarmMission {
@@ -552,6 +554,7 @@ export interface SwarmMission {
   finalSynthesis?: string;
   totalDurationMs?: number;
   totalTokens?: number;
+  selfCorrectionCount?: number;
   createdAt: string;
   updatedAt: string;
 }
