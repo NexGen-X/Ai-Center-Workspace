@@ -66,9 +66,34 @@ export async function executeAgentTask(
     realtimeHub.broadcast('task.updated', { taskId, status: 'IN_PROGRESS' });
   }
 
-  // 3. Delegate to appropriate adapter with comprehensive failure recovery
+  // 3. Delegate to appropriate adapter with comprehensive failure recovery & live streaming
   let result: any;
   let finishedAt = new Date().toISOString();
+  let accumulatedText = '';
+  let isInsideThinkTag = false;
+
+  const onTokenChunk = (chunk: string) => {
+    accumulatedText += chunk;
+
+    // Reasoning trace detection:
+    // Models like DeepSeek-R1, Qwen-2.5, Claude thinking outputs <think> tags
+    if (accumulatedText.includes('<think>') && !accumulatedText.includes('</think>')) {
+      isInsideThinkTag = true;
+    } else if (accumulatedText.includes('</think>')) {
+      isInsideThinkTag = false;
+    }
+
+    realtimeHub.broadcast('task.token_chunk', {
+      taskId,
+      runId,
+      agentId,
+      agentName: row.name,
+      chunk,
+      accumulated: accumulatedText,
+      isThinking: isInsideThinkTag,
+      timestamp: new Date().toISOString()
+    });
+  };
 
   try {
     const adapter = ConnectionRouter.getAdapter(row.provider_type);
@@ -82,7 +107,8 @@ export async function executeAgentTask(
       row.model_id,
       row.system_prompt,
       userPrompt,
-      row.parameters_json
+      row.parameters_json,
+      onTokenChunk
     );
     finishedAt = new Date().toISOString();
   } catch (adapterErr: any) {
@@ -200,6 +226,18 @@ export async function executeAgentTask(
   realtimeHub.broadcast('activity.created', {
     actorName: row.name,
     summary: `${row.name} menyelesaikan eksekusi tugas (${result.status})`
+  });
+
+  realtimeHub.broadcast('task.token_completed', {
+    taskId,
+    runId,
+    agentId,
+    agentName: row.name,
+    status: result.status,
+    success: result.success,
+    outputResult: result.outputResult,
+    durationMs: result.durationMs,
+    tokensUsed: result.tokensUsed
   });
 
   return {

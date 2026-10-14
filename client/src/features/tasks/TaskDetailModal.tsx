@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   Bot,
@@ -14,7 +14,9 @@ import {
   RotateCcw,
   Check,
   History,
-  FileText
+  FileText,
+  Terminal,
+  Sparkles
 } from 'lucide-react';
 import { Task, TaskStatus, TaskPriority, AIAgent, Project, AgentRun } from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
@@ -62,6 +64,12 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   // Execution state
   const [isExecuting, setIsExecuting] = useState(false);
   const [lastRun, setLastRun] = useState<AgentRun | null>(null);
+  const [streamingText, setStreamingText] = useState('');
+  const [streamingThoughts, setStreamingThoughts] = useState('');
+  const [isThinking, setIsThinking] = useState(false);
+  const [streamTokenCount, setStreamTokenCount] = useState(0);
+  const [streamingAgentName, setStreamingAgentName] = useState('');
+  const streamRef = useRef<HTMLDivElement>(null);
 
   // Edit state
   const [isEditing, setIsEditing] = useState(false);
@@ -100,8 +108,88 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
       loadTask(taskId);
       setIsEditing(false);
       setLastRun(null);
+      setStreamingText('');
+      setStreamingThoughts('');
+      setIsThinking(false);
+      setStreamTokenCount(0);
+      setStreamingAgentName('');
     }
   }, [taskId]);
+
+  // Connect to SSE for real-time live token streaming & reasoning trace
+  useEffect(() => {
+    if (!taskId) return;
+
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource('/api/realtime');
+
+      eventSource.addEventListener('task.token_chunk', (e: MessageEvent) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.taskId === taskId) {
+            setIsExecuting(true);
+            if (data.agentName) {
+              setStreamingAgentName(data.agentName);
+            }
+
+            const fullText: string = data.accumulated || '';
+            const thinkStart = fullText.indexOf('<think>');
+            const thinkEnd = fullText.indexOf('</think>');
+
+            if (thinkStart !== -1) {
+              if (thinkEnd !== -1) {
+                const thoughts = fullText.slice(thinkStart + 7, thinkEnd).trim();
+                const cleanOutput = (fullText.slice(0, thinkStart) + fullText.slice(thinkEnd + 8)).trim();
+                setStreamingThoughts(thoughts);
+                setStreamingText(cleanOutput);
+                setIsThinking(false);
+              } else {
+                const thoughts = fullText.slice(thinkStart + 7).trim();
+                setStreamingThoughts(thoughts);
+                setIsThinking(true);
+              }
+            } else {
+              setStreamingText(fullText);
+              setIsThinking(false);
+            }
+
+            setStreamTokenCount((prev) => prev + 1);
+          }
+        } catch {
+          // ignore parsing error
+        }
+      });
+
+      eventSource.addEventListener('task.token_completed', (e: MessageEvent) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.taskId === taskId) {
+            setIsExecuting(false);
+            setIsThinking(false);
+            loadTask(taskId);
+          }
+        } catch {
+          // ignore
+        }
+      });
+    } catch {
+      // EventSource fallback
+    }
+
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+    };
+  }, [taskId]);
+
+  // Auto-scroll stream box as tokens arrive
+  useEffect(() => {
+    if (streamRef.current) {
+      streamRef.current.scrollTop = streamRef.current.scrollHeight;
+    }
+  }, [streamingText, streamingThoughts]);
 
   // Handle Escape key to close modal
   useEffect(() => {
@@ -129,6 +217,10 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
     try {
       setIsExecuting(true);
+      setStreamingText('');
+      setStreamingThoughts('');
+      setIsThinking(false);
+      setStreamTokenCount(0);
       const runResult = await api.executeTask(task.id, targetAgentId);
       setLastRun(runResult);
       await loadTask(task.id);
@@ -138,6 +230,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
       toast.error(err.message || 'Eksekusi gagal dijalankan.', 'Gagal Mengeksekusi Tugas');
     } finally {
       setIsExecuting(false);
+      setIsThinking(false);
     }
   };
 
@@ -437,6 +530,57 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                   <span>{isExecuting ? 'Mengeksekusi...' : 'Jalankan Task Sekarang'}</span>
                 </button>
               </div>
+
+              {/* Live Token Streaming & Reasoning Trace Banner */}
+              {(isExecuting || streamingText || streamingThoughts) && (
+                <div className="p-4 rounded-xl bg-slate-950 border border-blue-500/40 shadow-xl space-y-3 animate-in fade-in">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2 flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="relative flex h-2.5 w-2.5">
+                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isThinking ? 'bg-indigo-400' : 'bg-cyan-400'} opacity-75`}></span>
+                        <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isThinking ? 'bg-indigo-500' : 'bg-cyan-500'}`}></span>
+                      </span>
+                      <span className="text-xs font-bold text-white flex items-center gap-1.5 font-mono">
+                        <Terminal className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>{isThinking ? '🧠 Deep Reasoning Trace' : `⚡ Live Streaming • ${streamingAgentName || 'Agent'}`}</span>
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 font-mono text-[11px] text-slate-400">
+                      {isExecuting && (
+                        <span className={`px-2 py-0.5 rounded border text-[10px] uppercase font-bold animate-pulse ${isThinking ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'}`}>
+                          {isThinking ? 'Menalar...' : 'Streaming...'}
+                        </span>
+                      )}
+                      <span className="bg-slate-900 px-2 py-0.5 rounded border border-slate-800 text-[10px]">
+                        ~{streamTokenCount} tokens
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Reasoning Thought Box (if present) */}
+                  {streamingThoughts && (
+                    <div className="p-3 rounded-lg bg-indigo-950/20 border border-indigo-500/30 text-[11px] text-indigo-200/90 font-mono space-y-1">
+                      <div className="flex items-center gap-1.5 text-indigo-400 font-bold text-[10px] uppercase tracking-wider">
+                        <Sparkles className="w-3 h-3 text-indigo-400" />
+                        <span>Chain of Thought / Alur Penalaran:</span>
+                      </div>
+                      <div className="whitespace-pre-wrap leading-relaxed max-h-36 overflow-y-auto pl-2 border-l-2 border-indigo-500/40 italic">
+                        {streamingThoughts}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Live Stream Output Box */}
+                  <div
+                    ref={streamRef}
+                    className="p-3.5 rounded-lg bg-slate-900 border border-slate-800/80 font-mono text-xs text-slate-100 whitespace-pre-wrap max-h-64 overflow-y-auto leading-relaxed"
+                  >
+                    {streamingText || (isThinking ? 'Menganalisis dependensi tugas & konteks sistem...' : 'Menghubungkan ke model gateway...')}
+                    {isExecuting && <span className="inline-block w-2 h-4 ml-1 bg-cyan-400 animate-pulse align-middle" />}
+                  </div>
+                </div>
+              )}
 
               {/* Last Run Output */}
               {(lastRun || runs.length > 0) && (

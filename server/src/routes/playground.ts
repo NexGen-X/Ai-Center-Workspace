@@ -7,6 +7,7 @@ import { pool } from '../db/index.js';
 import { ConnectionRouter } from '../adapters/router.js';
 import { decryptSecret } from '../utils/crypto.js';
 import { systemLogger } from '../services/logger.js';
+import { realtimeHub } from '../services/realtime.js';
 
 const router = Router();
 
@@ -57,6 +58,18 @@ router.post('/execute', async (req: Request, res: Response) => {
 
           systemLogger.info('INFERENCE', `[Playground Slot ${target.slotId}] Mengirim prompt ke ${target.modelId} (${prov.name})`);
 
+          let accumulated = '';
+          const onChunk = (chunk: string) => {
+            accumulated += chunk;
+            realtimeHub.broadcast('playground.token_chunk', {
+              slotId: target.slotId,
+              providerId: prov.id,
+              modelId: target.modelId,
+              chunk,
+              text: accumulated
+            });
+          };
+
           const execRes = await adapter.execute(
             {
               baseUrl: prov.base_url,
@@ -67,7 +80,8 @@ router.post('/execute', async (req: Request, res: Response) => {
             target.modelId,
             systemPrompt,
             prompt,
-            params
+            params,
+            onChunk
           );
 
           return {

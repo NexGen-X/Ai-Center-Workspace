@@ -3,7 +3,7 @@
  * Pre-configured adapters for verified providers (Route-X Local, OpenAI, Anthropic, Gemini, Groq, Ollama).
  */
 
-import { BaseConnectionAdapter, AdapterConfig, AdapterTestResult, AdapterExecutionResult } from './base.js';
+import { BaseConnectionAdapter, AdapterConfig, AdapterTestResult, AdapterExecutionResult, OnTokenChunk } from './base.js';
 import { CustomApiAdapter } from './customApi.js';
 import { ProviderType } from '../../../shared/types.js';
 
@@ -121,13 +121,16 @@ export class PresetProviderAdapter implements BaseConnectionAdapter {
     modelId: string,
     systemPrompt: string,
     userPrompt: string,
-    params?: Record<string, any>
+    params?: Record<string, any>,
+    onChunk?: OnTokenChunk
   ): Promise<AdapterExecutionResult> {
     if (this.providerType === 'gemini') {
       const startTime = Date.now();
       try {
         const cleanModel = modelId.startsWith('models/') ? modelId : `models/${modelId}`;
-        const url = `${config.baseUrl.replace(/\/+$/, '')}/${cleanModel}:generateContent?key=${config.apiKey || ''}`;
+        const isStreaming = Boolean(onChunk);
+        const endpointAction = isStreaming ? 'streamGenerateContent?alt=sse&key=' : 'generateContent?key=';
+        const url = `${config.baseUrl.replace(/\/+$/, '')}/${cleanModel}:${endpointAction}${config.apiKey || ''}`;
         const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -152,8 +155,63 @@ export class PresetProviderAdapter implements BaseConnectionAdapter {
           };
         }
 
+        if (isStreaming && res.body && onChunk) {
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder('utf-8');
+          let textOutput = '';
+          let buffer = '';
+          let promptTokens = 0;
+          let candidateTokens = 0;
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed || trimmed.startsWith(':')) continue;
+              if (trimmed.startsWith('data: ')) {
+                try {
+                  const json = JSON.parse(trimmed.slice(6));
+                  const delta = json.candidates?.[0]?.content?.parts?.[0]?.text;
+                  if (delta) {
+                    textOutput += delta;
+                    onChunk(delta);
+                  }
+                  if (json.usageMetadata) {
+                    promptTokens = json.usageMetadata.promptTokenCount || promptTokens;
+                    candidateTokens = json.usageMetadata.candidatesTokenCount || candidateTokens;
+                  }
+                } catch {
+                  // ignore incomplete JSON chunk
+                }
+              }
+            }
+          }
+
+          const completionTokens = candidateTokens || Math.ceil(textOutput.length / 4);
+          const pTokens = promptTokens || Math.ceil((systemPrompt.length + userPrompt.length) / 4);
+          return {
+            success: true,
+            status: 'SUCCEEDED',
+            outputResult: textOutput,
+            durationMs: Date.now() - startTime,
+            tokensUsed: {
+              promptTokens: pTokens,
+              completionTokens,
+              totalTokens: pTokens + completionTokens
+            }
+          };
+        }
+
         const data = await res.json() as any;
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        if (onChunk && text) {
+          onChunk(text);
+        }
         return {
           success: true,
           status: 'SUCCEEDED',
@@ -176,6 +234,6 @@ export class PresetProviderAdapter implements BaseConnectionAdapter {
       }
     }
 
-    return this.customAdapter.execute(config, modelId, systemPrompt, userPrompt, params);
+    return this.customAdapter.execute(config, modelId, systemPrompt, userPrompt, params, onChunk);
   }
 }

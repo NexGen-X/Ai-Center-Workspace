@@ -6,7 +6,7 @@
  * Adapter ini menginspeksi kehadiran runtime lokal secara faktual dan melaporkan status secara jujur.
  */
 
-import { BaseConnectionAdapter, AdapterConfig, AdapterTestResult, AdapterExecutionResult } from './base.js';
+import { BaseConnectionAdapter, AdapterConfig, AdapterTestResult, AdapterExecutionResult, OnTokenChunk } from './base.js';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs';
@@ -71,7 +71,8 @@ export class HermesRuntimeAdapter implements BaseConnectionAdapter {
     modelId: string,
     _systemPrompt: string,
     _userPrompt: string,
-    _params?: Record<string, any>
+    _params?: Record<string, any>,
+    _onChunk?: OnTokenChunk
   ): Promise<AdapterExecutionResult> {
     const availability = await this.checkHermesAvailability();
 

@@ -33,8 +33,17 @@ export interface AdapterConfig {
   timeoutMs?: number;
 }
 
+export type OnTokenChunk = (chunk: string) => void;
+
 export interface BaseConnectionAdapter {
   testConnection(config: AdapterConfig): Promise<AdapterTestResult>;
   discoverModels(config: AdapterConfig): Promise<string[]>;
-  execute(config: AdapterConfig, modelId: string, systemPrompt: string, userPrompt: string, params?: Record<string, any>): Promise<AdapterExecutionResult>;
+  execute(
+    config: AdapterConfig,
+    modelId: string,
+    systemPrompt: string,
+    userPrompt: string,
+    params?: Record<string, any>,
+    onChunk?: OnTokenChunk
+  ): Promise<AdapterExecutionResult>;
 }

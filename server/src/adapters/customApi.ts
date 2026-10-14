@@ -3,7 +3,7 @@
  * Supports OpenAI-compatible and Anthropic-compatible custom endpoints with SSRF protection.
  */
 
-import { BaseConnectionAdapter, AdapterConfig, AdapterTestResult, AdapterExecutionResult } from './base.js';
+import { BaseConnectionAdapter, AdapterConfig, AdapterTestResult, AdapterExecutionResult, OnTokenChunk } from './base.js';
 import { validateOutgoingUrl } from '../utils/ssrf.js';
 
 export class CustomApiAdapter implements BaseConnectionAdapter {
@@ -142,7 +142,8 @@ export class CustomApiAdapter implements BaseConnectionAdapter {
     modelId: string,
     systemPrompt: string,
     userPrompt: string,
-    params?: Record<string, any>
+    params?: Record<string, any>,
+    onChunk?: OnTokenChunk
   ): Promise<AdapterExecutionResult> {
     const startTime = Date.now();
     const urlValidation = validateOutgoingUrl(config.baseUrl);
@@ -182,7 +183,8 @@ export class CustomApiAdapter implements BaseConnectionAdapter {
             system: systemPrompt,
             messages: [{ role: 'user', content: userPrompt }],
             max_tokens: params?.maxTokens || 2048,
-            temperature: params?.temperature ?? 0.7
+            temperature: params?.temperature ?? 0.7,
+            stream: Boolean(onChunk)
           }),
           signal: controller.signal
         });
@@ -199,8 +201,56 @@ export class CustomApiAdapter implements BaseConnectionAdapter {
           };
         }
 
+        if (onChunk && response.body) {
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder('utf-8');
+          let textOutput = '';
+          let buffer = '';
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed || trimmed.startsWith(':')) continue;
+              if (trimmed === 'data: [DONE]') continue;
+              if (trimmed.startsWith('data: ')) {
+                try {
+                  const json = JSON.parse(trimmed.slice(6));
+                  if (json.type === 'content_block_delta' && json.delta?.text) {
+                    textOutput += json.delta.text;
+                    onChunk(json.delta.text);
+                  }
+                } catch {
+                  // ignore partial JSON chunk
+                }
+              }
+            }
+          }
+
+          const estimatedTokens = Math.ceil(textOutput.length / 4);
+          return {
+            success: true,
+            status: 'SUCCEEDED',
+            outputResult: textOutput,
+            durationMs,
+            tokensUsed: {
+              promptTokens: Math.ceil(userPrompt.length / 4),
+              completionTokens: estimatedTokens,
+              totalTokens: Math.ceil((userPrompt.length + textOutput.length) / 4)
+            }
+          };
+        }
+
         const data = await response.json() as any;
         const textOutput = data.content?.[0]?.text || '';
+        if (onChunk && textOutput) {
+          onChunk(textOutput);
+        }
         return {
           success: true,
           status: 'SUCCEEDED',
@@ -232,7 +282,8 @@ export class CustomApiAdapter implements BaseConnectionAdapter {
               { role: 'user', content: userPrompt }
             ],
             temperature: params?.temperature ?? 0.7,
-            max_tokens: params?.maxTokens || 2048
+            max_tokens: params?.maxTokens || 2048,
+            stream: Boolean(onChunk)
           }),
           signal: controller.signal
         });
@@ -249,8 +300,57 @@ export class CustomApiAdapter implements BaseConnectionAdapter {
           };
         }
 
+        if (onChunk && response.body) {
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder('utf-8');
+          let textOutput = '';
+          let buffer = '';
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed || trimmed.startsWith(':')) continue;
+              if (trimmed === 'data: [DONE]') continue;
+              if (trimmed.startsWith('data: ')) {
+                try {
+                  const json = JSON.parse(trimmed.slice(6));
+                  const delta = json.choices?.[0]?.delta?.content;
+                  if (delta) {
+                    textOutput += delta;
+                    onChunk(delta);
+                  }
+                } catch {
+                  // ignore partial JSON chunk
+                }
+              }
+            }
+          }
+
+          const estimatedTokens = Math.ceil(textOutput.length / 4);
+          return {
+            success: true,
+            status: 'SUCCEEDED',
+            outputResult: textOutput,
+            durationMs,
+            tokensUsed: {
+              promptTokens: Math.ceil(userPrompt.length / 4),
+              completionTokens: estimatedTokens,
+              totalTokens: Math.ceil((userPrompt.length + textOutput.length) / 4)
+            }
+          };
+        }
+
         const data = await response.json() as any;
         const textOutput = data.choices?.[0]?.message?.content || '';
+        if (onChunk && textOutput) {
+          onChunk(textOutput);
+        }
         return {
           success: true,
           status: 'SUCCEEDED',

@@ -93,7 +93,41 @@ export const PlaygroundModal: React.FC<PlaygroundModalProps> = ({
     A: null,
     B: null
   });
+  const [streamOutputs, setStreamOutputs] = useState<Record<'A' | 'B', string>>({
+    A: '',
+    B: ''
+  });
   const [copiedSlot, setCopiedSlot] = useState<'A' | 'B' | null>(null);
+
+  // Connect to SSE for real-time live streaming of playground token chunks
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource('/api/realtime');
+
+      eventSource.addEventListener('playground.token_chunk', (e: MessageEvent) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.slotId === 'A' || data.slotId === 'B') {
+            setStreamOutputs((prev) => ({
+              ...prev,
+              [data.slotId]: data.text || ''
+            }));
+          }
+        } catch {
+          // ignore parse error
+        }
+      });
+    } catch {
+      // fallback
+    }
+
+    return () => {
+      if (eventSource) eventSource.close();
+    };
+  }, [isOpen]);
 
   // Initialize default selections from available providers/agents
   useEffect(() => {
@@ -146,6 +180,7 @@ export const PlaygroundModal: React.FC<PlaygroundModalProps> = ({
 
     setLoading(true);
     setResults({ A: null, B: null });
+    setStreamOutputs({ A: '', B: '' });
 
     const targets: any[] = [
       {
@@ -379,10 +414,17 @@ export const PlaygroundModal: React.FC<PlaygroundModalProps> = ({
 
               <div className="flex-1 overflow-y-auto text-xs font-mono text-slate-200 leading-relaxed whitespace-pre-wrap select-text">
                 {loading ? (
-                  <div className="h-full flex items-center justify-center text-slate-500 text-xs gap-2">
-                    <Zap className="w-4 h-4 text-cyan-400 animate-spin" />
-                    <span>Inference sedang berjalan...</span>
-                  </div>
+                  streamOutputs.A ? (
+                    <div>
+                      {streamOutputs.A}
+                      <span className="inline-block w-1.5 h-3.5 ml-1 bg-cyan-400 animate-pulse align-middle" />
+                    </div>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-slate-500 text-xs gap-2">
+                      <Zap className="w-4 h-4 text-cyan-400 animate-spin" />
+                      <span>Inference sedang berjalan...</span>
+                    </div>
+                  )
                 ) : results.A ? (
                   results.A.outputResult || (
                     <span className="text-rose-400">{results.A.errorMessage || 'Tidak ada output'}</span>
@@ -480,10 +522,17 @@ export const PlaygroundModal: React.FC<PlaygroundModalProps> = ({
 
                 <div className="flex-1 overflow-y-auto text-xs font-mono text-slate-200 leading-relaxed whitespace-pre-wrap select-text">
                   {loading ? (
-                    <div className="h-full flex items-center justify-center text-slate-500 text-xs gap-2">
-                      <Zap className="w-4 h-4 text-purple-400 animate-spin" />
-                      <span>Inference sedang berjalan...</span>
-                    </div>
+                    streamOutputs.B ? (
+                      <div>
+                        {streamOutputs.B}
+                        <span className="inline-block w-1.5 h-3.5 ml-1 bg-purple-400 animate-pulse align-middle" />
+                      </div>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-slate-500 text-xs gap-2">
+                        <Zap className="w-4 h-4 text-purple-400 animate-spin" />
+                        <span>Inference sedang berjalan...</span>
+                      </div>
+                    )
                   ) : results.B ? (
                     results.B.outputResult || (
                       <span className="text-rose-400">{results.B.errorMessage || 'Tidak ada output'}</span>

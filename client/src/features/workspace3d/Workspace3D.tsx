@@ -58,6 +58,11 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
     return true;
   });
   const [webGlSupported, setWebGlSupported] = useState(true);
+  const [liveStreamHUD, setLiveStreamHUD] = useState<{
+    agentName: string;
+    text: string;
+    isThinking: boolean;
+  } | null>(null);
 
   // References for camera transitions
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -66,6 +71,58 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
   const targetLookAt = useRef<THREE.Vector3>(new THREE.Vector3(0, 2.5, 0));
 
   const operatorName = currentUser?.displayName || 'Yulian';
+
+  // Live Token Streaming & Reasoning Trace SSE Listener for 3D Studio HUD
+  useEffect(() => {
+    let eventSource: EventSource | null = null;
+    let fadeTimer: NodeJS.Timeout | null = null;
+
+    try {
+      eventSource = new EventSource('/api/realtime');
+
+      eventSource.addEventListener('task.token_chunk', (e: MessageEvent) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (fadeTimer) clearTimeout(fadeTimer);
+
+          const fullText: string = data.accumulated || '';
+          const thinkStart = fullText.indexOf('<think>');
+          const thinkEnd = fullText.indexOf('</think>');
+          let snippet = fullText;
+          let isThinking = Boolean(data.isThinking);
+
+          if (thinkStart !== -1 && thinkEnd === -1) {
+            snippet = fullText.slice(thinkStart + 7).trim();
+            isThinking = true;
+          } else if (thinkEnd !== -1) {
+            snippet = fullText.slice(thinkEnd + 8).trim();
+            isThinking = false;
+          }
+
+          setLiveStreamHUD({
+            agentName: data.agentName || 'Agent',
+            text: snippet.slice(-160),
+            isThinking
+          });
+        } catch {
+          // ignore parsing error
+        }
+      });
+
+      eventSource.addEventListener('task.token_completed', () => {
+        fadeTimer = setTimeout(() => {
+          setLiveStreamHUD(null);
+        }, 3500);
+      });
+    } catch {
+      // SSE not supported
+    }
+
+    return () => {
+      if (eventSource) eventSource.close();
+      if (fadeTimer) clearTimeout(fadeTimer);
+    };
+  }, []);
 
   useEffect(() => {
     const container = mountRef.current;
@@ -1294,6 +1351,30 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
     <div className="relative w-full h-[480px] sm:h-[580px] lg:h-[700px] bg-[#1a2133] rounded-2xl border border-slate-800/80 overflow-hidden shadow-2xl shadow-blue-950/40 select-none">
       {/* Three.js Canvas Container */}
       <div ref={mountRef} className="w-full h-full" />
+
+      {/* Floating Holographic AI Token Stream / Reasoning HUD */}
+      {liveStreamHUD && (
+        <div className="absolute top-2.5 sm:top-4 left-1/2 -translate-x-1/2 z-30 max-w-md w-[calc(100%-24px)] sm:w-full p-2.5 sm:p-3 rounded-2xl bg-slate-950/90 backdrop-blur-md border border-cyan-500/40 shadow-2xl shadow-cyan-950/50 pointer-events-auto animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center justify-between pb-1.5 border-b border-slate-800/80 mb-1.5 gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${liveStreamHUD.isThinking ? 'bg-indigo-400' : 'bg-cyan-400'} opacity-75`}></span>
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${liveStreamHUD.isThinking ? 'bg-indigo-500' : 'bg-cyan-500'}`}></span>
+              </span>
+              <span className="text-[11px] font-bold text-cyan-300 font-mono truncate">
+                {liveStreamHUD.isThinking ? '🧠 Deep Reasoning Trace' : `⚡ ${liveStreamHUD.agentName} Mengetik...`}
+              </span>
+            </div>
+            <span className="text-[9px] font-mono text-cyan-400 bg-cyan-950/50 px-1.5 py-0.5 rounded border border-cyan-800/40 uppercase tracking-wider shrink-0 font-bold">
+              Live SSE
+            </span>
+          </div>
+          <p className="text-[11px] font-mono text-slate-200 line-clamp-2 leading-relaxed break-words">
+            {liveStreamHUD.text}
+            <span className="inline-block w-1.5 h-3 ml-1 bg-cyan-400 animate-pulse align-middle" />
+          </p>
+        </div>
+      )}
 
       {/* Floating Top-Left Card: ✦ Team • Live */}
       <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-20 flex flex-col gap-2 pointer-events-auto max-w-[calc(100%-16px)] sm:max-w-xs">
