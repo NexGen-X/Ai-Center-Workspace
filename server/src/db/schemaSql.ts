@@ -245,5 +245,44 @@ CREATE TABLE IF NOT EXISTS swarm_messages (
 CREATE INDEX IF NOT EXISTS idx_swarm_missions_workspace_status ON swarm_missions(workspace_id, status);
 CREATE INDEX IF NOT EXISTS idx_swarm_missions_created ON swarm_missions(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_swarm_messages_mission ON swarm_messages(mission_id, created_at ASC);
+
+CREATE TABLE IF NOT EXISTS agent_schedules (
+    id VARCHAR(64) PRIMARY KEY,
+    workspace_id VARCHAR(64) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    cron_expression VARCHAR(64) NOT NULL,
+    routine_type VARCHAR(32) NOT NULL,
+    target_agent_id VARCHAR(64) REFERENCES ai_agents(id) ON DELETE SET NULL,
+    payload_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    last_run_at TIMESTAMP WITH TIME ZONE,
+    next_run_at TIMESTAMP WITH TIME ZONE,
+    last_status VARCHAR(32) NOT NULL DEFAULT 'IDLE',
+    last_result_summary TEXT,
+    total_runs INTEGER NOT NULL DEFAULT 0,
+    failure_count INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS schedule_executions (
+    id VARCHAR(64) PRIMARY KEY,
+    schedule_id VARCHAR(64) NOT NULL REFERENCES agent_schedules(id) ON DELETE CASCADE,
+    workspace_id VARCHAR(64) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    status VARCHAR(32) NOT NULL DEFAULT 'RUNNING',
+    started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    duration_ms INTEGER DEFAULT 0,
+    output_summary TEXT,
+    error_message TEXT,
+    mission_id VARCHAR(64) REFERENCES swarm_missions(id) ON DELETE SET NULL,
+    details_json JSONB DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_schedules_workspace ON agent_schedules(workspace_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_agent_schedules_next_run ON agent_schedules(next_run_at) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_schedule_executions_schedule ON schedule_executions(schedule_id, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_schedule_executions_workspace ON schedule_executions(workspace_id, started_at DESC);
 `;
 

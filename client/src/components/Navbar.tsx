@@ -260,13 +260,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span>Proyek</span>
           </button>
 
-          {/* Kalender */}
+          {/* Kalender & Jadwal Rutin */}
           <button
             onClick={onOpenCalendar}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 text-xs font-medium transition shrink-0 whitespace-nowrap"
           >
             <Calendar className="w-3.5 h-3.5 text-pink-400 shrink-0" />
-            <span>Kalender</span>
+            <span>Jadwal & Kalender</span>
           </button>
 
           {/* Dokumen */}

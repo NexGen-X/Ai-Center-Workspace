@@ -37,7 +37,11 @@ import {
   SwarmMission,
   SwarmMessage,
   SwarmPlanResponse,
-  SwarmDispatchRequest
+  SwarmDispatchRequest,
+  AgentSchedule,
+  ScheduleExecution,
+  CreateScheduleDTO,
+  UpdateScheduleDTO
 } from '../../../shared/types.js';
 
 const BASE_URL = '/api';
@@ -378,6 +382,38 @@ export const api = {
   }),
   resumeSwarmMission: (id: string) => request<{ success: boolean; mission: SwarmMission }>(`/swarm/missions/${id}/resume`, {
     method: 'POST'
-  })
+  }),
+
+  // Proactive Autonomous Routines & Cron Schedules
+  getSchedules: (workspaceId?: string) => {
+    const params = new URLSearchParams();
+    if (workspaceId) params.set('workspaceId', workspaceId);
+    return request<{ success: boolean; data: AgentSchedule[] }>(`/schedules?${params.toString()}`);
+  },
+  getSchedule: (id: string) => request<{ success: boolean; data: AgentSchedule }>(`/schedules/${id}`),
+  createSchedule: (data: CreateScheduleDTO) => request<{ success: boolean; data: AgentSchedule }>('/schedules', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+  updateSchedule: (id: string, data: UpdateScheduleDTO) => request<{ success: boolean; data: AgentSchedule }>(`/schedules/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  }),
+  deleteSchedule: (id: string) => request<{ success: boolean; message: string }>(`/schedules/${id}`, {
+    method: 'DELETE'
+  }),
+  toggleSchedule: (id: string) => request<{ success: boolean; data: AgentSchedule }>(`/schedules/${id}/toggle`, {
+    method: 'POST'
+  }),
+  runScheduleNow: (id: string) => request<{ success: boolean; data: ScheduleExecution }>(`/schedules/${id}/run-now`, {
+    method: 'POST'
+  }),
+  getScheduleHistory: (id: string, limit = 20) => request<{ success: boolean; data: ScheduleExecution[] }>(`/schedules/${id}/history?limit=${limit}`),
+  getRecentExecutions: (workspaceId?: string, limit = 30) => {
+    const params = new URLSearchParams();
+    if (workspaceId) params.set('workspaceId', workspaceId);
+    if (limit) params.set('limit', String(limit));
+    return request<{ success: boolean; data: ScheduleExecution[] }>(`/schedules/executions/recent?${params.toString()}`);
+  }
 };
 

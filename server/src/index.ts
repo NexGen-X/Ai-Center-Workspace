@@ -28,6 +28,7 @@ import { pipelineRouter } from './routes/pipeline.js';
 import actionsRouter from './routes/actions.js';
 import ragRouter from './routes/rag.js';
 import swarmRouter from './routes/swarm.js';
+import { schedulesRouter } from './routes/schedules.js';
 import { systemLogger } from './services/logger.js';
 
 export const app = express();
@@ -77,6 +78,7 @@ app.use('/api/pipeline', pipelineRouter);
 app.use('/api/actions', actionsRouter);
 app.use('/api/rag', ragRouter);
 app.use('/api/swarm', swarmRouter);
+app.use('/api/schedules', schedulesRouter);
 
 // Root healthcheck
 app.get('/healthz', (_req: Request, res: Response) => {
@@ -117,6 +119,8 @@ export async function startServer() {
   await initializeDatabase();
   const { SwarmService } = await import('./services/swarmService.js');
   await SwarmService.recoverInterruptedMissions();
+  const { SchedulerService } = await import('./services/schedulerService.js');
+  SchedulerService.startDaemon(30000);
   const server = app.listen(config.port, () => {
     console.log(`[Server] AI Agent Command Center backend listening on port ${config.port}`);
   });
@@ -127,9 +131,10 @@ export async function startServer() {
     try {
       // 1. Close SSE clients
       realtimeHub.closeAll();
-      // 2. Stop autonomous task runner
+      // 2. Stop autonomous task runner and scheduler
       const { taskRunner } = await import('./services/orchestrator.js');
       taskRunner.stop();
+      SchedulerService.stopDaemon();
       // 3. Stop accepting new HTTP requests
       server.close(() => {
         console.log('[Server] HTTP server closed.');

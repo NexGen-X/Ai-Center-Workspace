@@ -592,5 +592,74 @@ export interface SwarmDispatchRequest {
   workspaceId?: string;
 }
 
+// Proactive Autonomous Routines & Cron Scheduler Types
+export type ScheduleRoutineType =
+  | 'SWARM_MISSION'
+  | 'SECURITY_AUDIT'
+  | 'HEALTH_CHECK'
+  | 'VECTOR_REINDEX'
+  | 'AGENT_TASK';
+
+export type ScheduleStatus = 'IDLE' | 'RUNNING' | 'SUCCESS' | 'FAILED';
+
+export interface AgentSchedule {
+  id: string;
+  workspaceId: string;
+  title: string;
+  description?: string;
+  cronExpression: string;
+  routineType: ScheduleRoutineType;
+  targetAgentId?: string;
+  targetAgentName?: string;
+  payload: Record<string, any>;
+  isActive: boolean;
+  lastRunAt?: string;
+  nextRunAt?: string;
+  lastStatus: ScheduleStatus;
+  lastResultSummary?: string;
+  totalRuns: number;
+  failureCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ScheduleExecution {
+  id: string;
+  scheduleId: string;
+  scheduleTitle?: string;
+  routineType: ScheduleRoutineType;
+  workspaceId: string;
+  status: 'RUNNING' | 'SUCCESS' | 'FAILED';
+  startedAt: string;
+  completedAt?: string;
+  durationMs?: number;
+  outputSummary?: string;
+  errorMessage?: string;
+  missionId?: string;
+  details?: Record<string, any>;
+}
+
+export interface CreateScheduleDTO {
+  title: string;
+  description?: string;
+  cronExpression: string;
+  routineType: ScheduleRoutineType;
+  targetAgentId?: string;
+  payload?: Record<string, any>;
+  isActive?: boolean;
+  workspaceId?: string;
+}
+
+export interface UpdateScheduleDTO {
+  title?: string;
+  description?: string;
+  cronExpression?: string;
+  routineType?: ScheduleRoutineType;
+  targetAgentId?: string;
+  payload?: Record<string, any>;
+  isActive?: boolean;
+}
+
+
 
 

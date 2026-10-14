@@ -160,6 +160,25 @@ export async function initializeDatabase(): Promise<void> {
         ON CONFLICT (id) DO NOTHING;
       `, [config.defaultWorkspaceId]);
     }
+
+    // Seed initial autonomous proactive schedules if none exist
+    const schedCountRes = await client.query(`
+      SELECT count(*) as count FROM agent_schedules WHERE workspace_id = $1;
+    `, [config.defaultWorkspaceId]);
+
+    if (parseInt(schedCountRes.rows[0].count, 10) === 0) {
+      console.log('[DB] Seeding default autonomous routines (Health Check, Security Audit, Vector Sync, Weekly Swarm Audit)...');
+      await client.query(`
+        INSERT INTO agent_schedules (
+          id, workspace_id, title, description, cron_expression, routine_type, is_active, last_status
+        ) VALUES 
+          ('sched-health-hourly', $1, 'Pemeriksaan Kesehatan Server & Telemetri', 'Audit berkala latensi database, penggunaan memori server, dan ketersediaan agen.', '0 * * * *', 'HEALTH_CHECK', TRUE, 'IDLE'),
+          ('sched-security-daily', $1, 'Audit Keamanan & Integritas Sandbox Harian', 'Pemeriksaan berkala kebocoran env, proteksi path sensitif, dan log akses aksi terblokir.', '0 2 * * *', 'SECURITY_AUDIT', TRUE, 'IDLE'),
+          ('sched-vector-sync', $1, 'Sinkronisasi Indeks Memori Semantik RAG', 'Verifikasi status embedding chunk vektor pada pgvector HNSW.', '0 4 * * *', 'VECTOR_REINDEX', TRUE, 'IDLE'),
+          ('sched-swarm-codebase', $1, 'Swarm Autonomous Codebase Audit', 'Misi dekomposisi multi-agent berkala untuk evaluasi integritas arsitektur kode.', '0 3 * * 1', 'SWARM_MISSION', TRUE, 'IDLE')
+        ON CONFLICT (id) DO NOTHING;
+      `, [config.defaultWorkspaceId]);
+    }
   } finally {
     client.release();
   }
