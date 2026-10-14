@@ -8,6 +8,7 @@ import { decryptSecret } from '../utils/crypto.js';
 import { realtimeHub } from './realtime.js';
 import { systemLogger } from './logger.js';
 import { ActionManager } from './actionManager.js';
+import { RagService } from './ragService.js';
 import { v4 as uuidv4 } from 'uuid';
 import { AgentRun, OrchestratorStatus } from '../../../shared/types.js';
 
@@ -22,7 +23,7 @@ export async function executeAgentTask(
   // 1. Fetch agent and provider configuration
   const query = `
     SELECT 
-      a.id, a.name, a.role, a.system_prompt, a.model_id, a.parameters_json, a.capabilities,
+      a.id, a.workspace_id, a.name, a.role, a.system_prompt, a.model_id, a.parameters_json, a.capabilities,
       p.id as provider_id, p.name as provider_name, p.provider_type, p.base_url, p.protocol, p.api_key_encrypted
     FROM ai_agents a
     JOIN model_providers p ON a.provider_id = p.id
@@ -109,12 +110,40 @@ Anda memiliki akses ke Sandbox Tools untuk mengeksekusi aksi nyata di lingkungan
 3. file_write: {"filePath": "namafile.txt", "content": "isi teks"} (menulis file baru di folder sandbox)
 4. http_fetch: {"url": "https://..."} (mengambil data dari URL publik)
 5. system_inspect: {"query": "metrics"} (melihat telemetri host secara read-only)
+6. knowledge_search: {"query": "kata kunci"} (mencari SOP dan dokumen teknis relevan dari pgvector)
+7. memory_store: {"keyPoint": "...", "memoryType": "EPISODIC"} (menyimpan catatan ke memori jangka panjang)
+8. memory_search: {"query": "..."} (mencari arsip memori masa lalu agen)
 
 Untuk memanggil tool, sertakan blok JSON dalam format:
 \`\`\`action
 {"tool": "<nama_tool>", "input": { ... }}
 \`\`\`
 Sistem akan mengevaluasi risiko keamanan dan meminta approval operator jika aksi berisiko tinggi.`;
+  }
+
+  // Automatic Semantic RAG & Episodic Memory Context Injection
+  try {
+    const relevantChunks = await RagService.searchSimilarChunks(
+      row.workspace_id || 'ws-default-command-center',
+      userPrompt,
+      { limit: 2, minSimilarity: 0.45 }
+    );
+    if (relevantChunks.length > 0) {
+      effectiveSystemPrompt += `\n\n[KONTEKS KNOWLEDGE BASE RELEVAN (RAG)]\n` +
+        relevantChunks.map(c => `Dokumen: "${c.documentTitle}" (${c.category}, Relevansi: ${(c.similarity * 100).toFixed(0)}%)\n${c.content}`).join('\n---\n');
+    }
+
+    const relevantMemories = await RagService.searchAgentMemories(
+      agentId,
+      userPrompt,
+      { limit: 2, minSimilarity: 0.45 }
+    );
+    if (relevantMemories.length > 0) {
+      effectiveSystemPrompt += `\n\n[MEMORI JANGKA PANJANG AGEN (EPISODIK)]\n` +
+        relevantMemories.map(m => `- [${m.memoryType}] "${m.keyPoint}" (Relevansi: ${((m.similarity || 0) * 100).toFixed(0)}%)`).join('\n');
+    }
+  } catch (err: any) {
+    // Non-blocking retrieval fallback
   }
 
   try {
@@ -240,6 +269,23 @@ Sistem akan mengevaluasi risiko keamanan dan meminta approval operator jika aksi
       realtimeHub.broadcast('task.updated', { taskId, status: finalTaskStatus });
     } catch (taskErr) {
       console.error('[Orchestrator] Error updating task status:', taskErr);
+    }
+
+    // Auto-record episodic memory for completed task
+    if (result.success && result.outputResult) {
+      try {
+        const cleanExcerpt = result.outputResult.slice(0, 200).replace(/\s+/g, ' ').trim();
+        await RagService.storeAgentMemory({
+          agentId,
+          taskId,
+          workspaceId: row.workspace_id || 'ws-default-command-center',
+          memoryType: 'EPISODIC',
+          keyPoint: `Menyelesaikan tugas: "${userPrompt.slice(0, 100)}" -> ${cleanExcerpt}`,
+          importanceScore: 0.6
+        });
+      } catch {
+        // Non-blocking memory recording
+      }
     }
   }
 

@@ -26,6 +26,7 @@ import playgroundRouter from './routes/playground.js';
 import webhooksRouter from './routes/webhooks.js';
 import { pipelineRouter } from './routes/pipeline.js';
 import actionsRouter from './routes/actions.js';
+import ragRouter from './routes/rag.js';
 import { systemLogger } from './services/logger.js';
 
 export const app = express();
@@ -73,6 +74,7 @@ app.use('/api/playground', playgroundRouter);
 app.use('/api/webhooks', webhooksRouter);
 app.use('/api/pipeline', pipelineRouter);
 app.use('/api/actions', actionsRouter);
+app.use('/api/rag', ragRouter);
 
 // Root healthcheck
 app.get('/healthz', (_req: Request, res: Response) => {

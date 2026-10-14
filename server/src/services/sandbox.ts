@@ -10,6 +10,7 @@ import fs from 'fs';
 import { ToolDefinition, ToolRiskLevel } from '../../../shared/types.js';
 import { validateOutgoingUrl } from '../utils/ssrf.js';
 import { systemLogger } from './logger.js';
+import { RagService } from './ragService.js';
 
 const execAsync = promisify(exec);
 
@@ -112,6 +113,40 @@ export const AVAILABLE_TOOLS: Record<string, ToolDefinition> = {
     parameters: {
       query: { type: 'string', description: 'Tipe diagnostik: metrics | uptime | memory' }
     }
+  },
+  knowledge_search: {
+    name: 'knowledge_search',
+    description: 'Mencari dokumen SOP, arsitektur, dan panduan teknis yang relevan menggunakan pencarian semantik vektor pgvector.',
+    category: 'SYSTEM',
+    riskLevel: 'LOW',
+    requiresApproval: false,
+    parameters: {
+      query: { type: 'string', description: 'Konsep atau pertanyaan yang ingin dicari', required: true },
+      limit: { type: 'number', description: 'Batas jumlah hasil (default 3)' }
+    }
+  },
+  memory_store: {
+    name: 'memory_store',
+    description: 'Menyimpan wawasan, temuan fakta, atau preferensi ke memori jangka panjang agen.',
+    category: 'SYSTEM',
+    riskLevel: 'LOW',
+    requiresApproval: false,
+    parameters: {
+      keyPoint: { type: 'string', description: 'Intisari informasi penting yang ingin disimpan', required: true },
+      memoryType: { type: 'string', description: 'Tipe: EPISODIC | FACTUAL | PREFERENCE | GOAL' },
+      importanceScore: { type: 'number', description: 'Tingkat kepentingan 0.1 hingga 1.0' }
+    }
+  },
+  memory_search: {
+    name: 'memory_search',
+    description: 'Mencari memori jangka panjang masa lalu yang tersimpan terkait topik tertentu.',
+    category: 'SYSTEM',
+    riskLevel: 'LOW',
+    requiresApproval: false,
+    parameters: {
+      query: { type: 'string', description: 'Topik memori yang dicari', required: true },
+      limit: { type: 'number', description: 'Jumlah hasil maksimal (default 3)' }
+    }
   }
 };
 
@@ -193,7 +228,8 @@ export function evaluateActionRisk(toolName: string, input: Record<string, any>)
  */
 export async function executeToolInSandbox(
   toolName: string,
-  input: Record<string, any>
+  input: Record<string, any>,
+  context?: { agentId?: string; taskId?: string }
 ): Promise<{ success: boolean; output: string; durationMs: number; error?: string }> {
   const startTime = Date.now();
 
@@ -337,6 +373,72 @@ export async function executeToolInSandbox(
         return {
           success: true,
           output: JSON.stringify(info, null, 2),
+          durationMs: Date.now() - startTime
+        };
+      }
+
+      case 'knowledge_search': {
+        const query = String(input.query || '').trim();
+        if (!query) throw new Error('Parameter "query" wajib diisi.');
+        const limit = Math.min(10, Number(input.limit) || 3);
+        const matches = await RagService.searchSimilarChunks('ws-default-command-center', query, { limit });
+        if (matches.length === 0) {
+          return {
+            success: true,
+            output: 'Tidak ditemukan dokumen pengetahuan yang relevan dengan query tersebut.',
+            durationMs: Date.now() - startTime
+          };
+        }
+        const formatted = matches.map((m, idx) => 
+          `[HASIL ${idx + 1}] Dokumen: "${m.documentTitle}" (${m.category}) | Skor Relevansi: ${(m.similarity * 100).toFixed(1)}%\n${m.content}`
+        ).join('\n\n---\n\n');
+        return {
+          success: true,
+          output: `Ditemukan ${matches.length} referensi pengetahuan semantik:\n\n${formatted}`,
+          durationMs: Date.now() - startTime
+        };
+      }
+
+      case 'memory_store': {
+        const keyPoint = String(input.keyPoint || '').trim();
+        if (!keyPoint) throw new Error('Parameter "keyPoint" wajib diisi.');
+        const agentId = String(input.agentId || context?.agentId || '').trim();
+        if (!agentId) throw new Error('Parameter "agentId" diperlukan untuk menyimpan memori agen.');
+        const memory = await RagService.storeAgentMemory({
+          agentId,
+          taskId: context?.taskId || input.taskId,
+          memoryType: input.memoryType || 'EPISODIC',
+          keyPoint,
+          context: input.context,
+          importanceScore: input.importanceScore
+        });
+        return {
+          success: true,
+          output: `[MEMORI TERSIMPAN] ID: ${memory.id} | Tipe: ${memory.memoryType} | Poin: "${memory.keyPoint}"`,
+          durationMs: Date.now() - startTime
+        };
+      }
+
+      case 'memory_search': {
+        const query = String(input.query || '').trim();
+        if (!query) throw new Error('Parameter "query" wajib diisi.');
+        const agentId = String(input.agentId || context?.agentId || '').trim();
+        if (!agentId) throw new Error('Parameter "agentId" diperlukan untuk mencari memori agen.');
+        const limit = Math.min(10, Number(input.limit) || 3);
+        const memories = await RagService.searchAgentMemories(agentId, query, { limit });
+        if (memories.length === 0) {
+          return {
+            success: true,
+            output: 'Tidak ditemukan memori masa lalu agen yang relevan.',
+            durationMs: Date.now() - startTime
+          };
+        }
+        const formatted = memories.map((m, idx) =>
+          `[MEMORI ${idx + 1}] (${m.memoryType}) Poin: "${m.keyPoint}" | Relevansi: ${((m.similarity || 0) * 100).toFixed(1)}% (Penting: ${m.importanceScore})`
+        ).join('\n');
+        return {
+          success: true,
+          output: `Ditemukan ${memories.length} memori masa lalu:\n${formatted}`,
           durationMs: Date.now() - startTime
         };
       }

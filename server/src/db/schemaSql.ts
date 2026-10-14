@@ -185,5 +185,37 @@ CREATE INDEX IF NOT EXISTS idx_documents_workspace ON documents(workspace_id, ca
 CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(workspace_id, is_read, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_actions_status ON agent_actions(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_actions_agent ON agent_actions(agent_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS document_chunks (
+    id VARCHAR(64) PRIMARY KEY,
+    document_id VARCHAR(64) NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    workspace_id VARCHAR(64) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    chunk_index INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    char_count INTEGER NOT NULL,
+    token_count INTEGER NOT NULL,
+    embedding vector(768),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS agent_memories (
+    id VARCHAR(64) PRIMARY KEY,
+    agent_id VARCHAR(64) NOT NULL REFERENCES ai_agents(id) ON DELETE CASCADE,
+    workspace_id VARCHAR(64) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    task_id VARCHAR(64) REFERENCES tasks(id) ON DELETE SET NULL,
+    memory_type VARCHAR(32) NOT NULL DEFAULT 'EPISODIC',
+    key_point TEXT NOT NULL,
+    context TEXT,
+    importance_score REAL NOT NULL DEFAULT 0.5,
+    embedding vector(768),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_doc_chunks_doc_idx ON document_chunks(document_id, chunk_index);
+CREATE INDEX IF NOT EXISTS idx_doc_chunks_workspace ON document_chunks(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_doc_chunks_hnsw ON document_chunks USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS idx_agent_memories_agent ON agent_memories(agent_id, memory_type, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_memories_workspace ON agent_memories(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_agent_memories_hnsw ON agent_memories USING hnsw (embedding vector_cosine_ops);
 `;
 

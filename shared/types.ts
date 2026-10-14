@@ -262,6 +262,8 @@ export interface DocumentItem {
   tags: string[];
   createdAt: string;
   updatedAt: string;
+  chunkCount?: number;
+  isIndexed?: boolean;
 }
 
 export interface CreateDocumentRequest {
@@ -447,5 +449,75 @@ export interface ExecuteActionRequest {
   runId?: string;
   autoApprove?: boolean;
 }
+
+// RAG & Semantic Vector Memory Types
+export interface DocumentChunk {
+  id: string;
+  documentId: string;
+  workspaceId: string;
+  chunkIndex: number;
+  content: string;
+  charCount: number;
+  tokenCount: number;
+  similarity?: number;
+  documentTitle?: string;
+  category?: DocumentCategory;
+  createdAt: string;
+}
+
+export interface RagSearchResult {
+  chunkId: string;
+  documentId: string;
+  documentTitle: string;
+  category: DocumentCategory;
+  chunkIndex: number;
+  content: string;
+  similarity: number; // 0.0 to 1.0 (cosine similarity)
+  distance: number;   // cosine distance
+}
+
+export interface RagSearchRequest {
+  query: string;
+  limit?: number;
+  minSimilarity?: number;
+  category?: DocumentCategory;
+  projectId?: string;
+}
+
+export interface RagIndexStats {
+  totalDocuments: number;
+  indexedDocuments: number;
+  totalChunks: number;
+  totalMemories: number;
+  embeddingDimensions: number;
+  storageEngine: string;
+}
+
+export type AgentMemoryType = 'EPISODIC' | 'FACTUAL' | 'PREFERENCE' | 'GOAL';
+
+export interface AgentMemoryItem {
+  id: string;
+  agentId: string;
+  agentName?: string;
+  workspaceId: string;
+  taskId?: string;
+  taskTitle?: string;
+  memoryType: AgentMemoryType;
+  keyPoint: string;
+  context?: string;
+  importanceScore: number; // 0.1 to 1.0
+  similarity?: number;
+  createdAt: string;
+}
+
+export interface StoreMemoryRequest {
+  agentId: string;
+  taskId?: string;
+  memoryType?: AgentMemoryType;
+  keyPoint: string;
+  context?: string;
+  importanceScore?: number;
+}
+
 
 

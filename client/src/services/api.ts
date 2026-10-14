@@ -28,7 +28,12 @@ import {
   PipelineExecutionResult,
   AgentAction,
   ToolDefinition,
-  ExecuteActionRequest
+  ExecuteActionRequest,
+  RagSearchResult,
+  RagSearchRequest,
+  RagIndexStats,
+  AgentMemoryItem,
+  StoreMemoryRequest
 } from '../../../shared/types.js';
 
 const BASE_URL = '/api';
@@ -324,5 +329,27 @@ export const api = {
   rejectAction: (actionId: string, operatorId?: string, reason?: string) => request<AgentAction>(`/actions/${actionId}/reject`, {
     method: 'POST',
     body: JSON.stringify({ operatorId, reason })
+  }),
+
+  // RAG & Semantic Vector Memory (pgvector)
+  getRagStats: () => request<RagIndexStats>('/rag/stats'),
+  indexDocument: (docId: string) => request<{ success: boolean; documentId: string; chunksIndexed: number; message: string }>(`/rag/index/${docId}`, { method: 'POST' }),
+  indexAllDocuments: () => request<{ success: boolean; totalIndexed: number; documentsCount: number; message: string }>('/rag/index-all', { method: 'POST' }),
+  searchRag: (data: RagSearchRequest) => request<{ query: string; matchesCount: number; matches: RagSearchResult[] }>('/rag/search', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+  getAgentMemories: (agentId?: string, limit = 50) => {
+    const params = new URLSearchParams();
+    if (agentId) params.set('agentId', agentId);
+    if (limit) params.set('limit', String(limit));
+    return request<AgentMemoryItem[]>(`/rag/memories?${params.toString()}`);
+  },
+  storeAgentMemory: (data: StoreMemoryRequest) => request<AgentMemoryItem>('/rag/memories', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+  deleteAgentMemory: (id: string) => request<{ success: boolean; message: string }>(`/rag/memories/${id}`, {
+    method: 'DELETE'
   })
 };

@@ -3,6 +3,7 @@ import { pool } from '../db/index.js';
 import { v4 as uuidv4 } from 'uuid';
 import { realtimeHub } from '../services/realtime.js';
 import { DocumentItem } from '../../../shared/types.js';
+import { RagService } from '../services/ragService.js';
 
 const router = Router();
 
@@ -10,21 +11,25 @@ const router = Router();
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { category, projectId } = req.query;
-    let query = `SELECT id, workspace_id, project_id, title, content, category, tags, created_at, updated_at
-                 FROM documents
-                 WHERE 1=1`;
+    let query = `
+      SELECT d.id, d.workspace_id, d.project_id, d.title, d.content, d.category, d.tags, d.created_at, d.updated_at,
+             COUNT(dc.id)::int as chunk_count
+      FROM documents d
+      LEFT JOIN document_chunks dc ON d.id = dc.document_id
+      WHERE 1=1
+    `;
     const params: any[] = [];
 
     if (category) {
       params.push(category);
-      query += ` AND category = $${params.length}`;
+      query += ` AND d.category = $${params.length}`;
     }
     if (projectId) {
       params.push(projectId);
-      query += ` AND project_id = $${params.length}`;
+      query += ` AND d.project_id = $${params.length}`;
     }
 
-    query += ` ORDER BY updated_at DESC`;
+    query += ` GROUP BY d.id ORDER BY d.updated_at DESC`;
 
     const result = await pool.query(query, params);
     const documents: DocumentItem[] = result.rows.map((row: any) => ({
@@ -37,6 +42,8 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       tags: Array.isArray(row.tags) ? row.tags : [],
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      chunkCount: row.chunk_count || 0,
+      isIndexed: (row.chunk_count || 0) > 0,
     }));
 
     res.json(documents);
@@ -50,9 +57,12 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
-      `SELECT id, workspace_id, project_id, title, content, category, tags, created_at, updated_at
-       FROM documents
-       WHERE id = $1`,
+      `SELECT d.id, d.workspace_id, d.project_id, d.title, d.content, d.category, d.tags, d.created_at, d.updated_at,
+              COUNT(dc.id)::int as chunk_count
+       FROM documents d
+       LEFT JOIN document_chunks dc ON d.id = dc.document_id
+       WHERE d.id = $1
+       GROUP BY d.id`,
       [id]
     );
 
@@ -71,6 +81,8 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
       tags: Array.isArray(row.tags) ? row.tags : [],
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      chunkCount: row.chunk_count || 0,
+      isIndexed: (row.chunk_count || 0) > 0,
     };
 
     res.json(doc);
@@ -108,7 +120,14 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       tags: Array.isArray(row.tags) ? row.tags : [],
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      chunkCount: 0,
+      isIndexed: false,
     };
+
+    // Auto-trigger RAG vector indexing in background
+    RagService.indexDocument(id).catch(err => {
+      console.error(`[RAG Auto-Index Error] Failed to index document ${id}:`, err.message);
+    });
 
     // Log Activity
     await pool.query(
@@ -152,6 +171,12 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
     );
 
     const row = updateRes.rows[0];
+
+    // Re-index document in background
+    RagService.indexDocument(id).catch(err => {
+      console.error(`[RAG Auto-Index Error] Failed to re-index document ${id}:`, err.message);
+    });
+
     const updatedDoc: DocumentItem = {
       id: row.id,
       workspaceId: row.workspace_id,
@@ -162,6 +187,8 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
       tags: Array.isArray(row.tags) ? row.tags : [],
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      chunkCount: 1, // Will be updated asynchronously
+      isIndexed: true,
     };
 
     res.json(updatedDoc);

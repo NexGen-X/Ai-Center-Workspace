@@ -112,7 +112,10 @@ export class ActionManager {
 
     systemLogger.info('INFERENCE', `Mengeksekusi tool [${row.tool_name}] di sandbox atas izin operator [${operatorId}]...`);
 
-    const result = await executeToolInSandbox(row.tool_name, toolInput);
+    const result = await executeToolInSandbox(row.tool_name, toolInput, {
+      agentId: row.agent_id,
+      taskId: row.task_id
+    });
     const finalStatus: ActionApprovalStatus = result.success ? 'EXECUTED' : 'FAILED';
     const executedAt = new Date().toISOString();
 
