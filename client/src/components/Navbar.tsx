@@ -38,6 +38,8 @@ interface NavbarProps {
   onOpenSettings: () => void;
   onOpenPlayground: () => void;
   onOpenPipeline?: () => void;
+  onOpenActions?: () => void;
+  pendingActionCount?: number;
   onOpenLogin: () => void;
   onLogout: () => void;
   currentUser: { displayName: string; email: string; role: string } | null;
@@ -63,6 +65,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSettings,
   onOpenPlayground,
   onOpenPipeline,
+  onOpenActions,
+  pendingActionCount = 0,
   onOpenLogin,
   onLogout,
   currentUser,
@@ -297,6 +301,27 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Workflow className="w-3.5 h-3.5 text-purple-400 shrink-0" />
               <span>Swarm</span>
+            </button>
+          )}
+
+          {/* Aksi Sandbox & Human-in-the-Loop */}
+          {onOpenActions && (
+            <button
+              onClick={onOpenActions}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition shrink-0 whitespace-nowrap ${
+                pendingActionCount > 0
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-md shadow-amber-950/40 animate-pulse font-bold'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+              }`}
+              title="Agent Tool Calling & Action Sandbox"
+            >
+              <Terminal className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <span>Aksi Sandbox</span>
+              {pendingActionCount > 0 && (
+                <span className="w-4 h-4 rounded-full bg-amber-400 text-slate-950 text-[10px] font-extrabold flex items-center justify-center">
+                  {pendingActionCount}
+                </span>
+              )}
             </button>
           )}
         </nav>

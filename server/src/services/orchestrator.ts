@@ -7,6 +7,7 @@ import { ConnectionRouter } from '../adapters/router.js';
 import { decryptSecret } from '../utils/crypto.js';
 import { realtimeHub } from './realtime.js';
 import { systemLogger } from './logger.js';
+import { ActionManager } from './actionManager.js';
 import { v4 as uuidv4 } from 'uuid';
 import { AgentRun, OrchestratorStatus } from '../../../shared/types.js';
 
@@ -21,7 +22,7 @@ export async function executeAgentTask(
   // 1. Fetch agent and provider configuration
   const query = `
     SELECT 
-      a.id, a.name, a.role, a.system_prompt, a.model_id, a.parameters_json,
+      a.id, a.name, a.role, a.system_prompt, a.model_id, a.parameters_json, a.capabilities,
       p.id as provider_id, p.name as provider_name, p.provider_type, p.base_url, p.protocol, p.api_key_encrypted
     FROM ai_agents a
     JOIN model_providers p ON a.provider_id = p.id
@@ -95,6 +96,27 @@ export async function executeAgentTask(
     });
   };
 
+  const capabilities: string[] = typeof row.capabilities === 'string'
+    ? JSON.parse(row.capabilities)
+    : (Array.isArray(row.capabilities) ? row.capabilities : []);
+
+  let effectiveSystemPrompt = row.system_prompt;
+  if (capabilities.includes('tool_calling') || capabilities.includes('code_generation') || capabilities.includes('server_telemetry')) {
+    effectiveSystemPrompt += `\n\n[SANDBOX TOOLS TERSEDIA]
+Anda memiliki akses ke Sandbox Tools untuk mengeksekusi aksi nyata di lingkungan:
+1. bash_exec: {"command": "perintah shell Linux"} (menjalankan terminal di folder sandbox terisolasi)
+2. file_read: {"filePath": "jalur/file"} (membaca isi file proyek)
+3. file_write: {"filePath": "namafile.txt", "content": "isi teks"} (menulis file baru di folder sandbox)
+4. http_fetch: {"url": "https://..."} (mengambil data dari URL publik)
+5. system_inspect: {"query": "metrics"} (melihat telemetri host secara read-only)
+
+Untuk memanggil tool, sertakan blok JSON dalam format:
+\`\`\`action
+{"tool": "<nama_tool>", "input": { ... }}
+\`\`\`
+Sistem akan mengevaluasi risiko keamanan dan meminta approval operator jika aksi berisiko tinggi.`;
+  }
+
   try {
     const adapter = ConnectionRouter.getAdapter(row.provider_type);
     result = await adapter.execute(
@@ -105,12 +127,43 @@ export async function executeAgentTask(
         timeoutMs: 45000
       },
       row.model_id,
-      row.system_prompt,
+      effectiveSystemPrompt,
       userPrompt,
       row.parameters_json,
       onTokenChunk
     );
     finishedAt = new Date().toISOString();
+
+    // Check for Action / Tool Calling in output
+    const actionMatch = result.outputResult?.match(/```action\s*\n([\s\S]*?)\n```/);
+    if (actionMatch && result.success) {
+      try {
+        const actionPayload = JSON.parse(actionMatch[1].trim());
+        if (actionPayload.tool && actionPayload.input) {
+          systemLogger.info('INFERENCE', `Agen [${row.name}] mengajukan pemanggilan tool: ${actionPayload.tool}`, {
+            agentId,
+            taskId,
+            tool: actionPayload.tool
+          });
+
+          const actionRecord = await ActionManager.requestAction({
+            agentId,
+            toolName: actionPayload.tool,
+            toolInput: actionPayload.input,
+            taskId,
+            runId
+          });
+
+          if (actionRecord.status === 'EXECUTED') {
+            result.outputResult += `\n\n[HASIL EKSEKUSI TOOL (${actionPayload.tool})]\n${actionRecord.outputResult}`;
+          } else if (actionRecord.status === 'PENDING') {
+            result.outputResult += `\n\n⏳ [AKSI MENUNGGU PERSETUJUAN OPERATOR]\nTool: ${actionPayload.tool} (${actionRecord.riskLevel} Risk)\nStatus: Menunggu otorisasi operator di panel Command Center.`;
+          }
+        }
+      } catch (err: any) {
+        systemLogger.warn('INFERENCE', `Gagal mem-parse blok aksi dari agen [${row.name}]: ${err.message}`);
+      }
+    }
   } catch (adapterErr: any) {
     finishedAt = new Date().toISOString();
     result = {

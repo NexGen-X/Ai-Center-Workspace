@@ -407,3 +407,45 @@ export interface PipelineExecutionResult {
   finalSummary: string;
 }
 
+// Agent Tool Calling & Action Sandbox Types
+export type ToolRiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+export type ActionApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXECUTED' | 'FAILED';
+
+export interface ToolDefinition {
+  name: string;
+  description: string;
+  category: 'SYSTEM' | 'FILESYSTEM' | 'NETWORK' | 'RUNTIME';
+  riskLevel: ToolRiskLevel;
+  requiresApproval: boolean;
+  parameters: Record<string, { type: string; description: string; required?: boolean }>;
+}
+
+export interface AgentAction {
+  id: string;
+  runId?: string;
+  agentId: string;
+  agentName?: string;
+  taskId?: string;
+  taskTitle?: string;
+  toolName: string;
+  toolInput: Record<string, any>;
+  status: ActionApprovalStatus;
+  riskLevel: ToolRiskLevel;
+  requiresApproval: boolean;
+  approvedBy?: string;
+  outputResult?: string;
+  errorMessage?: string;
+  createdAt: string;
+  executedAt?: string;
+}
+
+export interface ExecuteActionRequest {
+  agentId: string;
+  toolName: string;
+  toolInput: Record<string, any>;
+  taskId?: string;
+  runId?: string;
+  autoApprove?: boolean;
+}
+
+

@@ -23,10 +23,12 @@ import { ServerMonitoringWidget } from './components/ServerMonitoringWidget.js';
 import { ConsoleDrawer } from './components/terminal/ConsoleDrawer.js';
 import { PlaygroundModal } from './features/playground/PlaygroundModal.js';
 import { PipelineModal } from './features/pipeline/PipelineModal.js';
+import { ActionApprovalModal } from './features/actions/ActionApprovalModal.js';
+import { ActionHistoryModal } from './features/actions/ActionHistoryModal.js';
 import { useFeedback } from './components/common/FeedbackContext.js';
 import { ErrorBoundary } from './components/common/ErrorBoundary.js';
 import { api } from './services/api.js';
-import { AIAgent, Task, Activity, DashboardSummary, ServerMetrics, Project, OrchestratorStatus, ModelProviderConfig } from '../../shared/types.js';
+import { AIAgent, Task, Activity, DashboardSummary, ServerMetrics, Project, OrchestratorStatus, ModelProviderConfig, AgentAction } from '../../shared/types.js';
 import { Bot, Plus, RefreshCw, Zap, Layers, Users } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -62,6 +64,9 @@ export const App: React.FC = () => {
   const [selectedAgent, setSelectedAgent] = useState<AIAgent | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [selectedProjectIdForTask, setSelectedProjectIdForTask] = useState<string | undefined>(undefined);
+  const [pendingAction, setPendingAction] = useState<AgentAction | null>(null);
+  const [isActionHistoryOpen, setIsActionHistoryOpen] = useState(false);
+  const [pendingActionCount, setPendingActionCount] = useState(0);
 
   const { toast } = useFeedback();
 
@@ -84,6 +89,7 @@ export const App: React.FC = () => {
       setMetrics(sumData.serverMetrics);
 
       api.getOrchestratorStatus().then(st => setOrchestratorStatus(st)).catch(() => {});
+      api.getPendingActionsCount().then(res => setPendingActionCount(res.pendingCount)).catch(() => {});
     } catch (err) {
       console.error('Failed to load initial data:', err);
     } finally {
@@ -229,6 +235,26 @@ export const App: React.FC = () => {
         ]);
       });
 
+      eventSource.addEventListener('action.approval_requested', (e: MessageEvent) => {
+        try {
+          const actionData: AgentAction = JSON.parse(e.data);
+          setPendingAction(actionData);
+          setPendingActionCount((prev) => prev + 1);
+          toast.warning(`Aksi "${actionData.toolName}" memerlukan otorisasi Anda.`, 'Otorisasi Agen Diperlukan');
+        } catch {
+          // ignore
+        }
+      });
+
+      eventSource.addEventListener('action.executed', () => {
+        refreshAllData();
+        api.getPendingActionsCount().then((res) => setPendingActionCount(res.pendingCount)).catch(() => {});
+      });
+
+      eventSource.addEventListener('action.rejected', () => {
+        api.getPendingActionsCount().then((res) => setPendingActionCount(res.pendingCount)).catch(() => {});
+      });
+
       eventSource.onerror = () => {
         setIsRealtimeConnected(false);
         eventSource?.close();
@@ -286,6 +312,8 @@ export const App: React.FC = () => {
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenPlayground={() => setIsPlaygroundOpen(true)}
         onOpenPipeline={() => setIsPipelineOpen(true)}
+        onOpenActions={() => setIsActionHistoryOpen(true)}
+        pendingActionCount={pendingActionCount}
         onOpenLogin={() => setIsLoginOpen(true)}
         onLogout={handleLogout}
         currentUser={currentUser}
@@ -556,6 +584,21 @@ export const App: React.FC = () => {
         onClose={() => setIsConsoleOpen(false)}
         orchestratorStatus={orchestratorStatus}
         onRefreshOrchestrator={refreshAllData}
+      />
+
+      <ActionApprovalModal
+        action={pendingAction}
+        onClose={() => setPendingAction(null)}
+        onActionHandled={() => {
+          setPendingAction(null);
+          refreshAllData();
+        }}
+      />
+
+      <ActionHistoryModal
+        isOpen={isActionHistoryOpen}
+        onClose={() => setIsActionHistoryOpen(false)}
+        onActionApprove={() => refreshAllData()}
       />
     </div>
   );

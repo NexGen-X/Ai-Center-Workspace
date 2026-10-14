@@ -1,0 +1,356 @@
+/**
+ * Agent Action Sandbox & Execution Engine — AI Agent Command Center
+ * Provides isolated, secure tool execution for autonomous AI agents with guardrails.
+ */
+
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import path from 'path';
+import fs from 'fs';
+import { ToolDefinition, ToolRiskLevel } from '../../../shared/types.js';
+import { validateOutgoingUrl } from '../utils/ssrf.js';
+import { systemLogger } from './logger.js';
+
+const execAsync = promisify(exec);
+
+// Dedicated Sandbox directory within the workspace
+export const SANDBOX_DIR = path.resolve(process.cwd(), 'sandbox');
+
+// Ensure sandbox directory exists on initialization
+if (!fs.existsSync(SANDBOX_DIR)) {
+  try {
+    fs.mkdirSync(SANDBOX_DIR, { recursive: true });
+  } catch (err: any) {
+    console.error('[Sandbox] Failed to create sandbox directory:', err.message);
+  }
+}
+
+// Blocklist for dangerous bash operations
+const DANGEROUS_PATTERNS = [
+  /rm\s+(-[rfRF]+\s+)?\/(?!\S)/,
+  /rm\s+(-[rfRF]+\s+)?\/root(?!\S)/,
+  /rm\s+(-[rfRF]+\s+)?\/etc/,
+  /mkfs/,
+  />\s*\/dev\/sd/,
+  /dd\s+if=/,
+  /:{\s*:\|:&\s*};:/,
+  /chmod\s+(-R\s+)?777\s+\//,
+  /shutdown/,
+  /reboot/,
+  /init\s+0/,
+  /killall\s+-9/,
+  /passwd/,
+  /sudoers/
+];
+
+// Commands considered safe for read-only auto-approval
+const SAFE_READONLY_COMMANDS = [
+  /^ls(\s+-[a-zA-Z0-9]+)?(\s+[\w.-]+)?$/,
+  /^pwd$/,
+  /^date$/,
+  /^echo\s+/,
+  /^cat\s+[\w.-]+$/,
+  /^git\s+(status|log|branch|diff)(\s+.*)?$/,
+  /^node\s+-(v|-version)$/,
+  /^npm\s+(test|-v|--version)$/,
+  /^uname(\s+-a)?$/
+];
+
+export const AVAILABLE_TOOLS: Record<string, ToolDefinition> = {
+  bash_exec: {
+    name: 'bash_exec',
+    description: 'Menjalankan perintah terminal Linux di direktori sandbox terisolasi dengan timeout 30 detik.',
+    category: 'RUNTIME',
+    riskLevel: 'HIGH',
+    requiresApproval: true,
+    parameters: {
+      command: { type: 'string', description: 'Perintah shell yang akan dieksekusi', required: true },
+      timeoutMs: { type: 'number', description: 'Timeout dalam milidetik (maks 30000ms)' }
+    }
+  },
+  file_read: {
+    name: 'file_read',
+    description: 'Membaca konten file teks dari direktori proyek atau sandbox.',
+    category: 'FILESYSTEM',
+    riskLevel: 'LOW',
+    requiresApproval: false,
+    parameters: {
+      filePath: { type: 'string', description: 'Jalur relatif file dari root workspace atau sandbox', required: true }
+    }
+  },
+  file_write: {
+    name: 'file_write',
+    description: 'Menulis atau membuat file teks baru di dalam folder sandbox.',
+    category: 'FILESYSTEM',
+    riskLevel: 'MEDIUM',
+    requiresApproval: true,
+    parameters: {
+      filePath: { type: 'string', description: 'Nama file atau jalur relatif di folder sandbox', required: true },
+      content: { type: 'string', description: 'Isi teks yang akan ditulis', required: true },
+      append: { type: 'boolean', description: 'Jika true, menambahkan ke akhir file' }
+    }
+  },
+  http_fetch: {
+    name: 'http_fetch',
+    description: 'Mengambil data dari URL publik HTTP/HTTPS dengan proteksi anti-SSRF.',
+    category: 'NETWORK',
+    riskLevel: 'LOW',
+    requiresApproval: false,
+    parameters: {
+      url: { type: 'string', description: 'URL target publik (mis. API eksternal)', required: true },
+      method: { type: 'string', description: 'Metode HTTP (GET/POST/PUT)' },
+      headers: { type: 'object', description: 'Header HTTP kustom' },
+      body: { type: 'string', description: 'Body request untuk POST/PUT' }
+    }
+  },
+  system_inspect: {
+    name: 'system_inspect',
+    description: 'Memeriksa diagnostik telemetri server (CPU, RAM, Disk, Uptime) secara read-only.',
+    category: 'SYSTEM',
+    riskLevel: 'LOW',
+    requiresApproval: false,
+    parameters: {
+      query: { type: 'string', description: 'Tipe diagnostik: metrics | uptime | memory' }
+    }
+  }
+};
+
+/**
+ * Menentukan apakah perintah atau aksi memerlukan approval manusia
+ */
+export function evaluateActionRisk(toolName: string, input: Record<string, any>): {
+  riskLevel: ToolRiskLevel;
+  requiresApproval: boolean;
+  reason?: string;
+} {
+  const tool = AVAILABLE_TOOLS[toolName];
+  if (!tool) {
+    return { riskLevel: 'HIGH', requiresApproval: true, reason: 'Tool tidak dikenal' };
+  }
+
+  // Khusus bash_exec: cek apakah perintah masuk daftar aman read-only
+  if (toolName === 'bash_exec') {
+    const cmd = String(input.command || '').trim();
+    
+    // Cek bahaya kritis
+    for (const pattern of DANGEROUS_PATTERNS) {
+      if (pattern.test(cmd)) {
+        return {
+          riskLevel: 'CRITICAL',
+          requiresApproval: true,
+          reason: 'Perintah terdeteksi mengandung pola berbahaya/destruktif bagi sistem.'
+        };
+      }
+    }
+
+    // Cek apakah perintah mengandung redirection file (>, <) atau chaining/piping (| , ;, &&)
+    const hasModifyingOperators = /[><|;&]/.test(cmd);
+    const isSafe = !hasModifyingOperators && SAFE_READONLY_COMMANDS.some(rx => rx.test(cmd));
+    if (isSafe) {
+      return {
+        riskLevel: 'LOW',
+        requiresApproval: false,
+        reason: 'Perintah read-only yang diverifikasi aman.'
+      };
+    }
+
+    return {
+      riskLevel: 'HIGH',
+      requiresApproval: true,
+      reason: 'Eksekusi terminal shell dapat memodifikasi lingkungan host/sandbox.'
+    };
+  }
+
+  // Khusus file_write: selalu butuh approval
+  if (toolName === 'file_write') {
+    return {
+      riskLevel: 'MEDIUM',
+      requiresApproval: true,
+      reason: 'Operasi penulisan atau manipulasi file di sistem.'
+    };
+  }
+
+  // http_fetch: jika method bukan GET, minta approval
+  if (toolName === 'http_fetch') {
+    const method = String(input.method || 'GET').toUpperCase();
+    if (method !== 'GET') {
+      return {
+        riskLevel: 'MEDIUM',
+        requiresApproval: true,
+        reason: `Request HTTP ${method} berpotensi mengubah state server target.`
+      };
+    }
+  }
+
+  return {
+    riskLevel: tool.riskLevel,
+    requiresApproval: tool.requiresApproval
+  };
+}
+
+/**
+ * Eksekutor Tool Sandbox
+ */
+export async function executeToolInSandbox(
+  toolName: string,
+  input: Record<string, any>
+): Promise<{ success: boolean; output: string; durationMs: number; error?: string }> {
+  const startTime = Date.now();
+
+  try {
+    switch (toolName) {
+      case 'bash_exec': {
+        const cmd = String(input.command || '').trim();
+        if (!cmd) throw new Error('Parameter "command" wajib diisi.');
+
+        // Validasi pola bahaya
+        for (const pattern of DANGEROUS_PATTERNS) {
+          if (pattern.test(cmd)) {
+            throw new Error(`Eksekusi ditolak: perintah mengandung pola berbahaya (${pattern.toString()}).`);
+          }
+        }
+
+        const timeout = Math.min(30000, Number(input.timeoutMs) || 15000);
+        const cwd = SANDBOX_DIR;
+
+        const { stdout, stderr } = await execAsync(cmd, {
+          timeout,
+          cwd,
+          maxBuffer: 1024 * 1024 * 2, // 2MB output buffer
+          env: {
+            ...process.env,
+            NODE_ENV: 'test',
+            SANDBOX: '1'
+          }
+        });
+
+        const output = (stdout || '') + (stderr ? `\n[STDERR]\n${stderr}` : '');
+        return {
+          success: true,
+          output: output.trim() || '(Perintah selesai tanpa output teks)',
+          durationMs: Date.now() - startTime
+        };
+      }
+
+      case 'file_read': {
+        const rawPath = String(input.filePath || '').trim();
+        if (!rawPath) throw new Error('Parameter "filePath" wajib diisi.');
+
+        // Proteksi path traversal & file sensitif
+        const resolved = path.resolve(process.cwd(), rawPath);
+        const forbiddenFiles = ['.env', 'id_rsa', 'id_ed25519', '/etc/shadow', '/etc/passwd'];
+        if (forbiddenFiles.some(f => resolved.includes(f))) {
+          throw new Error('Akses ditolak: File terproteksi atau sensitif tidak diizinkan dibaca.');
+        }
+
+        if (!fs.existsSync(resolved)) {
+          throw new Error(`File tidak ditemukan pada path: ${rawPath}`);
+        }
+
+        const stat = fs.statSync(resolved);
+        if (stat.size > 1024 * 1024 * 5) {
+          throw new Error('Ukuran file melebihi batas 5MB.');
+        }
+
+        const content = fs.readFileSync(resolved, 'utf-8');
+        return {
+          success: true,
+          output: content,
+          durationMs: Date.now() - startTime
+        };
+      }
+
+      case 'file_write': {
+        const rawPath = String(input.filePath || '').trim();
+        const content = String(input.content ?? '');
+        const append = Boolean(input.append);
+
+        if (!rawPath) throw new Error('Parameter "filePath" wajib diisi.');
+
+        // Simpan selalu di dalam SANDBOX_DIR untuk keamanan isolasi
+        const targetPath = path.resolve(SANDBOX_DIR, path.basename(rawPath));
+
+        if (append) {
+          fs.appendFileSync(targetPath, content, 'utf-8');
+        } else {
+          fs.writeFileSync(targetPath, content, 'utf-8');
+        }
+
+        return {
+          success: true,
+          output: `Berhasil menulis file: ${path.basename(targetPath)} (${content.length} karakter)`,
+          durationMs: Date.now() - startTime
+        };
+      }
+
+      case 'http_fetch': {
+        const rawUrl = String(input.url || '').trim();
+        if (!rawUrl) throw new Error('Parameter "url" wajib diisi.');
+
+        // SSRF protection
+        const urlValidation = validateOutgoingUrl(rawUrl);
+        if (!urlValidation.isValid) {
+          throw new Error(`SSRF Blocked: ${urlValidation.error}`);
+        }
+
+        const method = String(input.method || 'GET').toUpperCase();
+        const headers = input.headers || {};
+        const body = input.body ? String(input.body) : undefined;
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+
+        try {
+          const res = await fetch(rawUrl, {
+            method,
+            headers,
+            body: method !== 'GET' && method !== 'HEAD' ? body : undefined,
+            signal: controller.signal
+          });
+
+          const text = await res.text();
+          return {
+            success: res.ok,
+            output: `[HTTP ${res.status} ${res.statusText}]\n${text.slice(0, 10000)}`,
+            durationMs: Date.now() - startTime
+          };
+        } finally {
+          clearTimeout(timeout);
+        }
+      }
+
+      case 'system_inspect': {
+        const memory = process.memoryUsage();
+        const uptime = process.uptime();
+        const info = {
+          uptimeSeconds: Math.floor(uptime),
+          nodeVersion: process.version,
+          platform: process.platform,
+          memory: {
+            rssMB: (memory.rss / (1024 * 1024)).toFixed(1),
+            heapTotalMB: (memory.heapTotal / (1024 * 1024)).toFixed(1),
+            heapUsedMB: (memory.heapUsed / (1024 * 1024)).toFixed(1)
+          },
+          sandboxDir: SANDBOX_DIR
+        };
+
+        return {
+          success: true,
+          output: JSON.stringify(info, null, 2),
+          durationMs: Date.now() - startTime
+        };
+      }
+
+      default:
+        throw new Error(`Tool "${toolName}" tidak didukung oleh sandbox engine.`);
+    }
+  } catch (err: any) {
+    systemLogger.warn('SECURITY', `Kegagalan eksekusi sandbox tool [${toolName}]: ${err.message}`);
+    return {
+      success: false,
+      output: '',
+      error: err.message,
+      durationMs: Date.now() - startTime
+    };
+  }
+}

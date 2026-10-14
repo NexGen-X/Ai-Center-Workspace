@@ -160,10 +160,30 @@ CREATE TABLE IF NOT EXISTS notifications (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS agent_actions (
+    id VARCHAR(64) PRIMARY KEY,
+    run_id VARCHAR(64) REFERENCES agent_runs(id) ON DELETE CASCADE,
+    agent_id VARCHAR(64) NOT NULL REFERENCES ai_agents(id) ON DELETE CASCADE,
+    task_id VARCHAR(64) REFERENCES tasks(id) ON DELETE SET NULL,
+    tool_name VARCHAR(64) NOT NULL,
+    tool_input JSONB NOT NULL DEFAULT '{}'::jsonb,
+    status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+    risk_level VARCHAR(32) NOT NULL DEFAULT 'MEDIUM',
+    requires_approval BOOLEAN NOT NULL DEFAULT TRUE,
+    approved_by VARCHAR(64),
+    output_result TEXT,
+    error_message TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    executed_at TIMESTAMP WITH TIME ZONE
+);
+
 CREATE INDEX IF NOT EXISTS idx_tasks_workspace_status ON tasks(workspace_id, status);
 CREATE INDEX IF NOT EXISTS idx_agents_workspace ON ai_agents(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_runs_agent_created ON agent_runs(agent_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_activities_workspace_created ON activities(workspace_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_documents_workspace ON documents(workspace_id, category);
 CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(workspace_id, is_read, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_actions_status ON agent_actions(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_actions_agent ON agent_actions(agent_id, created_at DESC);
 `;
+

@@ -25,7 +25,10 @@ import {
   SystemLogEntry,
   WorkspaceBackup,
   PipelineTemplate,
-  PipelineExecutionResult
+  PipelineExecutionResult,
+  AgentAction,
+  ToolDefinition,
+  ExecuteActionRequest
 } from '../../../shared/types.js';
 
 const BASE_URL = '/api';
@@ -299,5 +302,27 @@ export const api = {
     request<PipelineExecutionResult>('/pipeline/execute', {
       method: 'POST',
       body: JSON.stringify(data)
-    })
+    }),
+
+  // Agent Actions & Sandbox Tools (Human-in-the-Loop)
+  getActions: (status?: string, limit = 50) => {
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    if (limit) params.set('limit', String(limit));
+    return request<{ actions: AgentAction[] }>(`/actions?${params.toString()}`);
+  },
+  getPendingActionsCount: () => request<{ pendingCount: number }>('/actions/pending-count'),
+  getTools: () => request<{ tools: ToolDefinition[] }>('/actions/tools'),
+  requestAction: (data: ExecuteActionRequest) => request<AgentAction>('/actions/request', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+  approveAction: (actionId: string, operatorId?: string) => request<AgentAction>(`/actions/${actionId}/approve`, {
+    method: 'POST',
+    body: JSON.stringify({ operatorId })
+  }),
+  rejectAction: (actionId: string, operatorId?: string, reason?: string) => request<AgentAction>(`/actions/${actionId}/reject`, {
+    method: 'POST',
+    body: JSON.stringify({ operatorId, reason })
+  })
 };
