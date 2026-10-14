@@ -20,7 +20,8 @@ import {
   Terminal,
   Zap,
   FlaskConical,
-  Workflow
+  Workflow,
+  Network
 } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown.js';
 import { OrchestratorStatus } from '../../../shared/types.js';
@@ -38,6 +39,7 @@ interface NavbarProps {
   onOpenSettings: () => void;
   onOpenPlayground: () => void;
   onOpenPipeline?: () => void;
+  onOpenSwarm?: () => void;
   onOpenActions?: () => void;
   pendingActionCount?: number;
   onOpenLogin: () => void;
@@ -65,6 +67,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSettings,
   onOpenPlayground,
   onOpenPipeline,
+  onOpenSwarm,
   onOpenActions,
   pendingActionCount = 0,
   onOpenLogin,
@@ -300,7 +303,19 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 text-xs font-medium transition shrink-0 whitespace-nowrap"
             >
               <Workflow className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-              <span>Swarm</span>
+              <span>Pipeline</span>
+            </button>
+          )}
+
+          {/* Autonomous Swarm Mesh */}
+          {onOpenSwarm && (
+            <button
+              onClick={onOpenSwarm}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-semibold shadow-sm transition shrink-0 whitespace-nowrap"
+              title="Autonomous Multi-Agent Swarm & Hierarchical Delegation Mesh"
+            >
+              <Network className="w-3.5 h-3.5 text-indigo-400 shrink-0 animate-pulse" />
+              <span>Swarm Mesh</span>
             </button>
           )}
 

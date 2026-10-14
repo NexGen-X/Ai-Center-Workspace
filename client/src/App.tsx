@@ -23,6 +23,7 @@ import { ServerMonitoringWidget } from './components/ServerMonitoringWidget.js';
 import { ConsoleDrawer } from './components/terminal/ConsoleDrawer.js';
 import { PlaygroundModal } from './features/playground/PlaygroundModal.js';
 import { PipelineModal } from './features/pipeline/PipelineModal.js';
+import { SwarmMissionModal } from './features/swarm/SwarmMissionModal.js';
 import { ActionApprovalModal } from './features/actions/ActionApprovalModal.js';
 import { ActionHistoryModal } from './features/actions/ActionHistoryModal.js';
 import { useFeedback } from './components/common/FeedbackContext.js';
@@ -51,6 +52,7 @@ export const App: React.FC = () => {
   const [isProvidersModalOpen, setIsProvidersModalOpen] = useState(false);
   const [isPlaygroundOpen, setIsPlaygroundOpen] = useState(false);
   const [isPipelineOpen, setIsPipelineOpen] = useState(false);
+  const [isSwarmModalOpen, setIsSwarmModalOpen] = useState(false);
   const [isAddAgentOpen, setIsAddAgentOpen] = useState(false);
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -312,6 +314,7 @@ export const App: React.FC = () => {
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenPlayground={() => setIsPlaygroundOpen(true)}
         onOpenPipeline={() => setIsPipelineOpen(true)}
+        onOpenSwarm={() => setIsSwarmModalOpen(true)}
         onOpenActions={() => setIsActionHistoryOpen(true)}
         pendingActionCount={pendingActionCount}
         onOpenLogin={() => setIsLoginOpen(true)}
@@ -356,6 +359,7 @@ export const App: React.FC = () => {
                 onOpenTasks={() => setIsTasksModalOpen(true)}
                 onOpenProjects={() => setIsProjectsOpen(true)}
                 onOpenManageTeam={() => setIsManageTeamOpen(true)}
+                onOpenSwarm={() => setIsSwarmModalOpen(true)}
                 onFallbackTo2D={() => setViewMode('2D')}
               />
             </ErrorBoundary>
@@ -577,6 +581,13 @@ export const App: React.FC = () => {
         agents={agents}
         projects={projects}
         onPipelineCompleted={refreshAllData}
+      />
+
+      <SwarmMissionModal
+        isOpen={isSwarmModalOpen}
+        onClose={() => setIsSwarmModalOpen(false)}
+        agents={agents}
+        onMissionLaunched={refreshAllData}
       />
 
       <ConsoleDrawer

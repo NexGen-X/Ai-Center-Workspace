@@ -216,6 +216,34 @@ CREATE INDEX IF NOT EXISTS idx_doc_chunks_workspace ON document_chunks(workspace
 CREATE INDEX IF NOT EXISTS idx_doc_chunks_hnsw ON document_chunks USING hnsw (embedding vector_cosine_ops);
 CREATE INDEX IF NOT EXISTS idx_agent_memories_agent ON agent_memories(agent_id, memory_type, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_agent_memories_workspace ON agent_memories(workspace_id);
-CREATE INDEX IF NOT EXISTS idx_agent_memories_hnsw ON agent_memories USING hnsw (embedding vector_cosine_ops);
+CREATE TABLE IF NOT EXISTS swarm_missions (
+    id VARCHAR(64) PRIMARY KEY,
+    workspace_id VARCHAR(64) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    objective TEXT NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'PLANNING',
+    coordinator_agent_id VARCHAR(64) REFERENCES ai_agents(id) ON DELETE SET NULL,
+    subtasks_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    final_synthesis TEXT,
+    total_duration_ms INTEGER DEFAULT 0,
+    total_tokens INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS swarm_messages (
+    id VARCHAR(64) PRIMARY KEY,
+    mission_id VARCHAR(64) NOT NULL REFERENCES swarm_missions(id) ON DELETE CASCADE,
+    from_agent_id VARCHAR(64) REFERENCES ai_agents(id) ON DELETE SET NULL,
+    to_agent_id VARCHAR(64) REFERENCES ai_agents(id) ON DELETE SET NULL,
+    message_type VARCHAR(32) NOT NULL,
+    content TEXT NOT NULL,
+    metadata_json JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_swarm_missions_workspace_status ON swarm_missions(workspace_id, status);
+CREATE INDEX IF NOT EXISTS idx_swarm_missions_created ON swarm_missions(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_swarm_messages_mission ON swarm_messages(mission_id, created_at ASC);
 `;
 

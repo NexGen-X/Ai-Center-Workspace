@@ -32,6 +32,7 @@ interface Workspace3DProps {
   onOpenTasks: () => void;
   onOpenProjects: () => void;
   onOpenManageTeam: () => void;
+  onOpenSwarm?: () => void;
   onFallbackTo2D: () => void;
 }
 
@@ -43,6 +44,7 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
   currentUser,
   onSelectAgent,
   onOpenCreateTask,
+  onOpenSwarm,
   onFallbackTo2D
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -64,15 +66,23 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
     isThinking: boolean;
   } | null>(null);
 
-  // References for camera transitions
+  const [activeSwarmHUD, setActiveSwarmHUD] = useState<{
+    missionId: string;
+    subtaskTitle: string;
+    agentFrom?: string;
+    agentTo?: string;
+  } | null>(null);
+
+  // References for camera transitions & 3D dynamic laser mesh
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const targetCamPos = useRef<THREE.Vector3>(new THREE.Vector3(0, 15, 23));
   const targetLookAt = useRef<THREE.Vector3>(new THREE.Vector3(0, 2.5, 0));
+  const triggerBeamRef = useRef<((fromId: string, toId: string) => void) | null>(null);
 
   const operatorName = currentUser?.displayName || 'Yulian';
 
-  // Live Token Streaming & Reasoning Trace SSE Listener for 3D Studio HUD
+  // Live Token Streaming, Reasoning Trace & Swarm Coordination SSE Listener for 3D Studio HUD
   useEffect(() => {
     let eventSource: EventSource | null = null;
     let fadeTimer: NodeJS.Timeout | null = null;
@@ -113,6 +123,41 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
         fadeTimer = setTimeout(() => {
           setLiveStreamHUD(null);
         }, 3500);
+      });
+
+      // Swarm Delegation & Handoff Laser Mesh
+      eventSource.addEventListener('swarm.agent_handoff', (e: MessageEvent) => {
+        try {
+          const data = JSON.parse(e.data);
+          setActiveSwarmHUD({
+            missionId: data.missionId,
+            subtaskTitle: data.subtaskTitle || 'Serah Terima Konteks',
+            agentFrom: data.fromAgentName,
+            agentTo: data.toAgentName
+          });
+          if (data.fromAgentId && data.toAgentId) {
+            triggerBeamRef.current?.(data.fromAgentId, data.toAgentId);
+          }
+        } catch {}
+      });
+
+      eventSource.addEventListener('swarm.subtask_dispatched', (e: MessageEvent) => {
+        try {
+          const data = JSON.parse(e.data);
+          setActiveSwarmHUD({
+            missionId: data.missionId,
+            subtaskTitle: data.subtask?.title || 'Eksekusi Subtugas Swarm',
+            agentTo: data.subtask?.assignedAgentName
+          });
+        } catch {}
+      });
+
+      eventSource.addEventListener('swarm.mission_completed', () => {
+        setTimeout(() => setActiveSwarmHUD(null), 4500);
+      });
+
+      eventSource.addEventListener('swarm.mission_cancelled', () => {
+        setActiveSwarmHUD(null);
       });
     } catch {
       // SSE not supported
@@ -1108,6 +1153,40 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
     });
 
     // =========================================================================
+    // 7b. SWARM MULTI-AGENT COORDINATION LASER MESH
+    // =========================================================================
+    const activeBeams: { mesh: THREE.Mesh; createdAt: number; ttl: number }[] = [];
+
+    triggerBeamRef.current = (fromAgentId: string, toAgentId: string) => {
+      const fromItem = agentPositions.find(a => a.agent.id === fromAgentId);
+      const toItem = agentPositions.find(a => a.agent.id === toAgentId);
+      if (!fromItem || !toItem) return;
+
+      const fromPos = fromItem.pos;
+      const toPos = toItem.pos;
+
+      const midPoint = new THREE.Vector3().addVectors(fromPos, toPos).multiplyScalar(0.5);
+      midPoint.y += 2.5;
+
+      const curve = new THREE.QuadraticBezierCurve3(
+        new THREE.Vector3(fromPos.x, fromPos.y + 0.5, fromPos.z),
+        midPoint,
+        new THREE.Vector3(toPos.x, toPos.y + 0.5, toPos.z)
+      );
+
+      const tubeGeo = new THREE.TubeGeometry(curve, 28, 0.08, 8, false);
+      const tubeMat = new THREE.MeshBasicMaterial({
+        color: 0x818cf8,
+        transparent: true,
+        opacity: 0.95
+      });
+
+      const beamMesh = new THREE.Mesh(tubeGeo, tubeMat);
+      scene.add(beamMesh);
+      activeBeams.push({ mesh: beamMesh, createdAt: Date.now(), ttl: 5000 });
+    };
+
+    // =========================================================================
     // 8. RAYCASTING INTERACTIVITY & HOVER EVENTS
     // =========================================================================
     const raycaster = new THREE.Raycaster();
@@ -1201,6 +1280,22 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
         controls.target.set(0, 2.5, 0);
       }
 
+      // Dynamic Swarm Laser Beam pulsation & TTL cleanup
+      const now = Date.now();
+      for (let i = activeBeams.length - 1; i >= 0; i--) {
+        const b = activeBeams[i];
+        const elapsed = now - b.createdAt;
+        if (elapsed > b.ttl) {
+          scene.remove(b.mesh);
+          b.mesh.geometry.dispose();
+          (b.mesh.material as THREE.Material).dispose();
+          activeBeams.splice(i, 1);
+        } else {
+          const bMat = b.mesh.material as THREE.MeshBasicMaterial;
+          bMat.opacity = 0.4 + 0.6 * Math.sin(elapsedTime * 9);
+        }
+      }
+
       controls.update();
       renderer.render(scene, camera);
     };
@@ -1229,6 +1324,13 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
       renderer.domElement.removeEventListener('click', handleClick);
       renderer.domElement.removeEventListener('webglcontextlost', onContextLost);
       renderer.domElement.removeEventListener('webglcontextrestored', onContextRestored);
+
+      triggerBeamRef.current = null;
+      activeBeams.forEach(b => {
+        scene.remove(b.mesh);
+        b.mesh.geometry.dispose();
+        (b.mesh.material as THREE.Material).dispose();
+      });
 
       // Deep recursive disposal of all geometries, materials, and textures in the scene
       scene.traverse((obj: any) => {
@@ -1373,6 +1475,41 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
             {liveStreamHUD.text}
             <span className="inline-block w-1.5 h-3 ml-1 bg-cyan-400 animate-pulse align-middle" />
           </p>
+        </div>
+      )}
+
+      {/* Floating Holographic Autonomous Swarm Coordination HUD */}
+      {activeSwarmHUD && (
+        <div className="absolute top-2.5 sm:top-4 left-1/2 -translate-x-1/2 z-30 max-w-lg w-[calc(100%-24px)] sm:w-full p-2.5 sm:p-3 rounded-2xl bg-indigo-950/90 backdrop-blur-md border border-indigo-500/50 shadow-2xl shadow-indigo-950/60 pointer-events-auto animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center justify-between pb-1.5 border-b border-indigo-500/30 mb-1.5 gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-400"></span>
+              </span>
+              <span className="text-[11px] font-bold text-indigo-300 font-mono truncate">
+                ✦ AUTONOMOUS SWARM MESH
+              </span>
+            </div>
+            {onOpenSwarm && (
+              <button
+                onClick={onOpenSwarm}
+                className="text-[9px] font-mono text-indigo-200 bg-indigo-900/60 hover:bg-indigo-800/80 px-2 py-0.5 rounded border border-indigo-700/50 uppercase tracking-wider shrink-0 font-bold transition"
+              >
+                Buka Swarm HUD
+              </button>
+            )}
+          </div>
+          <div className="flex items-center justify-between gap-2 text-xs">
+            <span className="font-semibold text-white truncate">
+              {activeSwarmHUD.subtaskTitle}
+            </span>
+            {activeSwarmHUD.agentFrom && activeSwarmHUD.agentTo && (
+              <span className="text-[10px] text-indigo-300 shrink-0 font-mono">
+                {activeSwarmHUD.agentFrom} ➔ {activeSwarmHUD.agentTo}
+              </span>
+            )}
+          </div>
         </div>
       )}
 

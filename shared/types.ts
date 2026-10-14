@@ -519,5 +519,75 @@ export interface StoreMemoryRequest {
   importanceScore?: number;
 }
 
+// Autonomous Multi-Agent Swarm & Hierarchical Delegation Mesh Types
+export type SwarmMissionStatus = 'PLANNING' | 'EXECUTING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+export type SwarmSubtaskStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'SKIPPED';
+export type SwarmMessageType = 'DELEGATION' | 'HANDOFF' | 'FEEDBACK' | 'SYNTHESIS';
+
+export interface SwarmSubtask {
+  id: string;
+  title: string;
+  role: AgentRole;
+  assignedAgentId?: string;
+  assignedAgentName?: string;
+  status: SwarmSubtaskStatus;
+  dependencies: string[]; // IDs of predecessor subtasks
+  promptTemplate: string;
+  outputResult?: string;
+  error?: string;
+  startedAt?: string;
+  completedAt?: string;
+  durationMs?: number;
+}
+
+export interface SwarmMission {
+  id: string;
+  workspaceId: string;
+  title: string;
+  objective: string;
+  status: SwarmMissionStatus;
+  coordinatorAgentId?: string;
+  coordinatorAgentName?: string;
+  subtasks: SwarmSubtask[];
+  finalSynthesis?: string;
+  totalDurationMs?: number;
+  totalTokens?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SwarmMessage {
+  id: string;
+  missionId: string;
+  fromAgentId?: string;
+  fromAgentName?: string;
+  toAgentId?: string;
+  toAgentName?: string;
+  messageType: SwarmMessageType;
+  content: string;
+  metadata?: Record<string, any>;
+  createdAt: string;
+}
+
+export interface SwarmPlanRequest {
+  objective: string;
+  workspaceId?: string;
+}
+
+export interface SwarmPlanResponse {
+  coordinatorAgent: AIAgent;
+  title: string;
+  objective: string;
+  subtasks: SwarmSubtask[];
+}
+
+export interface SwarmDispatchRequest {
+  objective: string;
+  title?: string;
+  subtasks?: SwarmSubtask[];
+  coordinatorAgentId?: string;
+  workspaceId?: string;
+}
+
 
 

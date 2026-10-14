@@ -33,7 +33,11 @@ import {
   RagSearchRequest,
   RagIndexStats,
   AgentMemoryItem,
-  StoreMemoryRequest
+  StoreMemoryRequest,
+  SwarmMission,
+  SwarmMessage,
+  SwarmPlanResponse,
+  SwarmDispatchRequest
 } from '../../../shared/types.js';
 
 const BASE_URL = '/api';
@@ -351,5 +355,26 @@ export const api = {
   }),
   deleteAgentMemory: (id: string) => request<{ success: boolean; message: string }>(`/rag/memories/${id}`, {
     method: 'DELETE'
+  }),
+
+  // Autonomous Multi-Agent Swarm & Hierarchical Delegation Mesh
+  planSwarm: (objective: string, workspaceId?: string) => request<SwarmPlanResponse>('/swarm/plan', {
+    method: 'POST',
+    body: JSON.stringify({ objective, workspaceId })
+  }),
+  dispatchSwarm: (data: SwarmDispatchRequest) => request<SwarmMission>('/swarm/dispatch', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+  getSwarmMissions: (workspaceId?: string, limit = 20) => {
+    const params = new URLSearchParams();
+    if (workspaceId) params.set('workspaceId', workspaceId);
+    if (limit) params.set('limit', String(limit));
+    return request<{ missions: SwarmMission[] }>(`/swarm/missions?${params.toString()}`);
+  },
+  getSwarmMission: (id: string) => request<{ mission: SwarmMission; messages: SwarmMessage[] }>(`/swarm/missions/${id}`),
+  cancelSwarmMission: (id: string) => request<{ success: boolean; message: string }>(`/swarm/missions/${id}/cancel`, {
+    method: 'POST'
   })
 };
+
