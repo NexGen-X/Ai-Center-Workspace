@@ -26,6 +26,7 @@ import { PipelineModal } from './features/pipeline/PipelineModal.js';
 import { SwarmMissionModal } from './features/swarm/SwarmMissionModal.js';
 import { ActionApprovalModal } from './features/actions/ActionApprovalModal.js';
 import { ActionHistoryModal } from './features/actions/ActionHistoryModal.js';
+import { WarRoomModal } from './features/warroom/WarRoomModal.js';
 import { useFeedback } from './components/common/FeedbackContext.js';
 import { ErrorBoundary } from './components/common/ErrorBoundary.js';
 import { api } from './services/api.js';
@@ -53,6 +54,7 @@ export const App: React.FC = () => {
   const [isPlaygroundOpen, setIsPlaygroundOpen] = useState(false);
   const [isPipelineOpen, setIsPipelineOpen] = useState(false);
   const [isSwarmModalOpen, setIsSwarmModalOpen] = useState(false);
+  const [isWarRoomOpen, setIsWarRoomOpen] = useState(false);
   const [isAddAgentOpen, setIsAddAgentOpen] = useState(false);
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -315,6 +317,7 @@ export const App: React.FC = () => {
         onOpenPlayground={() => setIsPlaygroundOpen(true)}
         onOpenPipeline={() => setIsPipelineOpen(true)}
         onOpenSwarm={() => setIsSwarmModalOpen(true)}
+        onOpenWarRoom={() => setIsWarRoomOpen(true)}
         onOpenActions={() => setIsActionHistoryOpen(true)}
         pendingActionCount={pendingActionCount}
         onOpenLogin={() => setIsLoginOpen(true)}
@@ -593,6 +596,14 @@ export const App: React.FC = () => {
         onClose={() => setIsSwarmModalOpen(false)}
         agents={agents}
         onMissionLaunched={refreshAllData}
+      />
+
+      <WarRoomModal
+        isOpen={isWarRoomOpen}
+        onClose={() => setIsWarRoomOpen(false)}
+        agents={agents}
+        projects={projects}
+        onTaskCreated={refreshAllData}
       />
 
       <ConsoleDrawer

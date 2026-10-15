@@ -21,7 +21,8 @@ import {
   Zap,
   FlaskConical,
   Workflow,
-  Network
+  Network,
+  Swords
 } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown.js';
 import { OrchestratorStatus } from '../../../shared/types.js';
@@ -40,6 +41,7 @@ interface NavbarProps {
   onOpenPlayground: () => void;
   onOpenPipeline?: () => void;
   onOpenSwarm?: () => void;
+  onOpenWarRoom?: () => void;
   onOpenActions?: () => void;
   pendingActionCount?: number;
   onOpenLogin: () => void;
@@ -68,6 +70,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenPlayground,
   onOpenPipeline,
   onOpenSwarm,
+  onOpenWarRoom,
   onOpenActions,
   pendingActionCount = 0,
   onOpenLogin,
@@ -316,6 +319,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Network className="w-3.5 h-3.5 text-indigo-400 shrink-0 animate-pulse" />
               <span>Swarm Mesh</span>
+            </button>
+          )}
+
+          {/* Multi-Agent War Room */}
+          {onOpenWarRoom && (
+            <button
+              type="button"
+              onClick={onOpenWarRoom}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-semibold shadow-sm transition shrink-0 whitespace-nowrap"
+              title="Multi-Agent War Room & Live Debate Studio"
+            >
+              <Swords className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+              <span>War Room</span>
             </button>
           )}
 

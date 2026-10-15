@@ -391,5 +391,42 @@ CREATE TABLE IF NOT EXISTS workflow_executions (
 
 CREATE INDEX IF NOT EXISTS idx_workflows_workspace ON workflows(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_workflow_executions_workflow ON workflow_executions(workflow_id, started_at DESC);
+
+CREATE TABLE IF NOT EXISTS war_rooms (
+    id VARCHAR(64) PRIMARY KEY,
+    workspace_id VARCHAR(64) NOT NULL DEFAULT 'ws-default-command-center',
+    title VARCHAR(255) NOT NULL,
+    topic TEXT NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
+    consensus_summary TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS war_room_participants (
+    id VARCHAR(64) PRIMARY KEY,
+    war_room_id VARCHAR(64) NOT NULL REFERENCES war_rooms(id) ON DELETE CASCADE,
+    agent_id VARCHAR(64) NOT NULL REFERENCES ai_agents(id) ON DELETE CASCADE,
+    role_in_debate VARCHAR(64) NOT NULL DEFAULT 'SPECIALIST',
+    joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(war_room_id, agent_id)
+);
+
+CREATE TABLE IF NOT EXISTS war_room_messages (
+    id VARCHAR(64) PRIMARY KEY,
+    war_room_id VARCHAR(64) NOT NULL REFERENCES war_rooms(id) ON DELETE CASCADE,
+    sender_type VARCHAR(32) NOT NULL,
+    sender_id VARCHAR(64) NOT NULL,
+    sender_name VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    round_number INTEGER NOT NULL DEFAULT 1,
+    is_consensus_proposal BOOLEAN DEFAULT FALSE,
+    critique_target_id VARCHAR(64),
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_war_rooms_status ON war_rooms(workspace_id, status);
+CREATE INDEX IF NOT EXISTS idx_war_room_messages_room ON war_room_messages(war_room_id, created_at ASC);
 `;
 

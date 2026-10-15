@@ -63,7 +63,12 @@ import {
   WorkflowNode,
   WorkflowEdge,
   WorkflowExecution,
-  WorkflowNodeState
+  WorkflowNodeState,
+  WarRoom,
+  WarRoomMessage,
+  CreateWarRoomRequest,
+  DeliberateRoundRequest,
+  ConvertWarRoomToTaskRequest
 } from '../../../shared/types.js';
 
 const BASE_URL = '/api';
@@ -608,6 +613,36 @@ export const api = {
   getWorkflowTemplates: async () => {
     const res = await request<{ success: boolean; data: Partial<Workflow>[] }>('/workflows/templates');
     return res.data;
-  }
+  },
+
+  // Multi-Agent War Room & Live Debate Studio
+  getWarRooms: (workspaceId?: string) =>
+    request<WarRoom[]>(`/war-rooms${workspaceId ? `?workspaceId=${workspaceId}` : ''}`),
+  createWarRoom: (data: CreateWarRoomRequest) =>
+    request<WarRoom>('/war-rooms', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+  getWarRoom: (id: string) =>
+    request<WarRoom>(`/war-rooms/${id}`),
+  postWarRoomMessage: (id: string, content: string) =>
+    request<WarRoomMessage>(`/war-rooms/${id}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content })
+    }),
+  deliberateWarRoomRound: (id: string, data?: DeliberateRoundRequest) =>
+    request<{ success: boolean; messages: WarRoomMessage[]; roundNumber: number }>(`/war-rooms/${id}/deliberate`, {
+      method: 'POST',
+      body: JSON.stringify(data || {})
+    }),
+  concludeWarRoom: (id: string) =>
+    request<WarRoom>(`/war-rooms/${id}/conclude`, {
+      method: 'POST'
+    }),
+  convertWarRoomToTask: (id: string, data?: ConvertWarRoomToTaskRequest) =>
+    request<Task>(`/war-rooms/${id}/convert-to-task`, {
+      method: 'POST',
+      body: JSON.stringify(data || {})
+    })
 };
 

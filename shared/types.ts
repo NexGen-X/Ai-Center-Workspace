@@ -952,6 +952,73 @@ export interface WorkflowExecution {
   completedAt?: string;
 }
 
+// Multi-Agent War Room & Live Debate Types
+export type WarRoomStatus = 'ACTIVE' | 'CONCLUDED' | 'ARCHIVED';
+
+export type DebateRole =
+  | 'LEAD_ARCHITECT'
+  | 'SECURITY_ANALYST'
+  | 'DEV_LEAD'
+  | 'PERFORMANCE_CRITIC'
+  | 'MODERATOR'
+  | 'SPECIALIST';
+
+export interface WarRoomParticipant {
+  id: string;
+  warRoomId: string;
+  agentId: string;
+  roleInDebate: DebateRole;
+  joinedAt: string;
+  agentName?: string;
+  agentRole?: string;
+}
+
+export interface WarRoomMessage {
+  id: string;
+  warRoomId: string;
+  senderType: 'USER' | 'AGENT' | 'MODERATOR';
+  senderId: string;
+  senderName: string;
+  content: string;
+  roundNumber: number;
+  isConsensusProposal?: boolean;
+  critiqueTargetId?: string;
+  metadata?: Record<string, any>;
+  createdAt: string;
+}
+
+export interface WarRoom {
+  id: string;
+  workspaceId: string;
+  title: string;
+  topic: string;
+  status: WarRoomStatus;
+  consensusSummary?: string;
+  participants: WarRoomParticipant[];
+  messages?: WarRoomMessage[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateWarRoomRequest {
+  title: string;
+  topic: string;
+  agentIds: string[];
+  roles?: Record<string, DebateRole>;
+}
+
+export interface DeliberateRoundRequest {
+  roundNumber?: number;
+  userPrompt?: string;
+  targetAgentId?: string;
+}
+
+export interface ConvertWarRoomToTaskRequest {
+  title?: string;
+  projectId?: string;
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+}
+
 
 
 
