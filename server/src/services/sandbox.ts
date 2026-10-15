@@ -193,6 +193,27 @@ export const AVAILABLE_TOOLS: Record<string, ToolDefinition> = {
       query: { type: 'string', description: 'Topik riset web yang ingin diindeks ke RAG', required: true },
       documentTitle: { type: 'string', description: 'Judul dokumen hasil riset' }
     }
+  },
+  sre_scan: {
+    name: 'sre_scan',
+    description: 'Memindai metrik kesehatan server, konektivitas database, dan mendeteksi anomali insiden secara otonom.',
+    category: 'SYSTEM',
+    riskLevel: 'LOW',
+    requiresApproval: false,
+    parameters: {
+      workspaceId: { type: 'string', description: 'ID workspace opsional' }
+    }
+  },
+  sre_remediate: {
+    name: 'sre_remediate',
+    description: 'Mengeksekusi playbook pemulihan mandiri (self-healing) untuk memulihkan insiden SRE.',
+    category: 'SYSTEM',
+    riskLevel: 'HIGH',
+    requiresApproval: true,
+    parameters: {
+      incidentId: { type: 'string', description: 'ID insiden SRE yang akan dipulihkan', required: true },
+      operatorApproved: { type: 'boolean', description: 'Konfirmasi otorisasi operator' }
+    }
   }
 };
 
@@ -568,6 +589,30 @@ export async function executeToolInSandbox(
         return {
           success: true,
           output: `[RISET WEB BERHASIL DIINDEKS KE RAG]\nDokumen ID: ${result.documentId}\nJudul: "${result.title}"\nKategori: ${result.category}\nJumlah Chunks: ${result.chunksIndexed}\nSumber:\n${result.sources.map(s => `- ${s.title} (${s.url})`).join('\n')}`,
+          durationMs: Date.now() - startTime
+        };
+      }
+
+      case 'sre_scan': {
+        const workspaceId = input.workspaceId || (context as any)?.workspaceId || 'ws-default-command-center';
+        const { SreAgentService } = await import('./sreAgentService.js');
+        const scanRes = await SreAgentService.scanSystemHealth(workspaceId);
+        return {
+          success: true,
+          output: `[SRE HEALTH SCAN]\nStatus: ${scanRes.healthy ? 'HEALTHY' : 'ANOMALY DETECTED'}\nCPU: ${scanRes.metrics.cpuPercent}%\nRAM: ${scanRes.metrics.memoryPercent}%\nDisk: ${scanRes.metrics.diskPercent}%\nInsiden Aktif Ditemukan: ${scanRes.detectedIncidents.length}`,
+          durationMs: Date.now() - startTime
+        };
+      }
+
+      case 'sre_remediate': {
+        const incidentId = String(input.incidentId || '').trim();
+        if (!incidentId) throw new Error('Parameter "incidentId" wajib diisi.');
+        const operatorApproved = Boolean(input.operatorApproved);
+        const { SreAgentService } = await import('./sreAgentService.js');
+        const remediated = await SreAgentService.remediateIncident(incidentId, operatorApproved);
+        return {
+          success: true,
+          output: `[SRE PEMULIHAN BERHASIL]\nID Insiden: ${remediated.id}\nStatus: ${remediated.status}\nTindakan: ${remediated.actionTaken}\nPost-Mortem: ${remediated.postMortem?.slice(0, 150)}...`,
           durationMs: Date.now() - startTime
         };
       }

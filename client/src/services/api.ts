@@ -73,7 +73,9 @@ import {
   WebSearchResponse,
   WebBrowseResponse,
   WebResearchAndIngestRequest,
-  WebResearchAndIngestResponse
+  WebResearchAndIngestResponse,
+  SreIncident,
+  SreScanResult
 } from '../../../shared/types.js';
 
 const BASE_URL = '/api';
@@ -665,6 +667,35 @@ export const api = {
     request<WebResearchAndIngestResponse>('/web-research/ingest', {
       method: 'POST',
       body: JSON.stringify(data)
+    }),
+
+  // Autonomous SRE & Server Self-Healing Incident Agent
+  scanSreHealth: (workspaceId?: string) =>
+    request<SreScanResult>('/sre/scan', {
+      method: 'POST',
+      body: JSON.stringify({ workspaceId })
+    }),
+  getSreIncidents: (status?: string, workspaceId?: string) => {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (workspaceId) params.append('workspaceId', workspaceId);
+    const qs = params.toString();
+    return request<SreIncident[]>(`/sre/incidents${qs ? `?${qs}` : ''}`);
+  },
+  getSreIncident: (id: string) =>
+    request<SreIncident>(`/sre/incidents/${id}`),
+  investigateSreIncident: (id: string) =>
+    request<SreIncident>(`/sre/incidents/${id}/investigate`, {
+      method: 'POST'
+    }),
+  remediateSreIncident: (id: string, operatorApproved?: boolean) =>
+    request<SreIncident>(`/sre/incidents/${id}/remediate`, {
+      method: 'POST',
+      body: JSON.stringify({ operatorApproved })
+    }),
+  approveSreIncident: (id: string) =>
+    request<SreIncident>(`/sre/incidents/${id}/approve`, {
+      method: 'POST'
     })
 };
 

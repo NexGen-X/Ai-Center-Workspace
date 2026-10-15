@@ -428,5 +428,26 @@ CREATE TABLE IF NOT EXISTS war_room_messages (
 
 CREATE INDEX IF NOT EXISTS idx_war_rooms_status ON war_rooms(workspace_id, status);
 CREATE INDEX IF NOT EXISTS idx_war_room_messages_room ON war_room_messages(war_room_id, created_at ASC);
+
+CREATE TABLE IF NOT EXISTS sre_incidents (
+    id VARCHAR(64) PRIMARY KEY,
+    workspace_id VARCHAR(64) NOT NULL DEFAULT 'ws-default-command-center',
+    incident_type VARCHAR(64) NOT NULL,
+    severity VARCHAR(32) NOT NULL DEFAULT 'MEDIUM',
+    status VARCHAR(32) NOT NULL DEFAULT 'OPEN',
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    diagnostics JSONB DEFAULT '{}'::jsonb,
+    remediation_plan JSONB DEFAULT '{}'::jsonb,
+    action_taken TEXT,
+    post_mortem TEXT,
+    requires_approval BOOLEAN DEFAULT FALSE,
+    is_approved BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    resolved_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX IF NOT EXISTS idx_sre_incidents_status ON sre_incidents(workspace_id, status);
+CREATE INDEX IF NOT EXISTS idx_sre_incidents_severity ON sre_incidents(severity);
 `;
 

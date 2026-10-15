@@ -1059,6 +1059,63 @@ export interface WebResearchAndIngestResponse {
   summary: string;
 }
 
+// Autonomous SRE & Self-Healing Incident Agent Types
+export type SreIncidentType =
+  | 'HIGH_MEMORY'
+  | 'HIGH_CPU'
+  | 'DISK_PRESSURE'
+  | 'SERVICE_CRASH'
+  | 'SLOW_QUERIES'
+  | 'SYSTEM_ANOMALY';
+
+export type SreIncidentSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+
+export type SreIncidentStatus =
+  | 'OPEN'
+  | 'INVESTIGATING'
+  | 'REMEDIATING'
+  | 'RESOLVED'
+  | 'FAILED';
+
+export interface SreRemediationPlan {
+  playbook: 'ROTATE_LOGS' | 'VACUUM_DATABASE' | 'RESTART_SERVICE' | 'CLEAR_MEMORY_CACHE' | 'CUSTOM';
+  description: string;
+  command?: string;
+  isDestructive: boolean;
+  estimatedRecoverySec: number;
+}
+
+export interface SreIncident {
+  id: string;
+  workspaceId: string;
+  incidentType: SreIncidentType;
+  severity: SreIncidentSeverity;
+  status: SreIncidentStatus;
+  title: string;
+  description: string;
+  diagnostics: Record<string, any>;
+  remediationPlan?: SreRemediationPlan;
+  actionTaken?: string;
+  postMortem?: string;
+  requiresApproval: boolean;
+  isApproved: boolean;
+  createdAt: string;
+  resolvedAt?: string;
+}
+
+export interface SreScanResult {
+  healthy: boolean;
+  timestamp: string;
+  metrics: {
+    cpuPercent: number;
+    memoryPercent: number;
+    diskPercent: number;
+    activeConnections: number;
+    systemdStatus: string;
+  };
+  detectedIncidents: SreIncident[];
+}
+
 
 
 

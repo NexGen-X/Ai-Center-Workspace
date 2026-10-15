@@ -22,7 +22,8 @@ import {
   FlaskConical,
   Workflow,
   Network,
-  Swords
+  Swords,
+  ShieldAlert
 } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown.js';
 import { OrchestratorStatus } from '../../../shared/types.js';
@@ -42,6 +43,7 @@ interface NavbarProps {
   onOpenPipeline?: () => void;
   onOpenSwarm?: () => void;
   onOpenWarRoom?: () => void;
+  onOpenSre?: () => void;
   onOpenActions?: () => void;
   pendingActionCount?: number;
   onOpenLogin: () => void;
@@ -71,6 +73,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenPipeline,
   onOpenSwarm,
   onOpenWarRoom,
+  onOpenSre,
   onOpenActions,
   pendingActionCount = 0,
   onOpenLogin,
@@ -332,6 +335,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Swords className="w-3.5 h-3.5 text-rose-400 shrink-0" />
               <span>War Room</span>
+            </button>
+          )}
+
+          {/* Autonomous SRE Self-Healing */}
+          {onOpenSre && (
+            <button
+              type="button"
+              onClick={onOpenSre}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30 text-xs font-semibold shadow-sm transition shrink-0 whitespace-nowrap"
+              title="Autonomous SRE & Server Self-Healing Agent"
+            >
+              <ShieldAlert className="w-3.5 h-3.5 text-red-400 shrink-0" />
+              <span>SRE Agent</span>
             </button>
           )}
 

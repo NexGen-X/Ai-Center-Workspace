@@ -27,6 +27,7 @@ import { SwarmMissionModal } from './features/swarm/SwarmMissionModal.js';
 import { ActionApprovalModal } from './features/actions/ActionApprovalModal.js';
 import { ActionHistoryModal } from './features/actions/ActionHistoryModal.js';
 import { WarRoomModal } from './features/warroom/WarRoomModal.js';
+import { SreModal } from './features/sre/SreModal.js';
 import { useFeedback } from './components/common/FeedbackContext.js';
 import { ErrorBoundary } from './components/common/ErrorBoundary.js';
 import { api } from './services/api.js';
@@ -55,6 +56,7 @@ export const App: React.FC = () => {
   const [isPipelineOpen, setIsPipelineOpen] = useState(false);
   const [isSwarmModalOpen, setIsSwarmModalOpen] = useState(false);
   const [isWarRoomOpen, setIsWarRoomOpen] = useState(false);
+  const [isSreOpen, setIsSreOpen] = useState(false);
   const [isAddAgentOpen, setIsAddAgentOpen] = useState(false);
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -318,6 +320,7 @@ export const App: React.FC = () => {
         onOpenPipeline={() => setIsPipelineOpen(true)}
         onOpenSwarm={() => setIsSwarmModalOpen(true)}
         onOpenWarRoom={() => setIsWarRoomOpen(true)}
+        onOpenSre={() => setIsSreOpen(true)}
         onOpenActions={() => setIsActionHistoryOpen(true)}
         pendingActionCount={pendingActionCount}
         onOpenLogin={() => setIsLoginOpen(true)}
@@ -458,7 +461,7 @@ export const App: React.FC = () => {
           </div>
 
           <div className="space-y-6">
-            <ServerMonitoringWidget metrics={metrics} />
+            <ServerMonitoringWidget metrics={metrics} onOpenSre={() => setIsSreOpen(true)} />
             <ActivityFeed activities={activities} />
           </div>
         </div>
@@ -604,6 +607,11 @@ export const App: React.FC = () => {
         agents={agents}
         projects={projects}
         onTaskCreated={refreshAllData}
+      />
+
+      <SreModal
+        isOpen={isSreOpen}
+        onClose={() => setIsSreOpen(false)}
       />
 
       <ConsoleDrawer

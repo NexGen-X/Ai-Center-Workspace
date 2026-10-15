@@ -53,6 +53,7 @@ describe('Modal & Dialog UI/UX Standardization Contracts', () => {
       'features/calendar/CalendarModal.tsx',
       'features/reports/ReportsModal.tsx',
       'features/warroom/WarRoomModal.tsx',
+      'features/sre/SreModal.tsx',
       'components/LoginModal.tsx',
       'components/terminal/ConsoleDrawer.tsx',
       'components/common/FeedbackContext.tsx'

@@ -1,12 +1,13 @@
 import React from 'react';
 import { ServerMetrics } from '../../../shared/types.js';
-import { Cpu, HardDrive, Server, Clock, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Cpu, HardDrive, Server, Clock, ShieldCheck, AlertTriangle, ShieldAlert } from 'lucide-react';
 
 interface ServerMonitoringWidgetProps {
   metrics: ServerMetrics | null;
+  onOpenSre?: () => void;
 }
 
-export const ServerMonitoringWidget: React.FC<ServerMonitoringWidgetProps> = ({ metrics }) => {
+export const ServerMonitoringWidget: React.FC<ServerMonitoringWidgetProps> = ({ metrics, onOpenSre }) => {
   if (!metrics) {
     return (
       <div className="bg-[#111827]/90 border border-slate-800 rounded-xl p-4 h-48 animate-pulse" />
@@ -33,9 +34,22 @@ export const ServerMonitoringWidget: React.FC<ServerMonitoringWidgetProps> = ({ 
           <Server className="w-4 h-4 text-cyan-400" />
           <h2 className="text-sm font-bold text-white">Pemantauan Server Host</h2>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className={`w-2 h-2 rounded-full ${metrics.status === 'NORMAL' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-          <span className="text-[10px] font-mono uppercase text-slate-400">{metrics.status}</span>
+        <div className="flex items-center gap-2">
+          {onOpenSre && (
+            <button
+              type="button"
+              onClick={onOpenSre}
+              className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px] font-semibold transition"
+              title="Buka Autonomous SRE & Self-Healing Agent"
+            >
+              <ShieldAlert className="w-3 h-3 text-rose-400" />
+              <span>Self-Healing SRE</span>
+            </button>
+          )}
+          <div className="flex items-center gap-1.5">
+            <span className={`w-2 h-2 rounded-full ${metrics.status === 'NORMAL' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+            <span className="text-[10px] font-mono uppercase text-slate-400">{metrics.status}</span>
+          </div>
         </div>
       </div>
 
