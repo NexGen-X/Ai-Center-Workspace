@@ -11,6 +11,7 @@ import { ToolDefinition, ToolRiskLevel } from '../../../shared/types.js';
 import { validateOutgoingUrl } from '../utils/ssrf.js';
 import { systemLogger } from './logger.js';
 import { RagService } from './ragService.js';
+import { McpClientService } from './mcpClientService.js';
 
 const execAsync = promisify(exec);
 
@@ -147,6 +148,18 @@ export const AVAILABLE_TOOLS: Record<string, ToolDefinition> = {
       query: { type: 'string', description: 'Topik memori yang dicari', required: true },
       limit: { type: 'number', description: 'Jumlah hasil maksimal (default 3)' }
     }
+  },
+  mcp_call: {
+    name: 'mcp_call',
+    description: 'Menjalankan tool eksternal dari server Model Context Protocol (MCP) yang terhubung.',
+    category: 'SYSTEM',
+    riskLevel: 'LOW',
+    requiresApproval: false,
+    parameters: {
+      serverId: { type: 'string', description: 'ID MCP server tujuan', required: true },
+      toolName: { type: 'string', description: 'Nama tool MCP yang akan dijalankan', required: true },
+      arguments: { type: 'object', description: 'Argumen JSON untuk tool MCP' }
+    }
   }
 };
 
@@ -158,6 +171,13 @@ export function evaluateActionRisk(toolName: string, input: Record<string, any>)
   requiresApproval: boolean;
   reason?: string;
 } {
+  if (toolName.startsWith('mcp:') || toolName === 'mcp_call') {
+    return {
+      riskLevel: 'LOW',
+      requiresApproval: false
+    };
+  }
+
   const tool = AVAILABLE_TOOLS[toolName];
   if (!tool) {
     return { riskLevel: 'HIGH', requiresApproval: true, reason: 'Tool tidak dikenal' };
@@ -234,7 +254,38 @@ export async function executeToolInSandbox(
   const startTime = Date.now();
 
   try {
+    if (toolName.startsWith('mcp:')) {
+      const parts = toolName.split(':');
+      const serverId = parts[1];
+      const actualToolName = parts.slice(2).join(':');
+
+      const mcpResult = await McpClientService.callTool(serverId, actualToolName, input);
+      const textParts = mcpResult.content.map(c => c.text || JSON.stringify(c)).join('\n');
+      return {
+        success: !mcpResult.isError,
+        output: textParts || '(Eksekusi tool MCP selesai tanpa output)',
+        durationMs: Date.now() - startTime
+      };
+    }
+
     switch (toolName) {
+      case 'mcp_call': {
+        const serverId = String(input.serverId || '');
+        const targetTool = String(input.toolName || '');
+        const toolArgs = input.arguments || {};
+        if (!serverId || !targetTool) {
+          throw new Error('Parameter "serverId" dan "toolName" wajib diisi.');
+        }
+
+        const mcpResult = await McpClientService.callTool(serverId, targetTool, toolArgs);
+        const textParts = mcpResult.content.map(c => c.text || JSON.stringify(c)).join('\n');
+        return {
+          success: !mcpResult.isError,
+          output: textParts || '(Eksekusi tool MCP selesai tanpa output)',
+          durationMs: Date.now() - startTime
+        };
+      }
+
       case 'bash_exec': {
         const cmd = String(input.command || '').trim();
         if (!cmd) throw new Error('Parameter "command" wajib diisi.');

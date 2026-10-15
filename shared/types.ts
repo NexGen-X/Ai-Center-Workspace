@@ -826,6 +826,67 @@ export interface EvalLeaderboardEntry {
   totalCostUsd: number;
 }
 
+// Model Context Protocol (MCP) Client Types
+export type McpTransport = 'stdio' | 'sse';
+export type McpServerStatus = 'CONNECTED' | 'DISCONNECTED' | 'ERROR';
+
+export interface McpToolSchema {
+  type: string;
+  properties?: Record<string, any>;
+  required?: string[];
+}
+
+export interface McpTool {
+  serverId: string;
+  serverName: string;
+  name: string;
+  description?: string;
+  inputSchema: McpToolSchema;
+}
+
+export interface McpServer {
+  id: string;
+  name: string;
+  description?: string;
+  transport: McpTransport;
+  command?: string;
+  args: string[];
+  env: Record<string, string>;
+  url?: string;
+  status: McpServerStatus;
+  enabled: boolean;
+  toolsCache: McpTool[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface McpToolCallRequest {
+  serverId: string;
+  toolName: string;
+  arguments: Record<string, any>;
+}
+
+export interface McpToolCallResult {
+  content: Array<{
+    type: 'text' | 'image' | 'resource';
+    text?: string;
+    data?: string;
+    mimeType?: string;
+  }>;
+  isError?: boolean;
+}
+
+export interface McpServerTemplate {
+  id: string;
+  name: string;
+  description: string;
+  transport: McpTransport;
+  command: string;
+  args: string[];
+  env?: Record<string, string>;
+  defaultTools: string[];
+}
+
 
 
 

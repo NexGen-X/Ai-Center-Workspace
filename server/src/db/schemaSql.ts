@@ -346,5 +346,23 @@ CREATE TABLE IF NOT EXISTS eval_runs (
 CREATE INDEX IF NOT EXISTS idx_eval_benchmarks_workspace ON eval_benchmarks(workspace_id, category);
 CREATE INDEX IF NOT EXISTS idx_eval_runs_benchmark ON eval_runs(benchmark_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_eval_runs_workspace ON eval_runs(workspace_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS mcp_servers (
+    id VARCHAR(64) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    transport VARCHAR(32) NOT NULL DEFAULT 'stdio',
+    command VARCHAR(255),
+    args JSONB DEFAULT '[]'::jsonb,
+    env JSONB DEFAULT '{}'::jsonb,
+    url TEXT,
+    status VARCHAR(32) DEFAULT 'DISCONNECTED',
+    enabled BOOLEAN DEFAULT true,
+    tools_cache JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_mcp_servers_status ON mcp_servers(status, enabled);
 `;
 

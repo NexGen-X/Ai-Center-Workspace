@@ -31,6 +31,7 @@ import swarmRouter from './routes/swarm.js';
 import { schedulesRouter } from './routes/schedules.js';
 import { alertsRouter } from './routes/alerts.js';
 import { evalsRouter } from './routes/evals.js';
+import { mcpRouter } from './routes/mcp.js';
 import { systemLogger } from './services/logger.js';
 
 export const app = express();
@@ -83,6 +84,7 @@ app.use('/api/swarm', swarmRouter);
 app.use('/api/schedules', schedulesRouter);
 app.use('/api/alerts', alertsRouter);
 app.use('/api/evals', evalsRouter);
+app.use('/api/mcp', mcpRouter);
 
 // Root healthcheck
 app.get('/healthz', (_req: Request, res: Response) => {

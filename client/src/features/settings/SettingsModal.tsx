@@ -28,7 +28,10 @@ import {
   Bell,
   Trash2,
   Plus,
-  MessageSquare
+  MessageSquare,
+  Plug,
+  Code2,
+  Play
 } from 'lucide-react';
 import {
   ModelProviderConfig,
@@ -36,7 +39,11 @@ import {
   AlertWebhookItem,
   AlertPlatform,
   AlertEventType,
-  AlertDeliveryLog
+  AlertDeliveryLog,
+  McpServer,
+  McpTool,
+  McpServerTemplate,
+  McpTransport
 } from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
 import { useFeedback } from '../../components/common/FeedbackContext.js';
@@ -61,7 +68,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onWorkspaceRestored
 }) => {
   const { toast, confirm } = useFeedback();
-  const [activeTab, setActiveTab] = useState<'WORKSPACE' | 'SECURITY' | 'PROVIDERS' | 'BACKUP' | 'WEBHOOKS' | 'ALERTS'>('WORKSPACE');
+  const [activeTab, setActiveTab] = useState<'WORKSPACE' | 'SECURITY' | 'PROVIDERS' | 'BACKUP' | 'WEBHOOKS' | 'ALERTS' | 'MCP'>('WORKSPACE');
   const [providers, setProviders] = useState<ModelProviderConfig[]>([]);
   const [loadingProviders, setLoadingProviders] = useState(false);
 
@@ -183,6 +190,177 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       toast.error(err.message || 'Gagal menguji webhook.');
     } finally {
       setTestingWebhookId(null);
+    }
+  };
+
+  // MCP Protocol states
+  const [mcpServers, setMcpServers] = useState<McpServer[]>([]);
+  const [loadingMcpServers, setLoadingMcpServers] = useState(false);
+  const [mcpTemplates, setMcpTemplates] = useState<McpServerTemplate[]>([]);
+  const [testingServerId, setTestingServerId] = useState<string | null>(null);
+  const [isAddingMcpServer, setIsAddingMcpServer] = useState(false);
+  const [inspectingServer, setInspectingServer] = useState<McpServer | null>(null);
+
+  // New MCP Server Form
+  const [mcpName, setMcpName] = useState('');
+  const [mcpDesc, setMcpDesc] = useState('');
+  const [mcpTransport, setMcpTransport] = useState<McpTransport>('stdio');
+  const [mcpCommand, setMcpCommand] = useState('npx');
+  const [mcpArgs, setMcpArgs] = useState('-y @modelcontextprotocol/server-filesystem /root/Ai-Center-Workspace');
+  const [mcpEnv, setMcpEnv] = useState('');
+  const [mcpUrl, setMcpUrl] = useState('');
+
+  // Tool tester state
+  const [selectedToolForTest, setSelectedToolForTest] = useState<McpTool | null>(null);
+  const [toolTestArgs, setToolTestArgs] = useState('{}');
+  const [toolTestResult, setToolTestResult] = useState<any>(null);
+  const [executingToolTest, setExecutingToolTest] = useState(false);
+
+  const fetchMcpServers = async () => {
+    try {
+      setLoadingMcpServers(true);
+      const [servers, templates] = await Promise.all([
+        api.getMcpServers(),
+        api.getMcpTemplates()
+      ]);
+      setMcpServers(servers);
+      setMcpTemplates(templates);
+    } catch (err: any) {
+      toast.error('Gagal memuat daftar MCP server: ' + err.message);
+    } finally {
+      setLoadingMcpServers(false);
+    }
+  };
+
+  const handleTestMcpServer = async (server: McpServer) => {
+    setTestingServerId(server.id);
+    try {
+      toast.info(`Menguji koneksi JSON-RPC ke ${server.name}...`);
+      const res = await api.testMcpServer(server.id);
+      if (res.success) {
+        toast.success(`Server "${server.name}" terhubung! Ditemukan ${res.data.tools.length} tool.`);
+        await fetchMcpServers();
+      } else {
+        toast.error(`Koneksi gagal: ${res.data.error || 'Unknown error'}`);
+        await fetchMcpServers();
+      }
+    } catch (err: any) {
+      toast.error('Gagal menguji MCP server: ' + err.message);
+    } finally {
+      setTestingServerId(null);
+    }
+  };
+
+  const handleToggleMcpServer = async (server: McpServer) => {
+    try {
+      await api.updateMcpServer(server.id, { enabled: !server.enabled });
+      toast.info(`Server "${server.name}" ${!server.enabled ? 'diaktifkan' : 'dinonaktifkan'}.`);
+      await fetchMcpServers();
+    } catch (err: any) {
+      toast.error('Gagal memperbarui status server: ' + err.message);
+    }
+  };
+
+  const handleDeleteMcpServer = async (server: McpServer) => {
+    const ok = await confirm({
+      title: 'Hapus MCP Server?',
+      message: `Apakah Anda yakin ingin menghapus MCP server "${server.name}"? Tool dari server ini tidak akan lagi tersedia bagi agen.`,
+      confirmText: 'Hapus Server',
+      cancelText: 'Batal',
+      variant: 'danger'
+    });
+    if (!ok) return;
+
+    try {
+      await api.deleteMcpServer(server.id);
+      toast.success('MCP Server berhasil dihapus.');
+      await fetchMcpServers();
+      if (inspectingServer?.id === server.id) {
+        setInspectingServer(null);
+      }
+    } catch (err: any) {
+      toast.error('Gagal menghapus server: ' + err.message);
+    }
+  };
+
+  const handleApplyMcpTemplate = (tmpl: McpServerTemplate) => {
+    setMcpName(tmpl.name);
+    setMcpDesc(tmpl.description);
+    setMcpTransport(tmpl.transport);
+    setMcpCommand(tmpl.command);
+    setMcpArgs(tmpl.args.join(' '));
+    setMcpUrl('');
+    setIsAddingMcpServer(true);
+  };
+
+  const handleCreateMcpServer = async () => {
+    if (!mcpName.trim()) {
+      toast.error('Nama server MCP wajib diisi.');
+      return;
+    }
+
+    try {
+      let parsedArgs: string[] = [];
+      if (mcpArgs.trim()) {
+        parsedArgs = mcpArgs.trim().split(/\s+/);
+      }
+
+      let parsedEnv: Record<string, string> = {};
+      if (mcpEnv.trim()) {
+        try {
+          parsedEnv = JSON.parse(mcpEnv);
+        } catch {
+          mcpEnv.split('\n').forEach(line => {
+            const idx = line.indexOf('=');
+            if (idx !== -1) {
+              const k = line.slice(0, idx).trim();
+              const v = line.slice(idx + 1).trim();
+              if (k) parsedEnv[k] = v;
+            }
+          });
+        }
+      }
+
+      await api.registerMcpServer({
+        name: mcpName.trim(),
+        description: mcpDesc.trim() || undefined,
+        transport: mcpTransport,
+        command: mcpTransport === 'stdio' ? mcpCommand.trim() : undefined,
+        args: parsedArgs,
+        env: parsedEnv,
+        url: mcpTransport === 'sse' ? mcpUrl.trim() : undefined,
+        enabled: true
+      });
+
+      toast.success('MCP Server berhasil ditambahkan!');
+      setIsAddingMcpServer(false);
+      setMcpName('');
+      setMcpDesc('');
+      await fetchMcpServers();
+    } catch (err: any) {
+      toast.error('Gagal menambahkan MCP server: ' + err.message);
+    }
+  };
+
+  const handleExecuteToolTest = async () => {
+    if (!selectedToolForTest) return;
+    setExecutingToolTest(true);
+    setToolTestResult(null);
+
+    try {
+      let argsObj: any = {};
+      if (toolTestArgs.trim()) {
+        argsObj = JSON.parse(toolTestArgs);
+      }
+
+      const res = await api.callMcpTool(selectedToolForTest.serverId, selectedToolForTest.name, argsObj);
+      setToolTestResult(res);
+      toast.success(`Tool "${selectedToolForTest.name}" berhasil dieksekusi!`);
+    } catch (err: any) {
+      setToolTestResult({ isError: true, error: err.message });
+      toast.error('Eksekusi tool gagal: ' + err.message);
+    } finally {
+      setExecutingToolTest(false);
     }
   };
 
@@ -490,6 +668,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           >
             <Bell className="w-4 h-4 text-indigo-400" />
             <span>Outbound Alerting ({alertWebhooks.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('MCP');
+              fetchMcpServers();
+            }}
+            className={`py-3 border-b-2 transition flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
+              activeTab === 'MCP'
+                ? 'border-emerald-400 text-emerald-300'
+                : 'border-transparent text-slate-400 hover:text-white'
+            }`}
+          >
+            <Plug className="w-4 h-4 text-emerald-400" />
+            <span>MCP Protocol ({mcpServers.length})</span>
           </button>
         </div>
 
@@ -1340,6 +1534,527 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 7: MODEL CONTEXT PROTOCOL (MCP) CLIENT HUB */}
+          {activeTab === 'MCP' && (
+            <div className="space-y-6">
+              {/* Header Banner */}
+              <div className="p-4 sm:p-5 rounded-xl bg-gradient-to-r from-emerald-950/40 via-teal-950/20 to-slate-900 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                    <Plug className="w-5 h-5 text-emerald-400" />
+                    <span>Model Context Protocol (MCP) Client Hub</span>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase tracking-wider font-mono">
+                      Anthropic Spec 2026
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1 max-w-2xl">
+                    Hubungkan agen AI Anda dengan puluhan server MCP resmi (Filesystem, PostgreSQL, Fetch, Git, Memory) menggunakan protokol JSON-RPC 2.0 untuk memperluas kapabilitas agen secara instan.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={fetchMcpServers}
+                    disabled={loadingMcpServers}
+                    className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition"
+                    title="Segarkan daftar server MCP"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${loadingMcpServers ? 'animate-spin text-emerald-400' : ''}`} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAddingMcpServer(!isAddingMcpServer);
+                      setInspectingServer(null);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-lg shadow-emerald-900/30 transition"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>{isAddingMcpServer ? 'Tutup Formulir' : 'Tambah Server MCP'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Template Quick-Launcher Carousel */}
+              {mcpTemplates.length > 0 && !isAddingMcpServer && !inspectingServer && (
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                      <Terminal className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Template Server MCP Populer</span>
+                    </span>
+                    <span className="text-[11px] text-slate-500">1-Klik untuk mengonfigurasi</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {mcpTemplates.slice(0, 3).map((tmpl) => (
+                      <div
+                        key={tmpl.id}
+                        className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-emerald-500/40 transition flex flex-col justify-between gap-3 group"
+                      >
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-white group-hover:text-emerald-300 transition">
+                              {tmpl.name}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-slate-800 text-slate-400 uppercase">
+                              {tmpl.transport}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-400 leading-relaxed line-clamp-2">
+                            {tmpl.description}
+                          </p>
+                          <div className="flex flex-wrap gap-1 pt-1">
+                            {tmpl.defaultTools.slice(0, 3).map((tool) => (
+                              <span
+                                key={tool}
+                                className="px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/40 text-[9px] font-mono text-emerald-300"
+                              >
+                                {tool}
+                              </span>
+                            ))}
+                            {tmpl.defaultTools.length > 3 && (
+                              <span className="text-[9px] text-slate-500 self-center">
+                                +{tmpl.defaultTools.length - 3} lagi
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyMcpTemplate(tmpl)}
+                          className="w-full py-1.5 rounded-lg bg-slate-800 hover:bg-emerald-600/30 text-slate-300 hover:text-emerald-200 border border-slate-700/80 hover:border-emerald-500/40 text-xs font-semibold transition flex items-center justify-center gap-1.5"
+                        >
+                          <Plus className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Gunakan Template Ini</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Add New Server Form */}
+              {isAddingMcpServer && (
+                <div className="p-4 sm:p-5 rounded-xl bg-slate-900/90 border border-emerald-500/40 space-y-4 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                    <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                      <Plus className="w-4 h-4 text-emerald-400" />
+                      <span>Konfigurasi Server MCP Baru</span>
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingMcpServer(false)}
+                      className="text-xs text-slate-400 hover:text-white"
+                    >
+                      Batal
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                    <div className="space-y-1.5">
+                      <label className="text-slate-300 font-semibold block">Nama Server MCP</label>
+                      <input
+                        type="text"
+                        value={mcpName}
+                        onChange={(e) => setMcpName(e.target.value)}
+                        placeholder="Contoh: Production Filesystem MCP"
+                        className="w-full px-3 py-2 rounded-lg bg-slate-800/80 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-slate-300 font-semibold block">Transport Protokol</label>
+                      <CustomSelect
+                        value={mcpTransport}
+                        onChange={(val) => setMcpTransport(val as McpTransport)}
+                        options={[
+                          { value: 'stdio', label: 'STDIO Process (Child Process npx/node/python)' },
+                          { value: 'sse', label: 'HTTP / SSE Endpoint (Remote Server)' }
+                        ]}
+                      />
+                    </div>
+
+                    {mcpTransport === 'stdio' ? (
+                      <>
+                        <div className="space-y-1.5">
+                          <label className="text-slate-300 font-semibold block">Command Utama</label>
+                          <input
+                            type="text"
+                            value={mcpCommand}
+                            onChange={(e) => setMcpCommand(e.target.value)}
+                            placeholder="Contoh: npx, node, python3, docker"
+                            className="w-full px-3 py-2 rounded-lg bg-slate-800/80 border border-slate-700 text-white font-mono placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-slate-300 font-semibold block">Argumen Eksekusi (Args)</label>
+                          <input
+                            type="text"
+                            value={mcpArgs}
+                            onChange={(e) => setMcpArgs(e.target.value)}
+                            placeholder="-y @modelcontextprotocol/server-filesystem /path/to/folder"
+                            className="w-full px-3 py-2 rounded-lg bg-slate-800/80 border border-slate-700 text-white font-mono placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+
+                        <div className="sm:col-span-2 space-y-1.5">
+                          <label className="text-slate-300 font-semibold block">
+                            Environment Variables (Opsional, baris per baris KEY=VAL atau format JSON)
+                          </label>
+                          <textarea
+                            value={mcpEnv}
+                            onChange={(e) => setMcpEnv(e.target.value)}
+                            placeholder="GITHUB_PERSONAL_ACCESS_TOKEN=ghp_xxx&#10;DEBUG=1"
+                            rows={2}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-800/80 border border-slate-700 text-white font-mono placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="sm:col-span-2 space-y-1.5">
+                        <label className="text-slate-300 font-semibold block">URL Endpoint Remote SSE</label>
+                        <input
+                          type="text"
+                          value={mcpUrl}
+                          onChange={(e) => setMcpUrl(e.target.value)}
+                          placeholder="http://127.0.0.1:8000/sse atau https://mcp.company.internal/events"
+                          className="w-full px-3 py-2 rounded-lg bg-slate-800/80 border border-slate-700 text-white font-mono placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                    )}
+
+                    <div className="sm:col-span-2 space-y-1.5">
+                      <label className="text-slate-300 font-semibold block">Deskripsi Singkat</label>
+                      <input
+                        type="text"
+                        value={mcpDesc}
+                        onChange={(e) => setMcpDesc(e.target.value)}
+                        placeholder="Contoh: Memberikan agen akses pembacaan berkas pada direktori kode"
+                        className="w-full px-3 py-2 rounded-lg bg-slate-800/80 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingMcpServer(false)}
+                      className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCreateMcpServer}
+                      className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-lg shadow-emerald-900/30"
+                    >
+                      Daftarkan Server
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Tool Inspector & Tester Modal/Drawer */}
+              {inspectingServer && (
+                <div className="p-4 sm:p-5 rounded-xl bg-slate-900/90 border border-cyan-500/40 space-y-4 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                        <Code2 className="w-4 h-4 text-cyan-400" />
+                        <span>Katalog Tools: {inspectingServer.name}</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950 text-cyan-300 border border-cyan-800/50">
+                          {inspectingServer.toolsCache?.length || 0} Tools
+                        </span>
+                      </h4>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Tool ini otomatis dikenali dan dapat dipanggil langsung oleh agen dalam reasoning loop.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInspectingServer(null);
+                        setSelectedToolForTest(null);
+                        setToolTestResult(null);
+                      }}
+                      className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white"
+                      title="Tutup Inspektor"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {(!inspectingServer.toolsCache || inspectingServer.toolsCache.length === 0) ? (
+                    <div className="p-6 text-center text-xs text-slate-400 space-y-2">
+                      <p>Belum ada tool yang ditemukan pada server ini.</p>
+                      <p className="text-[11px] text-slate-500">
+                        Klik tombol <strong>"Uji & Refresh Tools"</strong> pada kartu server untuk menjalankan handshake <code className="text-cyan-400">tools/list</code>.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => handleTestMcpServer(inspectingServer)}
+                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold"
+                      >
+                        Uji & Ambil Tools Sekarang
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {/* Left: Tools List */}
+                      <div className="space-y-2 max-h-[360px] overflow-y-auto no-scrollbar pr-1">
+                        {inspectingServer.toolsCache.map((tool) => {
+                          const isSelected = selectedToolForTest?.name === tool.name;
+                          return (
+                            <div
+                              key={tool.name}
+                              onClick={() => {
+                                setSelectedToolForTest(tool);
+                                setToolTestResult(null);
+                                const sampleParams: Record<string, any> = {};
+                                if (tool.inputSchema?.properties) {
+                                  for (const key of Object.keys(tool.inputSchema.properties)) {
+                                    sampleParams[key] = tool.inputSchema.properties[key].default ?? '';
+                                  }
+                                }
+                                setToolTestArgs(JSON.stringify(sampleParams, null, 2));
+                              }}
+                              className={`p-3 rounded-lg border text-left cursor-pointer transition space-y-1.5 ${
+                                isSelected
+                                  ? 'bg-cyan-950/40 border-cyan-500/60 shadow-md shadow-cyan-950/50'
+                                  : 'bg-slate-800/40 border-slate-700/60 hover:border-slate-600'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-mono font-bold text-white flex items-center gap-1.5">
+                                  <Terminal className="w-3.5 h-3.5 text-cyan-400" />
+                                  {tool.name}
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-mono">
+                                  {Object.keys(tool.inputSchema?.properties || {}).length} params
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-400 line-clamp-2">
+                                {tool.description || 'Tidak ada deskripsi tool'}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Right: Interactive Tool Execution Tester */}
+                      <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col justify-between gap-3">
+                        {selectedToolForTest ? (
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                              <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                                <Play className="w-3.5 h-3.5 text-emerald-400" />
+                                <span>Uji Eksekusi: <code className="text-cyan-300 font-mono">{selectedToolForTest.name}</code></span>
+                              </span>
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-[11px] font-semibold text-slate-400 block">
+                                Argumen Tool (JSON Payload)
+                              </label>
+                              <textarea
+                                value={toolTestArgs}
+                                onChange={(e) => setToolTestArgs(e.target.value)}
+                                rows={4}
+                                className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white font-mono placeholder-slate-600 focus:outline-none focus:border-cyan-500"
+                              />
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={handleExecuteToolTest}
+                              disabled={executingToolTest}
+                              className="w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-950/50 flex items-center justify-center gap-2 transition disabled:opacity-50"
+                            >
+                              {executingToolTest ? (
+                                <>
+                                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                  <span>Mengeksekusi Tool MCP...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Play className="w-3.5 h-3.5" />
+                                  <span>Jalankan Eksekusi Tool</span>
+                                </>
+                              )}
+                            </button>
+
+                            {toolTestResult && (
+                              <div className="space-y-1 pt-1">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                  Hasil Output Tool
+                                </span>
+                                <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 font-mono text-[11px] text-slate-200 max-h-[140px] overflow-y-auto whitespace-pre-wrap break-words">
+                                  {toolTestResult.content ? (
+                                    toolTestResult.content.map((c: any, i: number) => c.text || JSON.stringify(c, null, 2)).join('\n')
+                                  ) : (
+                                    JSON.stringify(toolTestResult, null, 2)
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="p-8 text-center text-xs text-slate-500 my-auto">
+                            Pilih salah satu tool di sebelah kiri untuk melihat skema parameter dan menjalankan pengujian langsung.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Registered Servers Grid */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Daftar MCP Server Terdaftar ({mcpServers.length})
+                  </span>
+                </div>
+
+                {loadingMcpServers ? (
+                  <div className="p-8 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+                    <RefreshCw className="w-4 h-4 animate-spin text-emerald-400" />
+                    <span>Memuat server MCP...</span>
+                  </div>
+                ) : mcpServers.length === 0 ? (
+                  <div className="p-8 rounded-xl bg-slate-900/40 border border-slate-800 text-center space-y-2">
+                    <Plug className="w-8 h-8 text-slate-600 mx-auto" />
+                    <p className="text-xs text-slate-400 font-semibold">
+                      Belum ada MCP Server yang terdaftar.
+                    </p>
+                    <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
+                      Gunakan template populer di atas atau klik "Tambah Server MCP" untuk menghubungkan Filesystem atau Database MCP.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    {mcpServers.map((server) => {
+                      const isTesting = testingServerId === server.id;
+                      const toolCount = server.toolsCache?.length || 0;
+
+                      return (
+                        <div
+                          key={server.id}
+                          className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition flex flex-col justify-between gap-3"
+                        >
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div className="p-1.5 rounded-lg bg-emerald-950/60 border border-emerald-800/40 text-emerald-400 shrink-0">
+                                  <Plug className="w-4 h-4" />
+                                </div>
+                                <div className="min-w-0">
+                                  <h4 className="text-xs font-bold text-white truncate">
+                                    {server.name}
+                                  </h4>
+                                  <span className="text-[10px] text-slate-500 font-mono block truncate">
+                                    {server.transport === 'stdio'
+                                      ? `${server.command || 'npx'} ${(server.args || []).join(' ')}`
+                                      : server.url}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 font-mono ${
+                                    server.status === 'CONNECTED'
+                                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                                      : server.status === 'ERROR'
+                                      ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+                                      : 'bg-slate-800 text-slate-400 border border-slate-700'
+                                  }`}
+                                >
+                                  <span
+                                    className={`w-1.5 h-1.5 rounded-full ${
+                                      server.status === 'CONNECTED'
+                                        ? 'bg-emerald-400 animate-pulse'
+                                        : server.status === 'ERROR'
+                                        ? 'bg-rose-400'
+                                        : 'bg-slate-400'
+                                    }`}
+                                  />
+                                  <span>{server.status}</span>
+                                </span>
+                              </div>
+                            </div>
+
+                            {server.description && (
+                              <p className="text-[11px] text-slate-400 line-clamp-2">
+                                {server.description}
+                              </p>
+                            )}
+
+                            <div className="flex items-center justify-between pt-1 text-[11px] text-slate-400 border-t border-slate-800/60">
+                              <span>Tools Terdeteksi:</span>
+                              <span className="font-mono font-bold text-cyan-300">
+                                {toolCount} Tools
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-800/80">
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleTestMcpServer(server)}
+                                disabled={isTesting}
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-semibold transition disabled:opacity-50"
+                                title="Lakukan handshake initialize dan refresh daftar tools"
+                              >
+                                <RefreshCw className={`w-3 h-3 ${isTesting ? 'animate-spin' : ''}`} />
+                                <span>{isTesting ? 'Menguji...' : 'Uji & Refresh'}</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => setInspectingServer(inspectingServer?.id === server.id ? null : server)}
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold transition"
+                              >
+                                <Code2 className="w-3 h-3 text-cyan-400" />
+                                <span>Tools ({toolCount})</span>
+                              </button>
+                            </div>
+
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleMcpServer(server)}
+                                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition ${
+                                  server.enabled
+                                    ? 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'
+                                    : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
+                                }`}
+                              >
+                                {server.enabled ? 'Nonaktifkan' : 'Aktifkan'}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteMcpServer(server)}
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-500/20 border border-slate-700 hover:border-rose-500/40 text-slate-400 hover:text-rose-400 transition"
+                                title="Hapus MCP Server"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       );

@@ -54,7 +54,11 @@ import {
   EvalBenchmarkItem,
   EvalRunResult,
   RunEvalRequest,
-  EvalLeaderboardEntry
+  EvalLeaderboardEntry,
+  McpServer,
+  McpTool,
+  McpToolCallResult,
+  McpServerTemplate
 } from '../../../shared/types.js';
 
 const BASE_URL = '/api';
@@ -497,6 +501,55 @@ export const api = {
     const params = new URLSearchParams();
     if (workspaceId) params.set('workspaceId', workspaceId);
     return request<EvalLeaderboardEntry[]>(`/evals/leaderboard?${params.toString()}`);
+  },
+
+  // Model Context Protocol (MCP) Client API
+  getMcpServers: async () => {
+    const res = await request<{ success: boolean; data: McpServer[] }>('/mcp/servers');
+    return res.data;
+  },
+  getMcpServerById: async (id: string) => {
+    const res = await request<{ success: boolean; data: McpServer }>(`/mcp/servers/${id}`);
+    return res.data;
+  },
+  registerMcpServer: async (data: Partial<McpServer>) => {
+    const res = await request<{ success: boolean; data: McpServer }>('/mcp/servers', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+    return res.data;
+  },
+  updateMcpServer: async (id: string, data: Partial<McpServer>) => {
+    const res = await request<{ success: boolean; data: McpServer }>(`/mcp/servers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+    return res.data;
+  },
+  deleteMcpServer: async (id: string) => {
+    return request<{ success: boolean; message: string }>(`/mcp/servers/${id}`, {
+      method: 'DELETE'
+    });
+  },
+  testMcpServer: async (id: string) => {
+    return request<{ success: boolean; data: any }>(`/mcp/servers/${id}/test`, {
+      method: 'POST'
+    });
+  },
+  getMcpTools: async () => {
+    const res = await request<{ success: boolean; data: McpTool[] }>('/mcp/tools');
+    return res.data;
+  },
+  callMcpTool: async (serverId: string, toolName: string, args: Record<string, any> = {}) => {
+    const res = await request<{ success: boolean; data: McpToolCallResult }>('/mcp/tools/call', {
+      method: 'POST',
+      body: JSON.stringify({ serverId, toolName, arguments: args })
+    });
+    return res.data;
+  },
+  getMcpTemplates: async () => {
+    const res = await request<{ success: boolean; data: McpServerTemplate[] }>('/mcp/templates');
+    return res.data;
   }
 };
 
