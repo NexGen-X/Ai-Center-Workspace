@@ -160,6 +160,39 @@ export const AVAILABLE_TOOLS: Record<string, ToolDefinition> = {
       toolName: { type: 'string', description: 'Nama tool MCP yang akan dijalankan', required: true },
       arguments: { type: 'object', description: 'Argumen JSON untuk tool MCP' }
     }
+  },
+  web_search: {
+    name: 'web_search',
+    description: 'Mencari informasi, dokumentasi teknis, atau API publik secara langsung dari web.',
+    category: 'NETWORK',
+    riskLevel: 'LOW',
+    requiresApproval: false,
+    parameters: {
+      query: { type: 'string', description: 'Kata kunci pencarian web', required: true },
+      limit: { type: 'number', description: 'Jumlah hasil (maksimal 10)' }
+    }
+  },
+  web_browse: {
+    name: 'web_browse',
+    description: 'Mengunjungi halaman web, membersihkan konten HTML dan mengubahnya menjadi Markdown.',
+    category: 'NETWORK',
+    riskLevel: 'LOW',
+    requiresApproval: false,
+    parameters: {
+      url: { type: 'string', description: 'URL halaman web yang ingin dibaca', required: true },
+      maxLength: { type: 'number', description: 'Batas panjang karakter teks Markdown' }
+    }
+  },
+  web_research_and_ingest: {
+    name: 'web_research_and_ingest',
+    description: 'Melakukan riset mendalam di web dan otomatis menyimpan serta mengindeks hasilnya ke pgvector RAG.',
+    category: 'NETWORK',
+    riskLevel: 'LOW',
+    requiresApproval: false,
+    parameters: {
+      query: { type: 'string', description: 'Topik riset web yang ingin diindeks ke RAG', required: true },
+      documentTitle: { type: 'string', description: 'Judul dokumen hasil riset' }
+    }
   }
 };
 
@@ -490,6 +523,51 @@ export async function executeToolInSandbox(
         return {
           success: true,
           output: `Ditemukan ${memories.length} memori masa lalu:\n${formatted}`,
+          durationMs: Date.now() - startTime
+        };
+      }
+
+      case 'web_search': {
+        const query = String(input.query || '').trim();
+        if (!query) throw new Error('Parameter "query" wajib diisi untuk web_search.');
+        const limit = Number(input.limit) || 5;
+        const { WebResearchService } = await import('./webResearchService.js');
+        const searchRes = await WebResearchService.search(query, limit);
+        const formatted = searchRes.results
+          .map((r, i) => `[${i + 1}] ${r.title}\nURL: ${r.url}\nIkhtisar: ${r.snippet}`)
+          .join('\n\n');
+        return {
+          success: true,
+          output: `Hasil pencarian web untuk "${query}":\n\n${formatted}`,
+          durationMs: Date.now() - startTime
+        };
+      }
+
+      case 'web_browse': {
+        const url = String(input.url || '').trim();
+        if (!url) throw new Error('Parameter "url" wajib diisi untuk web_browse.');
+        const maxLength = Number(input.maxLength) || 6000;
+        const { WebResearchService } = await import('./webResearchService.js');
+        const browsed = await WebResearchService.browse(url, maxLength);
+        return {
+          success: true,
+          output: `=== [KONTEN WEB: ${browsed.title}] ===\nURL: ${browsed.url}\n\n${browsed.markdownContent}`,
+          durationMs: Date.now() - startTime
+        };
+      }
+
+      case 'web_research_and_ingest': {
+        const query = String(input.query || '').trim();
+        if (!query) throw new Error('Parameter "query" wajib diisi untuk web_research_and_ingest.');
+        const { WebResearchService } = await import('./webResearchService.js');
+        const result = await WebResearchService.researchAndIngest({
+          query,
+          documentTitle: input.documentTitle ? String(input.documentTitle).trim() : undefined,
+          workspaceId: (context as any)?.workspaceId || input.workspaceId
+        });
+        return {
+          success: true,
+          output: `[RISET WEB BERHASIL DIINDEKS KE RAG]\nDokumen ID: ${result.documentId}\nJudul: "${result.title}"\nKategori: ${result.category}\nJumlah Chunks: ${result.chunksIndexed}\nSumber:\n${result.sources.map(s => `- ${s.title} (${s.url})`).join('\n')}`,
           durationMs: Date.now() - startTime
         };
       }

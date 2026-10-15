@@ -68,7 +68,12 @@ import {
   WarRoomMessage,
   CreateWarRoomRequest,
   DeliberateRoundRequest,
-  ConvertWarRoomToTaskRequest
+  ConvertWarRoomToTaskRequest,
+  WebSearchResultItem,
+  WebSearchResponse,
+  WebBrowseResponse,
+  WebResearchAndIngestRequest,
+  WebResearchAndIngestResponse
 } from '../../../shared/types.js';
 
 const BASE_URL = '/api';
@@ -643,6 +648,23 @@ export const api = {
     request<Task>(`/war-rooms/${id}/convert-to-task`, {
       method: 'POST',
       body: JSON.stringify(data || {})
+    }),
+
+  // Autonomous Web Research & Live Browser Engine
+  searchWeb: (query: string, limit?: number) =>
+    request<WebSearchResponse>('/web-research/search', {
+      method: 'POST',
+      body: JSON.stringify({ query, limit })
+    }),
+  browseWeb: (url: string, maxLength?: number) =>
+    request<WebBrowseResponse>('/web-research/browse', {
+      method: 'POST',
+      body: JSON.stringify({ url, maxLength })
+    }),
+  researchAndIngest: (data: WebResearchAndIngestRequest) =>
+    request<WebResearchAndIngestResponse>('/web-research/ingest', {
+      method: 'POST',
+      body: JSON.stringify(data)
     })
 };
 

@@ -250,7 +250,7 @@ export interface ExecuteAgentRunRequest {
   prompt: string;
 }
 
-export type DocumentCategory = 'SOP' | 'SPEC' | 'PROMPT_TEMPLATE' | 'ARCHITECTURE' | 'NOTE';
+export type DocumentCategory = 'SOP' | 'SPEC' | 'PROMPT_TEMPLATE' | 'ARCHITECTURE' | 'NOTE' | 'RESEARCH';
 
 export interface DocumentItem {
   id: string;
@@ -1017,6 +1017,46 @@ export interface ConvertWarRoomToTaskRequest {
   title?: string;
   projectId?: string;
   priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+}
+
+// Autonomous Web Research & Live Browser Types
+export interface WebSearchResultItem {
+  title: string;
+  url: string;
+  snippet: string;
+}
+
+export interface WebSearchResponse {
+  query: string;
+  results: WebSearchResultItem[];
+  totalResults: number;
+}
+
+export interface WebBrowseResponse {
+  url: string;
+  title: string;
+  markdownContent: string;
+  metaDescription?: string;
+  contentLength: number;
+}
+
+export interface WebResearchAndIngestRequest {
+  query: string;
+  documentTitle?: string;
+  category?: DocumentCategory;
+  tags?: string[];
+  projectId?: string;
+  workspaceId?: string;
+}
+
+export interface WebResearchAndIngestResponse {
+  success: boolean;
+  documentId: string;
+  title: string;
+  category: DocumentCategory;
+  chunksIndexed: number;
+  sources: Array<{ title: string; url: string }>;
+  summary: string;
 }
 
 

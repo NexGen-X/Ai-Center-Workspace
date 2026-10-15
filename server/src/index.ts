@@ -34,6 +34,7 @@ import { evalsRouter } from './routes/evals.js';
 import { mcpRouter } from './routes/mcp.js';
 import { workflowsRouter } from './routes/workflows.js';
 import { warRoomsRouter } from './routes/warRooms.js';
+import { webResearchRouter } from './routes/webResearch.js';
 import { systemLogger } from './services/logger.js';
 
 export const app = express();
@@ -89,6 +90,7 @@ app.use('/api/evals', evalsRouter);
 app.use('/api/mcp', mcpRouter);
 app.use('/api/workflows', workflowsRouter);
 app.use('/api/war-rooms', warRoomsRouter);
+app.use('/api/web-research', webResearchRouter);
 
 // Root healthcheck
 app.get('/healthz', (_req: Request, res: Response) => {
