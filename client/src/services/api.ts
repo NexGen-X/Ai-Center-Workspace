@@ -19,6 +19,7 @@ import {
   AgentRun,
   DocumentItem,
   CreateDocumentRequest,
+  UploadDocumentRequest,
   NotificationItem,
   FinOpsReportsSummary,
   OrchestratorStatus,
@@ -218,6 +219,10 @@ export const api = {
   getDocuments: (category?: string) => request<DocumentItem[]>(`/documents${category ? `?category=${category}` : ''}`),
   getDocument: (id: string) => request<DocumentItem>(`/documents/${id}`),
   createDocument: (data: CreateDocumentRequest) => request<DocumentItem>('/documents', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+  uploadDocument: (data: UploadDocumentRequest) => request<DocumentItem>('/documents/upload', {
     method: 'POST',
     body: JSON.stringify(data)
   }),

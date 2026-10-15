@@ -264,6 +264,13 @@ export interface DocumentItem {
   updatedAt: string;
   chunkCount?: number;
   isIndexed?: boolean;
+  fileMetadata?: {
+    originalFileName?: string;
+    fileType?: string;
+    fileSize?: number;
+    rowCount?: number;
+    parsedFormat?: string;
+  };
 }
 
 export interface CreateDocumentRequest {
@@ -273,6 +280,17 @@ export interface CreateDocumentRequest {
   tags?: string[];
   projectId?: string;
 }
+
+export interface UploadDocumentRequest {
+  fileName: string;
+  fileType: string;
+  fileContentBase64: string;
+  category?: DocumentCategory;
+  tags?: string[];
+  projectId?: string;
+  workspaceId?: string;
+}
+
 
 export type NotificationType = 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
 

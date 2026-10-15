@@ -12,7 +12,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { category, projectId } = req.query;
     let query = `
-      SELECT d.id, d.workspace_id, d.project_id, d.title, d.content, d.category, d.tags, d.created_at, d.updated_at,
+      SELECT d.id, d.workspace_id, d.project_id, d.title, d.content, d.category, d.tags, d.file_metadata, d.created_at, d.updated_at,
              COUNT(dc.id)::int as chunk_count
       FROM documents d
       LEFT JOIN document_chunks dc ON d.id = dc.document_id
@@ -44,6 +44,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       updatedAt: row.updated_at,
       chunkCount: row.chunk_count || 0,
       isIndexed: (row.chunk_count || 0) > 0,
+      fileMetadata: typeof row.file_metadata === 'string' ? JSON.parse(row.file_metadata) : (row.file_metadata || undefined)
     }));
 
     res.json(documents);
@@ -57,7 +58,7 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
-      `SELECT d.id, d.workspace_id, d.project_id, d.title, d.content, d.category, d.tags, d.created_at, d.updated_at,
+      `SELECT d.id, d.workspace_id, d.project_id, d.title, d.content, d.category, d.tags, d.file_metadata, d.created_at, d.updated_at,
               COUNT(dc.id)::int as chunk_count
        FROM documents d
        LEFT JOIN document_chunks dc ON d.id = dc.document_id
@@ -83,6 +84,7 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
       updatedAt: row.updated_at,
       chunkCount: row.chunk_count || 0,
       isIndexed: (row.chunk_count || 0) > 0,
+      fileMetadata: typeof row.file_metadata === 'string' ? JSON.parse(row.file_metadata) : (row.file_metadata || undefined)
     };
 
     res.json(doc);
@@ -137,6 +139,83 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     );
 
     realtimeHub.broadcast('activity', { summary: `Dokumen baru: ${title}`, category });
+
+    res.status(201).json(newDoc);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/documents/upload — Ingest rich files (PDF, CSV, JSON, MD, TXT)
+router.post('/upload', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { fileName, fileType, fileContentBase64, category = 'SOP', tags = [], projectId } = req.body;
+
+    if (!fileContentBase64 || !fileName) {
+      return res.status(400).json({ error: { message: 'Nama file dan konten base64 wajib disertakan.' } });
+    }
+
+    const { DocumentParserService } = await import('../services/documentParserService.js');
+    const parsed = DocumentParserService.parseUploadedDocument({
+      fileName,
+      fileType: fileType || 'text/plain',
+      fileContentBase64
+    });
+
+    const id = `doc-${uuidv4().slice(0, 8)}`;
+    const workspaceId = 'ws-default-command-center';
+
+    const insertRes = await pool.query(
+      `INSERT INTO documents (id, workspace_id, project_id, title, content, category, tags, file_metadata)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING *`,
+      [
+        id,
+        workspaceId,
+        projectId || null,
+        parsed.parsedTitle,
+        parsed.parsedContent,
+        category,
+        JSON.stringify(tags),
+        JSON.stringify(parsed.metadata)
+      ]
+    );
+
+    const row = insertRes.rows[0];
+
+    // Trigger immediate RAG indexing
+    let chunkCount = 0;
+    try {
+      const indexResult = await RagService.indexDocument(id);
+      chunkCount = indexResult.chunksIndexed;
+    } catch (indexErr: any) {
+      console.error(`[RAG Auto-Index Error] Failed to index uploaded doc ${id}:`, indexErr.message);
+    }
+
+    const newDoc: DocumentItem = {
+      id: row.id,
+      workspaceId: row.workspace_id,
+      projectId: row.project_id || undefined,
+      title: row.title,
+      content: row.content,
+      category: row.category,
+      tags: Array.isArray(row.tags) ? row.tags : [],
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      chunkCount,
+      isIndexed: chunkCount > 0,
+      fileMetadata: parsed.metadata
+    };
+
+    // Log Activity
+    await pool.query(
+      `INSERT INTO activities (id, workspace_id, actor_type, actor_name, event_type, summary, target_type, target_id)
+       VALUES ($1, $2, 'USER', 'Operator', 'DOCUMENT_UPLOADED', $3, 'DOCUMENT', $4)`,
+      [`act-${uuidv4().slice(0, 8)}`, workspaceId, `File diunggah & diindeks: "${parsed.parsedTitle}" (${parsed.metadata.parsedFormat})`, id]
+    );
+
+    realtimeHub.broadcast('activity', { summary: `File diunggah: ${parsed.parsedTitle}`, category });
+    realtimeHub.broadcast('document.uploaded', newDoc);
 
     res.status(201).json(newDoc);
   } catch (err) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   FileText,
@@ -20,7 +20,9 @@ import {
   Cpu,
   Sliders,
   ExternalLink,
-  Bot
+  Bot,
+  Upload,
+  FileSpreadsheet
 } from 'lucide-react';
 import { api } from '../../services/api.js';
 import {
@@ -82,6 +84,67 @@ export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose,
   const [memories, setMemories] = useState<AgentMemoryItem[]>([]);
   const [selectedMemoryType, setSelectedMemoryType] = useState<AgentMemoryType | 'ALL'>('ALL');
   const [loadingMemories, setLoadingMemories] = useState(false);
+
+  // File Upload state
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Ukuran berkas melebihi batas maksimum 10MB.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      toast.info(`Membaca dan memproses "${file.name}"...`);
+
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const resultStr = reader.result as string;
+          const base64Data = resultStr.includes(',') ? resultStr.split(',')[1] : resultStr;
+          if (!base64Data) {
+            throw new Error('Gagal membaca data berkas.');
+          }
+
+          const res = await api.uploadDocument({
+            fileName: file.name,
+            fileContentBase64: base64Data,
+            fileType: file.type || 'text/plain',
+            category: 'SPEC',
+            projectId: formProjectId || undefined
+          });
+
+          toast.success(`Berkas "${file.name}" berhasil diunggah dan diindeks!`);
+          await fetchDocs();
+          await fetchRagStats();
+          if (res && res.id) {
+            setSelectedDoc(res);
+          }
+        } catch (uploadErr: any) {
+          toast.error(uploadErr.message || 'Gagal memproses berkas yang diunggah.', 'Unggah Gagal');
+        } finally {
+          setIsUploading(false);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+      };
+      reader.onerror = () => {
+        toast.error('Gagal membaca berkas dari sistem lokal.');
+        setIsUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal memulai unggah berkas.');
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const fetchDocs = async () => {
     try {
@@ -471,6 +534,24 @@ export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose,
                   <Download className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Export</span>
                 </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.csv,.json,.txt,.md,application/pdf,text/csv,application/json,text/plain,text/markdown"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all active:scale-95 disabled:opacity-50"
+                  title="Unggah berkas PDF, CSV, JSON, atau Markdown ke Knowledge Base"
+                >
+                  <Upload className={`w-3.5 h-3.5 shrink-0 ${isUploading ? 'animate-bounce' : ''}`} />
+                  <span className="hidden sm:inline">{isUploading ? 'Mengunggah...' : 'Unggah Berkas'}</span>
+                  <span className="sm:hidden">Unggah</span>
+                </button>
                 <button
                   type="button"
                   onClick={handleStartCreate}
@@ -556,9 +637,16 @@ export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose,
                       }`}
                     >
                       <div className="flex items-center justify-between gap-1 mb-1">
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-purple-300 border border-purple-500/20">
-                          {doc.category}
-                        </span>
+                        <div className="flex items-center gap-1.5 overflow-hidden">
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-purple-300 border border-purple-500/20">
+                            {doc.category}
+                          </span>
+                          {doc.fileMetadata?.parsedFormat && (
+                            <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase">
+                              {doc.fileMetadata.parsedFormat}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-1.5">
                           {doc.chunkCount && doc.chunkCount > 0 ? (
                             <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20" title="Terindeks ke pgvector">
@@ -741,6 +829,29 @@ export const DocumentsModal: React.FC<DocumentsModalProps> = ({ isOpen, onClose,
                               #{t}
                             </span>
                           ))}
+                        </div>
+                      )}
+                      {selectedDoc.fileMetadata && selectedDoc.fileMetadata.originalFileName && (
+                        <div className="flex flex-wrap items-center gap-2 mt-2.5 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/60 text-xs text-slate-300">
+                          <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <span className="font-mono text-emerald-300 font-medium">
+                            {selectedDoc.fileMetadata.originalFileName}
+                          </span>
+                          {selectedDoc.fileMetadata.fileSize && (
+                            <span className="text-[11px] text-slate-400">
+                              ({(selectedDoc.fileMetadata.fileSize / 1024).toFixed(1)} KB)
+                            </span>
+                          )}
+                          {selectedDoc.fileMetadata.rowCount !== undefined && (
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                              {selectedDoc.fileMetadata.rowCount} baris
+                            </span>
+                          )}
+                          {selectedDoc.fileMetadata.parsedFormat && (
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase">
+                              {selectedDoc.fileMetadata.parsedFormat}
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>
