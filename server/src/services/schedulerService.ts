@@ -345,6 +345,20 @@ export class SchedulerService {
       errorMessage = err.message || 'Eksekusi jadwal gagal tanpa pesan spesifik';
       outputSummary = `[Gagal] ${errorMessage}`;
       systemLogger.error('SYSTEM', `[Scheduler Error] ${schedule.title}: ${errorMessage}`);
+
+      import('./alertingService.js').then(({ AlertingService }) => {
+        AlertingService.dispatchAlert({
+          event: 'SCHEDULE_FAILED',
+          title: `Jadwal Rutin Gagal: ${schedule.title}`,
+          message: errorMessage || 'Eksekusi jadwal otomatis gagal dijalankan.',
+          severity: 'CRITICAL',
+          metadata: {
+            schedule_id: schedule.id,
+            routine_type: schedule.routine_type,
+            error: errorMessage
+          }
+        }, schedule.workspace_id).catch(() => {});
+      }).catch(() => {});
     }
 
     const durationMs = Date.now() - startTime;

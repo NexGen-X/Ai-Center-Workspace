@@ -45,7 +45,12 @@ import {
   UpdateScheduleDTO,
   SwarmArtifactBundle,
   CreateGitBranchRequest,
-  CreateGitBranchResponse
+  CreateGitBranchResponse,
+  AlertWebhookItem,
+  CreateAlertWebhookRequest,
+  UpdateAlertWebhookRequest,
+  AlertPayload,
+  AlertDeliveryLog
 } from '../../../shared/types.js';
 
 const BASE_URL = '/api';
@@ -427,6 +432,41 @@ export const api = {
     if (workspaceId) params.set('workspaceId', workspaceId);
     if (limit) params.set('limit', String(limit));
     return request<{ success: boolean; data: ScheduleExecution[] }>(`/schedules/executions/recent?${params.toString()}`);
+  },
+
+  // Outbound Alerting & Webhooks
+  getAlertWebhooks: (workspaceId?: string) => {
+    const params = new URLSearchParams();
+    if (workspaceId) params.set('workspaceId', workspaceId);
+    return request<AlertWebhookItem[]>(`/alerts/webhooks?${params.toString()}`);
+  },
+  createAlertWebhook: (data: CreateAlertWebhookRequest) => request<AlertWebhookItem>('/alerts/webhooks', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+  updateAlertWebhook: (id: string, data: UpdateAlertWebhookRequest) => request<AlertWebhookItem>(`/alerts/webhooks/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  }),
+  deleteAlertWebhook: (id: string) => request<{ success: boolean; message: string }>(`/alerts/webhooks/${id}`, {
+    method: 'DELETE'
+  }),
+  testAlertWebhook: (id: string) => request<{ success: boolean; statusCode?: number; error?: string }>(`/alerts/webhooks/${id}/test`, {
+    method: 'POST'
+  }),
+  getAlertHistory: (workspaceId?: string, limit = 50) => {
+    const params = new URLSearchParams();
+    if (workspaceId) params.set('workspaceId', workspaceId);
+    if (limit) params.set('limit', String(limit));
+    return request<AlertDeliveryLog[]>(`/alerts/history?${params.toString()}`);
+  },
+  dispatchAlert: (alert: AlertPayload, workspaceId?: string) => {
+    const params = new URLSearchParams();
+    if (workspaceId) params.set('workspaceId', workspaceId);
+    return request<{ success: boolean; message: string }>(`/alerts/dispatch?${params.toString()}`, {
+      method: 'POST',
+      body: JSON.stringify(alert)
+    });
   }
 };
 

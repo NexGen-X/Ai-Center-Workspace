@@ -24,9 +24,20 @@ import {
   Copy,
   Check,
   Send,
-  Terminal
+  Terminal,
+  Bell,
+  Trash2,
+  Plus,
+  MessageSquare
 } from 'lucide-react';
-import { ModelProviderConfig, WorkspaceBackup } from '../../../../shared/types.js';
+import {
+  ModelProviderConfig,
+  WorkspaceBackup,
+  AlertWebhookItem,
+  AlertPlatform,
+  AlertEventType,
+  AlertDeliveryLog
+} from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
 import { useFeedback } from '../../components/common/FeedbackContext.js';
 import { CustomSelect } from '../../components/common/CustomSelect.js';
@@ -50,9 +61,130 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onWorkspaceRestored
 }) => {
   const { toast, confirm } = useFeedback();
-  const [activeTab, setActiveTab] = useState<'WORKSPACE' | 'SECURITY' | 'PROVIDERS' | 'BACKUP' | 'WEBHOOKS'>('WORKSPACE');
+  const [activeTab, setActiveTab] = useState<'WORKSPACE' | 'SECURITY' | 'PROVIDERS' | 'BACKUP' | 'WEBHOOKS' | 'ALERTS'>('WORKSPACE');
   const [providers, setProviders] = useState<ModelProviderConfig[]>([]);
   const [loadingProviders, setLoadingProviders] = useState(false);
+
+  // Outbound Alerting state
+  const [alertWebhooks, setAlertWebhooks] = useState<AlertWebhookItem[]>([]);
+  const [loadingAlertWebhooks, setLoadingAlertWebhooks] = useState(false);
+  const [isAddingAlertWebhook, setIsAddingAlertWebhook] = useState(false);
+  const [testingWebhookId, setTestingWebhookId] = useState<string | null>(null);
+
+  // New webhook form
+  const [whName, setWhName] = useState('');
+  const [whPlatform, setWhPlatform] = useState<AlertPlatform>('DISCORD');
+  const [whUrl, setWhUrl] = useState('');
+  const [whSecret, setWhSecret] = useState('');
+  const [whEvents, setWhEvents] = useState<AlertEventType[]>([
+    'SECURITY_ALERT',
+    'SWARM_COMPLETED',
+    'ACTION_PENDING',
+    'SCHEDULE_FAILED'
+  ]);
+
+  // Delivery logs state
+  const [deliveryLogs, setDeliveryLogs] = useState<AlertDeliveryLog[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [showDeliveryHistory, setShowDeliveryHistory] = useState(false);
+
+  const fetchAlertWebhooks = async () => {
+    try {
+      setLoadingAlertWebhooks(true);
+      const res = await api.getAlertWebhooks();
+      setAlertWebhooks(res);
+    } catch (err: any) {
+      console.error('Failed to load alert webhooks:', err);
+    } finally {
+      setLoadingAlertWebhooks(false);
+    }
+  };
+
+  const fetchDeliveryLogs = async () => {
+    try {
+      setLoadingHistory(true);
+      const res = await api.getAlertHistory();
+      setDeliveryLogs(res);
+    } catch (err: any) {
+      console.error('Failed to load alert history:', err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const handleCreateAlertWebhook = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!whName.trim() || !whUrl.trim()) {
+      toast.error('Nama webhook dan URL webhook tujuan wajib diisi.');
+      return;
+    }
+
+    try {
+      await api.createAlertWebhook({
+        name: whName.trim(),
+        platform: whPlatform,
+        webhookUrl: whUrl.trim(),
+        secretToken: whSecret.trim() || undefined,
+        events: whEvents,
+        isActive: true
+      });
+      toast.success(`Webhook "${whName}" berhasil ditambahkan.`);
+      setWhName('');
+      setWhUrl('');
+      setWhSecret('');
+      setIsAddingAlertWebhook(false);
+      fetchAlertWebhooks();
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal menyimpan webhook alert.');
+    }
+  };
+
+  const handleToggleWebhook = async (wh: AlertWebhookItem) => {
+    try {
+      await api.updateAlertWebhook(wh.id, { isActive: !wh.isActive });
+      toast.info(`Webhook "${wh.name}" ${!wh.isActive ? 'diaktifkan' : 'dinonaktifkan'}.`);
+      fetchAlertWebhooks();
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal memperbarui status webhook.');
+    }
+  };
+
+  const handleDeleteWebhook = async (wh: AlertWebhookItem) => {
+    const ok = await confirm({
+      title: 'Hapus Webhook Alert?',
+      message: `Apakah Anda yakin ingin menghapus webhook "${wh.name}" (${wh.platform})? Notifikasi outbound ke channel ini akan dihentikan.`,
+      confirmText: 'Hapus Webhook',
+      cancelText: 'Batal',
+      variant: 'danger'
+    });
+    if (!ok) return;
+
+    try {
+      await api.deleteAlertWebhook(wh.id);
+      toast.success(`Webhook "${wh.name}" berhasil dihapus.`);
+      fetchAlertWebhooks();
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal menghapus webhook.');
+    }
+  };
+
+  const handleTestWebhook = async (wh: AlertWebhookItem) => {
+    try {
+      setTestingWebhookId(wh.id);
+      toast.info(`Mengirim payload uji ke ${wh.platform}...`);
+      const res = await api.testAlertWebhook(wh.id);
+      if (res.success) {
+        toast.success(`Uji koneksi ke ${wh.name} sukses! (HTTP ${res.statusCode || 200})`);
+      } else {
+        toast.error(`Uji koneksi gagal: ${res.error || 'Terjadi kesalahan'}`);
+      }
+      fetchDeliveryLogs();
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal menguji webhook.');
+    } finally {
+      setTestingWebhookId(null);
+    }
+  };
 
   // Password change state
   const [oldPassword, setOldPassword] = useState('');
@@ -198,6 +330,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       fetchProviders();
+      fetchAlertWebhooks();
       setPasswordMsg(null);
     }
   }, [isOpen]);
@@ -340,7 +473,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             }`}
           >
             <Radio className="w-4 h-4 text-emerald-400" />
-            <span>Webhook & API</span>
+            <span>Webhook Trigger (Inbound)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('ALERTS');
+              fetchAlertWebhooks();
+            }}
+            className={`py-3 border-b-2 transition flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
+              activeTab === 'ALERTS'
+                ? 'border-indigo-400 text-indigo-300'
+                : 'border-transparent text-slate-400 hover:text-white'
+            }`}
+          >
+            <Bell className="w-4 h-4 text-indigo-400" />
+            <span>Outbound Alerting ({alertWebhooks.length})</span>
           </button>
         </div>
 
@@ -837,6 +986,364 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <pre className="p-2.5 bg-[#05070A] rounded-lg text-[11px] font-mono text-emerald-300 overflow-x-auto">
                       {JSON.stringify(webhookResult, null, 2)}
                     </pre>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 6: OUTBOUND ALERTING & WEBHOOK DISPATCHER */}
+          {activeTab === 'ALERTS' && (
+            <div className="space-y-6">
+              {/* Header Banner */}
+              <div className="p-4 sm:p-5 rounded-xl bg-gradient-to-r from-indigo-950/40 via-purple-950/20 to-slate-900 border border-indigo-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-indigo-400" />
+                    <span>Outbound Alerting & Incident Webhooks</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1 max-w-xl">
+                    Kirim notifikasi otomatis ke Discord, Slack, Telegram, atau custom webhook saat terjadi ancaman keamanan, persetujuan tool berisiko, atau kegagalan cron daemon.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDeliveryHistory(!showDeliveryHistory);
+                      if (!showDeliveryHistory) fetchDeliveryLogs();
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition ${
+                      showDeliveryHistory
+                        ? 'bg-slate-700 border-slate-600 text-white'
+                        : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    <Terminal className="w-3.5 h-3.5" />
+                    <span>{showDeliveryHistory ? 'Sembunyikan Log' : 'Riwayat Pengiriman'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingAlertWebhook(!isAddingAlertWebhook)}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>{isAddingAlertWebhook ? 'Tutup Form' : '+ Webhook Baru'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Form Add Webhook */}
+              {isAddingAlertWebhook && (
+                <form
+                  onSubmit={handleCreateAlertWebhook}
+                  className="p-4 sm:p-5 rounded-xl bg-slate-800/80 border border-indigo-500/40 space-y-4 animate-in fade-in duration-200"
+                >
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-300 flex items-center gap-2">
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    Konfigurasi Endpoint Webhook Baru
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-slate-400 block mb-1 text-xs font-medium">Platform Channel *</label>
+                      <CustomSelect
+                        value={whPlatform}
+                        onChange={(val) => setWhPlatform(val as AlertPlatform)}
+                        options={[
+                          { value: 'DISCORD', label: 'Discord Webhook', badge: 'DISCORD', badgeColor: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' },
+                          { value: 'SLACK', label: 'Slack Incoming Webhook', badge: 'SLACK', badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
+                          { value: 'TELEGRAM', label: 'Telegram Bot API', badge: 'TELEGRAM', badgeColor: 'bg-sky-500/20 text-sky-300 border-sky-500/30' },
+                          { value: 'GENERIC', label: 'Custom Webhook (JSON)', badge: 'GENERIC', badgeColor: 'bg-slate-700 text-slate-300 border-slate-600' }
+                        ]}
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="text-slate-400 block mb-1 text-xs font-medium">Nama Integrasi *</label>
+                      <input
+                        type="text"
+                        value={whName}
+                        onChange={(e) => setWhName(e.target.value)}
+                        placeholder="Contoh: Discord DevOps Incident Room"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-400"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-slate-400 block mb-1 text-xs font-medium">Webhook URL *</label>
+                    <input
+                      type="url"
+                      value={whUrl}
+                      onChange={(e) => setWhUrl(e.target.value)}
+                      placeholder={
+                        whPlatform === 'DISCORD'
+                          ? 'https://discord.com/api/webhooks/...'
+                          : whPlatform === 'SLACK'
+                          ? 'https://hooks.slack.com/services/...'
+                          : whPlatform === 'TELEGRAM'
+                          ? 'https://api.telegram.org/bot<TOKEN>/sendMessage'
+                          : 'https://api.example.com/webhooks/incidents'
+                      }
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-indigo-400"
+                    />
+                  </div>
+
+                  {whPlatform === 'TELEGRAM' ? (
+                    <div>
+                      <label className="text-slate-400 block mb-1 text-xs font-medium">Chat ID Telegram (Wajib untuk bot) *</label>
+                      <input
+                        type="text"
+                        value={whSecret}
+                        onChange={(e) => setWhSecret(e.target.value)}
+                        placeholder="Contoh: -100123456789 atau @channel_name"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-indigo-400"
+                      />
+                    </div>
+                  ) : whPlatform === 'GENERIC' ? (
+                    <div>
+                      <label className="text-slate-400 block mb-1 text-xs font-medium">Secret Token (Header X-Webhook-Secret) - Opsional</label>
+                      <input
+                        type="password"
+                        value={whSecret}
+                        onChange={(e) => setWhSecret(e.target.value)}
+                        placeholder="Secret key untuk HMAC / validasi tanda tangan"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-indigo-400"
+                      />
+                    </div>
+                  ) : null}
+
+                  <div>
+                    <label className="text-slate-400 block mb-1.5 text-xs font-medium">Event yang Dilanggan (Subscribed Events):</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      {[
+                        { key: 'SECURITY_ALERT', label: 'Security Alerts (Celah SSRF, Prompt Injection, Anomali)' },
+                        { key: 'ACTION_PENDING', label: 'Action Approvals (Persetujuan Aksi Agen Berisiko Tinggi)' },
+                        { key: 'SWARM_COMPLETED', label: 'Swarm Missions (Selesai Misi Autonomous Swarm)' },
+                        { key: 'SCHEDULE_FAILED', label: 'Cron Schedules (Kegagalan Rutinitas Otomatis)' },
+                        { key: 'SYSTEM_ANOMALY', label: 'System Anomaly (Lonjakan Error atau Latensi Sistem)' }
+                      ].map((ev) => {
+                        const isChecked = whEvents.includes(ev.key as AlertEventType);
+                        return (
+                          <label
+                            key={ev.key}
+                            className={`flex items-start gap-2 p-2 rounded-lg border cursor-pointer transition ${
+                              isChecked
+                                ? 'bg-indigo-500/10 border-indigo-500/30 text-slate-200'
+                                : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-300'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setWhEvents([...whEvents, ev.key as AlertEventType]);
+                                } else {
+                                  setWhEvents(whEvents.filter((item) => item !== ev.key));
+                                }
+                              }}
+                              className="mt-0.5 rounded border-slate-700 text-indigo-500 focus:ring-0"
+                            />
+                            <span className="text-[11px] leading-tight">{ev.label}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingAlertWebhook(false)}
+                      className="px-3 py-1.5 rounded-lg border border-slate-700 text-xs text-slate-400 hover:text-white"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={!whName.trim() || !whUrl.trim()}
+                      className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition disabled:opacity-50"
+                    >
+                      Simpan Webhook Alert
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Delivery History Section */}
+              {showDeliveryHistory && (
+                <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                      <Terminal className="w-3.5 h-3.5 text-indigo-400" />
+                      Log Audit Pengiriman Webhook Terakhir
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={fetchDeliveryLogs}
+                      disabled={loadingHistory}
+                      className="p-1 rounded-lg text-slate-400 hover:text-white"
+                      title="Segarkan Log"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${loadingHistory ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
+
+                  {loadingHistory ? (
+                    <div className="p-4 text-center text-xs text-slate-500">Memuat riwayat pengiriman...</div>
+                  ) : deliveryLogs.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-slate-500">Belum ada riwayat pengiriman notifikasi.</div>
+                  ) : (
+                    <div className="max-h-60 overflow-y-auto divide-y divide-slate-800 text-xs">
+                      {deliveryLogs.map((log) => (
+                        <div key={log.id} className="py-2.5 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {log.success ? (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                            ) : (
+                              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                            )}
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-slate-200 truncate">
+                                  {(log as any).webhook_name || log.webhookId}
+                                </span>
+                                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-indigo-300 border border-slate-700">
+                                  {log.eventType}
+                                </span>
+                              </div>
+                              {log.errorMessage && (
+                                <p className="text-[10px] text-rose-400 truncate mt-0.5">{log.errorMessage}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span
+                              className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                                log.success
+                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                  : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                              }`}
+                            >
+                              HTTP {log.statusCode || (log.success ? 200 : 'ERR')}
+                            </span>
+                            <div className="text-[10px] text-slate-500 mt-0.5">
+                              {new Date(log.createdAt).toLocaleTimeString()}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Webhooks List */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Daftar Integrasi Webhook Aktif ({alertWebhooks.length})
+                </h4>
+
+                {loadingAlertWebhooks && alertWebhooks.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-slate-500">Memuat konfigurasi webhook...</div>
+                ) : alertWebhooks.length === 0 ? (
+                  <div className="p-8 text-center rounded-xl bg-slate-800/30 border border-dashed border-slate-700/60 space-y-2">
+                    <Radio className="w-8 h-8 text-slate-600 mx-auto" />
+                    <p className="text-xs font-medium text-slate-400">Belum ada webhook outbound yang terkonfigurasi.</p>
+                    <p className="text-[11px] text-slate-500 max-w-md mx-auto">
+                      Tambahkan webhook Discord atau Slack untuk menerima laporan instan saat agen menyelesaikan misi swarm atau mendeteksi aksi berisiko.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingAlertWebhook(true)}
+                      className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Buat Webhook Pertama</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3">
+                    {alertWebhooks.map((wh) => {
+                      const platformColors: Record<AlertPlatform, { bg: string; text: string; border: string }> = {
+                        DISCORD: { bg: 'bg-indigo-500/20', text: 'text-indigo-300', border: 'border-indigo-500/30' },
+                        SLACK: { bg: 'bg-emerald-500/20', text: 'text-emerald-300', border: 'border-emerald-500/30' },
+                        TELEGRAM: { bg: 'bg-sky-500/20', text: 'text-sky-300', border: 'border-sky-500/30' },
+                        GENERIC: { bg: 'bg-cyan-500/20', text: 'text-cyan-300', border: 'border-cyan-500/30' }
+                      };
+                      const color = platformColors[wh.platform] || platformColors.GENERIC;
+
+                      return (
+                        <div
+                          key={wh.id}
+                          className="p-4 rounded-xl bg-slate-800/50 border border-slate-700/80 hover:border-slate-600 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                        >
+                          <div className="min-w-0 space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${color.bg} ${color.text} ${color.border}`}>
+                                {wh.platform}
+                              </span>
+                              <h5 className="text-sm font-bold text-white truncate">{wh.name}</h5>
+                              <span
+                                className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                                  wh.isActive
+                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                    : 'bg-slate-700 text-slate-400'
+                                }`}
+                              >
+                                {wh.isActive ? 'Active' : 'Disabled'}
+                              </span>
+                            </div>
+                            <p className="text-[11px] font-mono text-slate-400 truncate max-w-md">
+                              {wh.webhookUrl.slice(0, 45)}...
+                            </p>
+                            <div className="flex flex-wrap gap-1 pt-1">
+                              {wh.events.map((ev) => (
+                                <span
+                                  key={ev}
+                                  className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-800"
+                                >
+                                  {ev}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleWebhook(wh)}
+                              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition ${
+                                wh.isActive
+                                  ? 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'
+                                  : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
+                              }`}
+                            >
+                              {wh.isActive ? 'Nonaktifkan' : 'Aktifkan'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleTestWebhook(wh)}
+                              disabled={testingWebhookId === wh.id}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-semibold transition disabled:opacity-50"
+                              title="Kirim payload uji ke webhook ini"
+                            >
+                              <Send className={`w-3 h-3 ${testingWebhookId === wh.id ? 'animate-bounce' : ''}`} />
+                              <span>{testingWebhookId === wh.id ? 'Menguji...' : 'Uji Ping'}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteWebhook(wh)}
+                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-500/20 border border-slate-700 hover:border-rose-500/40 text-slate-400 hover:text-rose-400 transition"
+                              title="Hapus Webhook"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

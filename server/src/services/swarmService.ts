@@ -573,6 +573,23 @@ export class SwarmService {
         finalSynthesis
       });
 
+      // Dispatch Outbound Webhook Alert
+      import('./alertingService.js').then(({ AlertingService }) => {
+        AlertingService.dispatchAlert({
+          event: 'SWARM_COMPLETED',
+          title: `Autonomous Swarm Mission ${missionStatus === 'COMPLETED' ? 'Selesai' : 'Gagal'}: ${title}`,
+          message: `Misi swarm "${title}" berakhir dengan status ${missionStatus}. Subtugas selesai: ${completedTasks.length}/${subtasks.length} dalam ${(totalDuration / 1000).toFixed(1)}s.`,
+          severity: missionStatus === 'COMPLETED' ? 'INFO' : 'WARNING',
+          metadata: {
+            mission_id: missionId,
+            status: missionStatus,
+            completed_tasks: completedTasks.length,
+            total_tasks: subtasks.length,
+            duration_ms: totalDuration
+          }
+        }, workspaceId).catch(() => {});
+      }).catch(() => {});
+
       systemLogger.info('ORCHESTRATOR', `Misi Swarm [${missionId}] selesai dengan status ${missionStatus} (${(totalDuration / 1000).toFixed(1)}s)`);
     } catch (err: any) {
       const isAbort = signal.aborted || err.message?.includes('dibatalkan');

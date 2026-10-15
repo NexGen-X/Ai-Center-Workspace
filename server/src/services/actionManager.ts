@@ -84,6 +84,22 @@ export class ActionManager {
         reason: riskEval.reason
       });
 
+      // Dispatch Outbound Webhook Alert
+      import('./alertingService.js').then(({ AlertingService }) => {
+        AlertingService.dispatchAlert({
+          event: 'ACTION_PENDING',
+          title: `Persetujuan Dibutuhkan: ${toolName}`,
+          message: `Agen "${agentName}" mengajukan eksekusi tool berisiko "${toolName}". Alasan: ${riskEval.reason || 'Tindakan berisiko tinggi'}`,
+          severity: 'WARNING',
+          metadata: {
+            action_id: actionId,
+            agent_name: agentName,
+            tool_name: toolName,
+            risk_level: riskEval.riskLevel
+          }
+        }).catch(() => {});
+      }).catch(() => {});
+
       return actionData;
     }
 

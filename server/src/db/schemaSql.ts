@@ -285,5 +285,34 @@ CREATE INDEX IF NOT EXISTS idx_agent_schedules_workspace ON agent_schedules(work
 CREATE INDEX IF NOT EXISTS idx_agent_schedules_next_run ON agent_schedules(next_run_at) WHERE is_active = true;
 CREATE INDEX IF NOT EXISTS idx_schedule_executions_schedule ON schedule_executions(schedule_id, started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_schedule_executions_workspace ON schedule_executions(workspace_id, started_at DESC);
+
+CREATE TABLE IF NOT EXISTS alert_webhooks (
+    id VARCHAR(64) PRIMARY KEY,
+    workspace_id VARCHAR(64) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    name VARCHAR(120) NOT NULL,
+    platform VARCHAR(32) NOT NULL DEFAULT 'DISCORD',
+    webhook_url TEXT NOT NULL,
+    secret_token VARCHAR(255),
+    events JSONB NOT NULL DEFAULT '["SECURITY_ALERT","SWARM_COMPLETED","ACTION_PENDING","SCHEDULE_FAILED"]'::jsonb,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS alert_deliveries (
+    id VARCHAR(64) PRIMARY KEY,
+    webhook_id VARCHAR(64) NOT NULL REFERENCES alert_webhooks(id) ON DELETE CASCADE,
+    workspace_id VARCHAR(64) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    event_type VARCHAR(64) NOT NULL,
+    payload JSONB NOT NULL,
+    status_code INTEGER,
+    success BOOLEAN NOT NULL,
+    error_message TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_alert_webhooks_workspace ON alert_webhooks(workspace_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_alert_deliveries_webhook ON alert_deliveries(webhook_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_alert_deliveries_workspace ON alert_deliveries(workspace_id, created_at DESC);
 `;
 

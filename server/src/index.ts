@@ -29,6 +29,7 @@ import actionsRouter from './routes/actions.js';
 import ragRouter from './routes/rag.js';
 import swarmRouter from './routes/swarm.js';
 import { schedulesRouter } from './routes/schedules.js';
+import { alertsRouter } from './routes/alerts.js';
 import { systemLogger } from './services/logger.js';
 
 export const app = express();
@@ -79,6 +80,7 @@ app.use('/api/actions', actionsRouter);
 app.use('/api/rag', ragRouter);
 app.use('/api/swarm', swarmRouter);
 app.use('/api/schedules', schedulesRouter);
+app.use('/api/alerts', alertsRouter);
 
 // Root healthcheck
 app.get('/healthz', (_req: Request, res: Response) => {

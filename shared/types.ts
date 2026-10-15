@@ -713,6 +713,68 @@ export interface CreateGitBranchResponse {
   message: string;
 }
 
+// Outbound Alerting & Webhook Incident Dispatcher Types
+export type AlertPlatform = 'DISCORD' | 'SLACK' | 'TELEGRAM' | 'GENERIC';
+
+export type AlertEventType =
+  | 'SECURITY_ALERT'
+  | 'SWARM_COMPLETED'
+  | 'ACTION_PENDING'
+  | 'SCHEDULE_FAILED'
+  | 'SYSTEM_ANOMALY';
+
+export interface AlertWebhookItem {
+  id: string;
+  workspaceId: string;
+  name: string;
+  platform: AlertPlatform;
+  webhookUrl: string;
+  secretToken?: string;
+  events: AlertEventType[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateAlertWebhookRequest {
+  name: string;
+  platform: AlertPlatform;
+  webhookUrl: string;
+  secretToken?: string;
+  events?: AlertEventType[];
+  isActive?: boolean;
+}
+
+export interface UpdateAlertWebhookRequest {
+  name?: string;
+  platform?: AlertPlatform;
+  webhookUrl?: string;
+  secretToken?: string;
+  events?: AlertEventType[];
+  isActive?: boolean;
+}
+
+export interface AlertPayload {
+  event: AlertEventType;
+  title: string;
+  message: string;
+  severity?: 'INFO' | 'WARNING' | 'CRITICAL';
+  metadata?: Record<string, any>;
+  timestamp?: string;
+}
+
+export interface AlertDeliveryLog {
+  id: string;
+  webhookId: string;
+  workspaceId: string;
+  eventType: string;
+  payload: any;
+  statusCode?: number;
+  success: boolean;
+  errorMessage?: string;
+  createdAt: string;
+}
+
 
 
 
