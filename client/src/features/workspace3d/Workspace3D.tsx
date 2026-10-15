@@ -17,7 +17,9 @@ import {
   Volume2,
   VolumeX,
   Server,
-  AlertCircle
+  AlertCircle,
+  Mic,
+  MicOff
 } from 'lucide-react';
 import { audioService } from '../../services/audio.js';
 
@@ -33,6 +35,10 @@ interface Workspace3DProps {
   onOpenProjects: () => void;
   onOpenManageTeam: () => void;
   onOpenSwarm?: () => void;
+  onOpenCalendar?: () => void;
+  onOpenDocuments?: () => void;
+  onOpenPlayground?: () => void;
+  onOpenSettings?: () => void;
   onFallbackTo2D: () => void;
 }
 
@@ -44,7 +50,14 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
   currentUser,
   onSelectAgent,
   onOpenCreateTask,
+  onOpenTasks,
+  onOpenProjects,
+  onOpenManageTeam,
   onOpenSwarm,
+  onOpenCalendar,
+  onOpenDocuments,
+  onOpenPlayground,
+  onOpenSettings,
   onFallbackTo2D
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -72,6 +85,16 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
     agentFrom?: string;
     agentTo?: string;
   } | null>(null);
+
+  // Interactive Voice Command & Speech Feedback Synthesis states
+  const [isListeningVoice, setIsListeningVoice] = useState(false);
+  const [voiceHUD, setVoiceHUD] = useState<{
+    text: string;
+    actionLabel: string;
+    status: 'listening' | 'matched' | 'unrecognized';
+  } | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const voiceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // References for camera transitions & 3D dynamic laser mesh
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -1431,6 +1454,187 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
     setIsAudioMuted(nextMuted);
   };
 
+  const handleToggleVoiceRecognition = () => {
+    if (typeof window === 'undefined') return;
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Browser Anda tidak mendukung Web Speech Recognition API. Gunakan browser Google Chrome atau Microsoft Edge untuk fitur perintah suara.');
+      return;
+    }
+
+    if (isListeningVoice) {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {
+          // ignore
+        }
+      }
+      setIsListeningVoice(false);
+      setVoiceHUD(null);
+      audioService.speak('Perintah suara dinonaktifkan.');
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.lang = 'id-ID';
+
+      recognition.onstart = () => {
+        setIsListeningVoice(true);
+        audioService.playClick();
+        setVoiceHUD({
+          text: 'Mendengarkan suara...',
+          actionLabel: 'Katakan: "Buka Swarm", "Buat Tugas", "Kalender", "Dokumen", "Arena", dll.',
+          status: 'listening'
+        });
+      };
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
+        if (!transcript) return;
+
+        let matched = false;
+        let actionDesc = '';
+        let spokenResponse = '';
+
+        if (transcript.includes('swarm') || transcript.includes('kolaborasi')) {
+          matched = true;
+          actionDesc = 'Membuka Autonomous Mission Swarm';
+          spokenResponse = 'Membuka Mission Swarm Control';
+          onOpenSwarm?.();
+        } else if (transcript.includes('buat tugas') || transcript.includes('tugas baru') || transcript.includes('create task') || transcript.includes('new task')) {
+          matched = true;
+          actionDesc = 'Membuka Pembuatan Tugas Baru';
+          spokenResponse = 'Membuka formulir tugas baru';
+          onOpenCreateTask();
+        } else if (transcript.includes('tugas') || transcript.includes('tasks') || transcript.includes('riwayat')) {
+          matched = true;
+          actionDesc = 'Membuka Riwayat & Manajemen Tugas';
+          spokenResponse = 'Membuka riwayat tugas';
+          onOpenTasks();
+        } else if (transcript.includes('jadwal') || transcript.includes('kalender') || transcript.includes('calendar') || transcript.includes('schedule')) {
+          matched = true;
+          actionDesc = 'Membuka Kalender & Jadwal Otomatis';
+          spokenResponse = 'Membuka kalender jadwal otomatis';
+          onOpenCalendar?.();
+        } else if (transcript.includes('dokumen') || transcript.includes('sop') || transcript.includes('berkas') || transcript.includes('knowledge') || transcript.includes('document')) {
+          matched = true;
+          actionDesc = 'Membuka Repositori Dokumen & Basis Pengetahuan';
+          spokenResponse = 'Membuka basis pengetahuan dokumen';
+          onOpenDocuments?.();
+        } else if (transcript.includes('arena') || transcript.includes('playground') || transcript.includes('eval') || transcript.includes('judge') || transcript.includes('benchmark')) {
+          matched = true;
+          actionDesc = 'Membuka LLM-as-a-Judge Arena & Evals';
+          spokenResponse = 'Membuka LLM Judge Arena dan Evaluasi';
+          onOpenPlayground?.();
+        } else if (transcript.includes('pengaturan') || transcript.includes('setting') || transcript.includes('webhook') || transcript.includes('alert')) {
+          matched = true;
+          actionDesc = 'Membuka Pengaturan Sistem & Webhook';
+          spokenResponse = 'Membuka pengaturan sistem';
+          onOpenSettings?.();
+        } else if (transcript.includes('proyek') || transcript.includes('project')) {
+          matched = true;
+          actionDesc = 'Membuka Daftar Proyek';
+          spokenResponse = 'Membuka daftar proyek';
+          onOpenProjects();
+        } else if (transcript.includes('tim') || transcript.includes('manajemen') || transcript.includes('team') || transcript.includes('agen')) {
+          matched = true;
+          actionDesc = 'Membuka Manajemen Tim Agen';
+          spokenResponse = 'Membuka manajemen tim agen';
+          onOpenManageTeam();
+        } else if (transcript.includes('overview') || transcript.includes('reset') || transcript.includes('kamera utama') || transcript.includes('tampilan utama')) {
+          matched = true;
+          actionDesc = 'Kamera Tampilan Overview';
+          spokenResponse = 'Kamera diatur ke tampilan overview';
+          handleCamOverview();
+        } else if (transcript.includes('wall') || transcript.includes('dinding')) {
+          matched = true;
+          actionDesc = 'Kamera Tampilan Task Wall';
+          spokenResponse = 'Kamera diarahkan ke task wall';
+          handleCamTaskWall();
+        } else if (transcript.includes('server') || transcript.includes('rack')) {
+          matched = true;
+          actionDesc = 'Kamera Tampilan Server Rack';
+          spokenResponse = 'Kamera diarahkan ke server rack';
+          handleCamServerRack();
+        } else if (transcript.includes('isometrik') || transcript.includes('isometric')) {
+          matched = true;
+          actionDesc = 'Kamera Sudut Isometrik';
+          spokenResponse = 'Kamera diatur ke sudut isometrik';
+          handleCamIsometric();
+        } else if (transcript.includes('tur') || transcript.includes('tour')) {
+          matched = true;
+          actionDesc = autoTour ? 'Menghentikan Auto Tour' : 'Memulai Auto Tour Studio 3D';
+          spokenResponse = autoTour ? 'Auto tour dihentikan' : 'Memulai auto tour studio 3D';
+          handleToggleAutoTour();
+        } else if (transcript.includes('suara') || transcript.includes('mute') || transcript.includes('unmute')) {
+          matched = true;
+          actionDesc = isAudioMuted ? 'Mengaktifkan Suara SFX' : 'Mematikan Suara SFX';
+          spokenResponse = isAudioMuted ? 'Suara diaktifkan' : 'Suara dinonaktifkan';
+          handleToggleSound();
+        } else if (transcript.includes('bantuan') || transcript.includes('help')) {
+          matched = true;
+          actionDesc = 'Bantuan Perintah Suara';
+          spokenResponse = 'Perintah tersedia: Buka swarm, buat tugas, kalender, dokumen, arena eval, pengaturan, kamera server, atau tur.';
+        }
+
+        if (matched) {
+          audioService.playBeam();
+          audioService.speak(spokenResponse);
+          setVoiceHUD({
+            text: `"${transcript}"`,
+            actionLabel: `✓ ${actionDesc}`,
+            status: 'matched'
+          });
+        } else {
+          setVoiceHUD({
+            text: `"${transcript}"`,
+            actionLabel: 'Perintah tidak dikenali. Coba: "Buka Swarm", "Kamera Server", "Dokumen", dll.',
+            status: 'unrecognized'
+          });
+        }
+
+        if (voiceTimeoutRef.current) clearTimeout(voiceTimeoutRef.current);
+        voiceTimeoutRef.current = setTimeout(() => {
+          setVoiceHUD((prev) => (prev?.status === 'listening' ? prev : null));
+        }, 5000);
+      };
+
+      recognition.onerror = () => {
+        setIsListeningVoice(false);
+      };
+
+      recognition.onend = () => {
+        setIsListeningVoice(false);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch {
+      setIsListeningVoice(false);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch {
+          // ignore
+        }
+      }
+      if (voiceTimeoutRef.current) {
+        clearTimeout(voiceTimeoutRef.current);
+      }
+      audioService.stopSpeaking();
+    };
+  }, []);
+
   if (!webGlSupported) {
     return (
       <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 text-center space-y-3">
@@ -1509,6 +1713,57 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
                 {activeSwarmHUD.agentFrom} ➔ {activeSwarmHUD.agentTo}
               </span>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Floating Holographic Voice Command & Speech Feedback HUD */}
+      {(isListeningVoice || voiceHUD) && (
+        <div className="absolute bottom-16 sm:bottom-20 left-1/2 -translate-x-1/2 z-30 max-w-lg w-[calc(100%-24px)] sm:w-auto min-w-[320px] p-2.5 sm:p-3 rounded-2xl bg-slate-950/95 backdrop-blur-md border border-cyan-500/50 shadow-2xl shadow-cyan-950/70 pointer-events-auto animate-in fade-in slide-in-from-bottom-2">
+          <div className="flex items-center justify-between pb-1.5 border-b border-slate-800/80 mb-1.5 gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="relative flex h-2.5 w-2.5 shrink-0">
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isListeningVoice ? 'bg-rose-400' : 'bg-cyan-400'} opacity-75`}></span>
+                <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isListeningVoice ? 'bg-rose-500' : 'bg-cyan-500'}`}></span>
+              </span>
+              <span className="text-[11px] font-bold text-cyan-300 font-mono truncate flex items-center gap-1.5">
+                <Mic className={`w-3.5 h-3.5 ${isListeningVoice ? 'text-rose-400 animate-pulse' : 'text-cyan-400'}`} />
+                {isListeningVoice ? 'VOICE COMMAND AKTIF' : 'SPEECH SYNTHESIS HUD'}
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                if (recognitionRef.current) {
+                  try {
+                    recognitionRef.current.stop();
+                  } catch {
+                    // ignore
+                  }
+                }
+                setIsListeningVoice(false);
+                setVoiceHUD(null);
+                audioService.stopSpeaking();
+              }}
+              className="text-slate-500 hover:text-slate-300 transition"
+              title="Tutup Voice HUD"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div className="space-y-1">
+            <div className="text-[11px] font-mono font-semibold text-slate-100 flex items-center gap-1.5">
+              {voiceHUD?.status === 'matched' ? (
+                <span className="text-emerald-400 font-bold">🎤 Terdeteksi:</span>
+              ) : voiceHUD?.status === 'unrecognized' ? (
+                <span className="text-amber-400 font-bold">❓ Belum Cocok:</span>
+              ) : (
+                <span className="text-cyan-400 animate-pulse font-bold">🎙️ Bicara:</span>
+              )}
+              <span className="truncate text-white">{voiceHUD?.text || 'Mendengarkan instruksi...'}</span>
+            </div>
+            <p className="text-[10px] font-mono text-slate-400">
+              {voiceHUD?.actionLabel || 'Contoh suara: "Buka Swarm", "Kamera Server", "Buat Tugas", "Dokumen", dll.'}
+            </p>
           </div>
         </div>
       )}
@@ -1785,6 +2040,20 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
 
         {/* Right Toggle Button: Riwayat tugas & aktivitas • Live */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Cybernetic Voice Command Toggle Button */}
+          <button
+            onClick={handleToggleVoiceRecognition}
+            className={`p-2 sm:p-2.5 rounded-xl sm:rounded-2xl backdrop-blur-md border text-xs font-semibold shadow-xl transition flex items-center justify-center ${
+              isListeningVoice
+                ? 'bg-rose-500/20 border-rose-500/60 text-rose-400 hover:bg-rose-500/30 shadow-rose-500/20 animate-pulse'
+                : 'bg-slate-900/90 border-slate-800 text-slate-400 hover:text-cyan-400 hover:border-cyan-500/30'
+            }`}
+            title={isListeningVoice ? 'Voice Command Aktif (Klik untuk Matikan)' : 'Perintah Suara & Speech Synthesis (Klik untuk Aktifkan)'}
+            aria-label="Toggle Voice Command"
+          >
+            {isListeningVoice ? <Mic className="w-4 h-4 text-rose-400" /> : <MicOff className="w-4 h-4" />}
+          </button>
+
           {/* Cybernetic SFX Toggle Button */}
           <button
             onClick={handleToggleSound}

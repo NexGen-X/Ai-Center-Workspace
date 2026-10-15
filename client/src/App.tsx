@@ -360,6 +360,10 @@ export const App: React.FC = () => {
                 onOpenProjects={() => setIsProjectsOpen(true)}
                 onOpenManageTeam={() => setIsManageTeamOpen(true)}
                 onOpenSwarm={() => setIsSwarmModalOpen(true)}
+                onOpenCalendar={() => setIsCalendarOpen(true)}
+                onOpenDocuments={() => setIsDocumentsOpen(true)}
+                onOpenPlayground={() => setIsPlaygroundOpen(true)}
+                onOpenSettings={() => setIsSettingsOpen(true)}
                 onFallbackTo2D={() => setViewMode('2D')}
               />
             </ErrorBoundary>

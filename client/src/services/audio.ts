@@ -193,6 +193,77 @@ class CyberneticAudioService {
       // ignore
     }
   }
+
+  /**
+   * Laser beam pulse for 3D swarm / voice recognition trigger
+   */
+  public playBeam(): void {
+    if (this.muted) return;
+    try {
+      const ctx = this.initContext();
+      if (!ctx) return;
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(800, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.08);
+
+      gain.gain.setValueAtTime(0.06, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start();
+      osc.stop(ctx.currentTime + 0.08);
+    } catch {
+      // ignore
+    }
+  }
+
+  /**
+   * Synthesizes and speaks text feedback using Web Speech API
+   */
+  public speak(text: string, lang = 'id-ID'): void {
+    if (this.muted) return;
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+
+    try {
+      window.speechSynthesis.cancel();
+      const cleanText = text.replace(/[*#`_~]/g, '').slice(0, 250);
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = lang;
+      utterance.rate = 1.05;
+      utterance.pitch = 1.0;
+
+      const voices = window.speechSynthesis.getVoices();
+      const idVoice = voices.find((v) => v.lang.startsWith('id') || v.lang.startsWith('id-ID'));
+      if (idVoice) utterance.voice = idVoice;
+
+      window.speechSynthesis.speak(utterance);
+    } catch {
+      // Gracefully ignore speech synthesis errors
+    }
+  }
+
+  /**
+   * Stops ongoing speech synthesis
+   */
+  public stopSpeaking(): void {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+  }
+
+  public isSpeechSupported(): boolean {
+    return typeof window !== 'undefined' && 'speechSynthesis' in window;
+  }
+
+  public isVoiceRecognitionSupported(): boolean {
+    return typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
+  }
 }
 
 export const audioService = new CyberneticAudioService();
