@@ -314,5 +314,37 @@ CREATE TABLE IF NOT EXISTS alert_deliveries (
 CREATE INDEX IF NOT EXISTS idx_alert_webhooks_workspace ON alert_webhooks(workspace_id, is_active);
 CREATE INDEX IF NOT EXISTS idx_alert_deliveries_webhook ON alert_deliveries(webhook_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_alert_deliveries_workspace ON alert_deliveries(workspace_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS eval_benchmarks (
+    id VARCHAR(64) PRIMARY KEY,
+    workspace_id VARCHAR(64) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    category VARCHAR(64) NOT NULL DEFAULT 'CODING',
+    title VARCHAR(255) NOT NULL,
+    prompt TEXT NOT NULL,
+    reference_answer TEXT,
+    evaluation_criteria TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS eval_runs (
+    id VARCHAR(64) PRIMARY KEY,
+    workspace_id VARCHAR(64) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    benchmark_id VARCHAR(64) NOT NULL REFERENCES eval_benchmarks(id) ON DELETE CASCADE,
+    provider_config_id VARCHAR(64) REFERENCES model_providers(id) ON DELETE SET NULL,
+    model_name VARCHAR(128) NOT NULL,
+    agent_output TEXT NOT NULL,
+    latency_ms INTEGER NOT NULL DEFAULT 0,
+    tokens_used INTEGER NOT NULL DEFAULT 0,
+    cost_usd REAL NOT NULL DEFAULT 0,
+    judge_score_correctness REAL NOT NULL DEFAULT 0,
+    judge_score_faithfulness REAL NOT NULL DEFAULT 0,
+    judge_verdict TEXT NOT NULL,
+    judge_model VARCHAR(128) NOT NULL DEFAULT 'LLM-as-a-Judge',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_eval_benchmarks_workspace ON eval_benchmarks(workspace_id, category);
+CREATE INDEX IF NOT EXISTS idx_eval_runs_benchmark ON eval_runs(benchmark_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_eval_runs_workspace ON eval_runs(workspace_id, created_at DESC);
 `;
 

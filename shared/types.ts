@@ -775,6 +775,57 @@ export interface AlertDeliveryLog {
   createdAt: string;
 }
 
+// Automated Agent Evals & LLM-as-a-Judge Types
+export type EvalCategory = 'CODING' | 'ARCHITECTURE' | 'SECURITY' | 'ANTI_HALLUCINATION';
+
+export interface EvalBenchmarkItem {
+  id: string;
+  workspaceId: string;
+  category: EvalCategory;
+  title: string;
+  prompt: string;
+  referenceAnswer?: string;
+  evaluationCriteria: string;
+  createdAt: string;
+}
+
+export interface EvalRunResult {
+  id: string;
+  workspaceId: string;
+  benchmarkId: string;
+  benchmarkTitle?: string;
+  benchmarkCategory?: EvalCategory;
+  providerConfigId?: string;
+  modelName: string;
+  agentOutput: string;
+  latencyMs: number;
+  tokensUsed: number;
+  costUsd: number;
+  judgeScoreCorrectness: number;
+  judgeScoreFaithfulness: number;
+  judgeVerdict: string;
+  judgeModel: string;
+  createdAt: string;
+}
+
+export interface RunEvalRequest {
+  benchmarkId: string;
+  providerId: string;
+  modelId: string;
+  judgeProviderId?: string;
+  judgeModelId?: string;
+}
+
+export interface EvalLeaderboardEntry {
+  modelName: string;
+  totalRuns: number;
+  avgCorrectness: number;
+  avgFaithfulness: number;
+  overallScore: number;
+  avgLatencyMs: number;
+  totalCostUsd: number;
+}
+
 
 
 

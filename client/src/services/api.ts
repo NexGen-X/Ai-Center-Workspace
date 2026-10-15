@@ -50,7 +50,11 @@ import {
   CreateAlertWebhookRequest,
   UpdateAlertWebhookRequest,
   AlertPayload,
-  AlertDeliveryLog
+  AlertDeliveryLog,
+  EvalBenchmarkItem,
+  EvalRunResult,
+  RunEvalRequest,
+  EvalLeaderboardEntry
 } from '../../../shared/types.js';
 
 const BASE_URL = '/api';
@@ -467,6 +471,32 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(alert)
     });
+  },
+
+  // Automated Agent Evals & LLM-as-a-Judge Arena
+  getEvalBenchmarks: (workspaceId?: string) => {
+    const params = new URLSearchParams();
+    if (workspaceId) params.set('workspaceId', workspaceId);
+    return request<EvalBenchmarkItem[]>(`/evals/benchmarks?${params.toString()}`);
+  },
+  runEval: (data: RunEvalRequest, workspaceId?: string) => {
+    const params = new URLSearchParams();
+    if (workspaceId) params.set('workspaceId', workspaceId);
+    return request<EvalRunResult>(`/evals/run?${params.toString()}`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+  getEvalRuns: (workspaceId?: string, limit = 50) => {
+    const params = new URLSearchParams();
+    if (workspaceId) params.set('workspaceId', workspaceId);
+    if (limit) params.set('limit', String(limit));
+    return request<EvalRunResult[]>(`/evals/runs?${params.toString()}`);
+  },
+  getEvalLeaderboard: (workspaceId?: string) => {
+    const params = new URLSearchParams();
+    if (workspaceId) params.set('workspaceId', workspaceId);
+    return request<EvalLeaderboardEntry[]>(`/evals/leaderboard?${params.toString()}`);
   }
 };
 

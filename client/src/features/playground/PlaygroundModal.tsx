@@ -20,9 +20,21 @@ import {
   Split,
   ChevronDown,
   ChevronUp,
-  AlertCircle
+  AlertCircle,
+  Trophy,
+  Award,
+  Scale,
+  RefreshCw,
+  ShieldCheck
 } from 'lucide-react';
-import { ModelProviderConfig, AIAgent } from '../../../../shared/types.js';
+import {
+  ModelProviderConfig,
+  AIAgent,
+  EvalBenchmarkItem,
+  EvalRunResult,
+  EvalLeaderboardEntry,
+  EvalCategory
+} from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
 import { useFeedback } from '../../components/common/FeedbackContext.js';
 import { CustomSelect } from '../../components/common/CustomSelect.js';
@@ -73,10 +85,75 @@ export const PlaygroundModal: React.FC<PlaygroundModalProps> = ({
   agents
 }) => {
   const { toast } = useFeedback();
+  const [activeTab, setActiveTab] = useState<'SANDBOX' | 'ARENA'>('SANDBOX');
   const [isCompareMode, setIsCompareMode] = useState<boolean>(true);
   const [prompt, setPrompt] = useState<string>('Jelaskan keunggulan arsitektur event-driven microservices untuk sistem AI Agent Command Center.');
   const [systemPrompt, setSystemPrompt] = useState<string>('You are an expert AI systems architect.');
   const [showSystemPrompt, setShowSystemPrompt] = useState<boolean>(false);
+
+  // Evals & LLM-as-a-Judge Arena state
+  const [benchmarks, setBenchmarks] = useState<EvalBenchmarkItem[]>([]);
+  const [selectedBenchmarkId, setSelectedBenchmarkId] = useState<string>('');
+  const [evalTargetProviderId, setEvalTargetProviderId] = useState<string>('');
+  const [evalTargetModelId, setEvalTargetModelId] = useState<string>('');
+  const [evalJudgeProviderId, setEvalJudgeProviderId] = useState<string>('');
+  const [evalJudgeModelId, setEvalJudgeModelId] = useState<string>('');
+  const [evalRunLoading, setEvalRunLoading] = useState<boolean>(false);
+  const [lastEvalResult, setLastEvalResult] = useState<EvalRunResult | null>(null);
+  const [leaderboard, setLeaderboard] = useState<EvalLeaderboardEntry[]>([]);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState<boolean>(false);
+
+  const fetchBenchmarksAndLeaderboard = async () => {
+    try {
+      const bList = await api.getEvalBenchmarks();
+      setBenchmarks(bList);
+      if (bList.length > 0 && !selectedBenchmarkId) {
+        setSelectedBenchmarkId(bList[0].id);
+      }
+      fetchLeaderboard();
+    } catch (err: any) {
+      console.error('Failed to load benchmarks:', err);
+    }
+  };
+
+  const fetchLeaderboard = async () => {
+    try {
+      setLoadingLeaderboard(true);
+      const lb = await api.getEvalLeaderboard();
+      setLeaderboard(lb);
+    } catch (err: any) {
+      console.error('Failed to load leaderboard:', err);
+    } finally {
+      setLoadingLeaderboard(false);
+    }
+  };
+
+  const handleRunEval = async () => {
+    if (!selectedBenchmarkId || !evalTargetProviderId || !evalTargetModelId) {
+      toast.warning('Pilih benchmark test case, provider, dan model target untuk dievaluasi.');
+      return;
+    }
+
+    try {
+      setEvalRunLoading(true);
+      setLastEvalResult(null);
+      toast.info('Menjalankan inferensi model dan penilaian LLM-as-a-Judge...');
+      const res = await api.runEval({
+        benchmarkId: selectedBenchmarkId,
+        providerId: evalTargetProviderId,
+        modelId: evalTargetModelId,
+        judgeProviderId: evalJudgeProviderId || undefined,
+        judgeModelId: evalJudgeModelId || undefined
+      });
+      setLastEvalResult(res);
+      toast.success(`Evaluasi selesai! Skor Total: ${((res.judgeScoreCorrectness + res.judgeScoreFaithfulness) / 2).toFixed(1)}/100`);
+      fetchLeaderboard();
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal menjalankan evaluasi benchmark.');
+    } finally {
+      setEvalRunLoading(false);
+    }
+  };
 
   // Slot A Config
   const [slotAProviderId, setSlotAProviderId] = useState<string>('');
@@ -147,8 +224,26 @@ export const PlaygroundModal: React.FC<PlaygroundModalProps> = ({
         const agentB = agents.find(a => a.providerId === provB.id && a.modelId !== slotAModelId) || agents[0];
         setSlotBModelId(agentB?.modelId || 'claude-3-7-sonnet');
       }
+
+      if (!evalTargetProviderId && provA) {
+        setEvalTargetProviderId(provA.id);
+        const agent = agents.find(a => a.providerId === provA.id);
+        setEvalTargetModelId(agent?.modelId || 'gpt-4o');
+      }
+
+      if (!evalJudgeProviderId && provB) {
+        setEvalJudgeProviderId(provB.id);
+        const jAgent = agents.find(a => a.providerId === provB.id) || agents[0];
+        setEvalJudgeModelId(jAgent?.modelId || 'claude-3-7-sonnet');
+      }
     }
-  }, [providers, agents, slotAProviderId, slotBProviderId, slotAModelId]);
+  }, [providers, agents, slotAProviderId, slotBProviderId, slotAModelId, evalTargetProviderId, evalJudgeProviderId]);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchBenchmarksAndLeaderboard();
+    }
+  }, [isOpen]);
 
   // Handle Escape key to close modal
   useEffect(() => {
@@ -261,19 +356,53 @@ export const PlaygroundModal: React.FC<PlaygroundModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {/* Compare Mode Toggle */}
-            <button
-              type="button"
-              onClick={() => setIsCompareMode(!isCompareMode)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition ${
-                isCompareMode
-                  ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300'
-                  : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
-              }`}
-            >
-              <Split className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{isCompareMode ? 'Mode Komparasi (2 Model)' : 'Mode Tunggal'}</span>
-            </button>
+            {/* Tab Switcher: Sandbox vs LLM-as-a-Judge Arena */}
+            <div className="flex items-center p-1 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setActiveTab('SANDBOX')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+                  activeTab === 'SANDBOX'
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <FlaskConical className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Sandbox A/B</span>
+                <span className="sm:hidden">A/B</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('ARENA');
+                  fetchBenchmarksAndLeaderboard();
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+                  activeTab === 'ARENA'
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden sm:inline">Judge Arena</span>
+                <span className="sm:hidden">Arena</span>
+              </button>
+            </div>
+
+            {activeTab === 'SANDBOX' && (
+              <button
+                type="button"
+                onClick={() => setIsCompareMode(!isCompareMode)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition ${
+                  isCompareMode
+                    ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300'
+                    : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                }`}
+              >
+                <Split className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{isCompareMode ? '2 Model' : '1 Model'}</span>
+              </button>
+            )}
 
             <button
               type="button"
@@ -286,8 +415,10 @@ export const PlaygroundModal: React.FC<PlaygroundModalProps> = ({
           </div>
         </div>
 
-        {/* Collapsible System Prompt */}
-        <div className="border-b border-slate-800 bg-slate-900/60 px-4 py-2 text-xs">
+        {activeTab === 'SANDBOX' ? (
+          <>
+            {/* Collapsible System Prompt */}
+            <div className="border-b border-slate-800 bg-slate-900/60 px-4 py-2 text-xs">
           <div className="flex items-center justify-between">
             <button
               onClick={() => setShowSystemPrompt(!showSystemPrompt)}
@@ -587,6 +718,266 @@ export const PlaygroundModal: React.FC<PlaygroundModalProps> = ({
             Tutup
           </button>
         </div>
+      </>
+    ) : (
+      /* TAB 2: LLM-as-a-Judge Benchmark Arena */
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+        {/* Top Config Row: Select Benchmark & Model Target */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-[#0E1424] border border-amber-500/30 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-amber-400" />
+              <h3 className="text-sm sm:text-base font-bold text-white">
+                Automated Agent Evals & Benchmark Arena
+              </h3>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-slate-400">Metodologi:</span>
+              <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20 font-bold">
+                LLM-as-a-Judge (Rubrik 4 Metrik)
+              </span>
+            </div>
+          </div>
+
+          {/* Benchmark Suite Picker */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-slate-300 block">Pilih Test Case Standar:</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+              {benchmarks.map((b) => {
+                const isSelected = selectedBenchmarkId === b.id;
+                const catBadgeColor: Record<EvalCategory, string> = {
+                  CODING: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+                  ARCHITECTURE: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+                  SECURITY: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+                  ANTI_HALLUCINATION: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                };
+
+                return (
+                  <div
+                    key={b.id}
+                    onClick={() => setSelectedBenchmarkId(b.id)}
+                    className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                      isSelected
+                        ? 'bg-amber-500/10 border-amber-500 shadow-md shadow-amber-500/10'
+                        : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
+                    }`}
+                  >
+                    <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border uppercase ${catBadgeColor[b.category] || 'bg-slate-800 text-slate-300'}`}>
+                      {b.category}
+                    </span>
+                    <h4 className="text-xs font-bold text-white mt-1.5 line-clamp-1">{b.title}</h4>
+                    <p className="text-[11px] text-slate-400 line-clamp-2 mt-1">{b.prompt}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Target & Judge Configuration */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-800/80 items-end">
+            <div>
+              <label className="text-xs text-slate-400 block mb-1 font-medium">Model yang Dievaluasi (Target) *</label>
+              <CustomSelect
+                value={evalTargetProviderId}
+                onChange={(val) => {
+                  setEvalTargetProviderId(val);
+                  const agent = agents.find((a) => a.providerId === val);
+                  if (agent) setEvalTargetModelId(agent.modelId);
+                }}
+                options={providers.map((p) => ({
+                  value: p.id,
+                  label: p.name,
+                  badge: p.providerType,
+                  badgeColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20'
+                }))}
+              />
+              <input
+                type="text"
+                value={evalTargetModelId}
+                onChange={(e) => setEvalTargetModelId(e.target.value)}
+                placeholder="Model ID (cth: gpt-4o, claude-3-7-sonnet)"
+                className="w-full mt-1.5 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-slate-400 block mb-1 font-medium">Evaluator Model (Judge LLM)</label>
+              <CustomSelect
+                value={evalJudgeProviderId}
+                onChange={(val) => {
+                  setEvalJudgeProviderId(val);
+                  const agent = agents.find((a) => a.providerId === val);
+                  if (agent) setEvalJudgeModelId(agent.modelId);
+                }}
+                options={[
+                  { value: '', label: 'Automated Rubric (Fallback)', badge: 'RUBRIC', badgeColor: 'bg-slate-800 text-slate-400' },
+                  ...providers.map((p) => ({
+                    value: p.id,
+                    label: p.name,
+                    badge: p.providerType,
+                    badgeColor: 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                  }))
+                ]}
+              />
+              <input
+                type="text"
+                value={evalJudgeModelId}
+                onChange={(e) => setEvalJudgeModelId(e.target.value)}
+                placeholder="Judge Model ID (opsional)"
+                className="w-full mt-1.5 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono"
+              />
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handleRunEval}
+                disabled={evalRunLoading || !selectedBenchmarkId || !evalTargetProviderId}
+                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 transition active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <Scale className={`w-4 h-4 ${evalRunLoading ? 'animate-spin' : ''}`} />
+                <span>{evalRunLoading ? 'Mengevaluasi...' : 'Jalankan Uji Benchmark'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Evaluation Scoreboard Outcome */}
+        {lastEvalResult && (
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#0E1424] border border-slate-800 space-y-4 animate-in fade-in duration-200">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+              <div className="flex items-center gap-2">
+                <Award className="w-5 h-5 text-amber-400" />
+                <h4 className="text-sm font-bold text-white">Hasil Penilaian LLM-as-a-Judge</h4>
+                <span className="text-xs font-mono text-cyan-400">({lastEvalResult.modelName})</span>
+              </div>
+              <span className="text-[11px] text-slate-500">
+                Evaluator: <strong className="text-slate-300 font-mono">{lastEvalResult.judgeModel}</strong>
+              </span>
+            </div>
+
+            {/* KPI Metrics Gauges */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 text-center space-y-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Correctness</span>
+                <div className="text-2xl font-black text-emerald-400">{lastEvalResult.judgeScoreCorrectness}%</div>
+                <span className="text-[10px] text-slate-500">Ketepatan Teknis</span>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 text-center space-y-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Faithfulness</span>
+                <div className="text-2xl font-black text-cyan-400">{lastEvalResult.judgeScoreFaithfulness}%</div>
+                <span className="text-[10px] text-slate-500">Anti-Halusinasi</span>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 text-center space-y-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Latency</span>
+                <div className="text-2xl font-black text-amber-400">{lastEvalResult.latencyMs} ms</div>
+                <span className="text-[10px] text-slate-500">{lastEvalResult.tokensUsed} tokens</span>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 text-center space-y-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Estimated Cost</span>
+                <div className="text-2xl font-black text-indigo-400">${lastEvalResult.costUsd.toFixed(4)}</div>
+                <span className="text-[10px] text-slate-500">Inferensi & Tokens</span>
+              </div>
+            </div>
+
+            {/* Judge Verdict Box */}
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 leading-relaxed">
+              <strong className="block mb-1 text-amber-300 font-bold uppercase tracking-wider text-[10px]">
+                Ulasan & Kritik Konstruktif Evaluator:
+              </strong>
+              {lastEvalResult.judgeVerdict}
+            </div>
+
+            {/* Collapsible Model Output */}
+            <details className="text-xs group">
+              <summary className="cursor-pointer text-slate-400 hover:text-white font-semibold py-1">
+                Lihat Jawaban Lengkap Model ({lastEvalResult.modelName})
+              </summary>
+              <pre className="mt-2 p-3 bg-slate-950 rounded-xl border border-slate-800 font-mono text-[11px] text-slate-300 overflow-x-auto max-h-60 whitespace-pre-wrap">
+                {lastEvalResult.agentOutput}
+              </pre>
+            </details>
+          </div>
+        )}
+
+        {/* Model Arena Leaderboard Table */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-[#0E1424] border border-slate-800 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-amber-400" />
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                Leaderboard Peringkat Model LLM ({leaderboard.length} Model)
+              </h4>
+            </div>
+            <button
+              type="button"
+              onClick={fetchLeaderboard}
+              disabled={loadingLeaderboard}
+              className="p-1 text-slate-400 hover:text-white"
+              title="Segarkan Leaderboard"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loadingLeaderboard ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+
+          {loadingLeaderboard && leaderboard.length === 0 ? (
+            <div className="p-6 text-center text-xs text-slate-500">Menghitung skor leaderboard...</div>
+          ) : leaderboard.length === 0 ? (
+            <div className="p-6 text-center text-xs text-slate-500">Belum ada hasil evaluasi yang tercatat di arena.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-800 text-slate-400 text-[10px] uppercase font-bold">
+                    <th className="py-2 px-3">Rank</th>
+                    <th className="py-2 px-3">Model</th>
+                    <th className="py-2 px-3 text-center">Total Uji</th>
+                    <th className="py-2 px-3 text-center">Correctness</th>
+                    <th className="py-2 px-3 text-center">Faithfulness</th>
+                    <th className="py-2 px-3 text-center">Skor Keseluruhan</th>
+                    <th className="py-2 px-3 text-center">Rata-rata Latensi</th>
+                    <th className="py-2 px-3 text-right">Total Biaya</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 font-mono">
+                  {leaderboard.map((entry, idx) => (
+                    <tr key={entry.modelName} className="hover:bg-slate-800/40 transition">
+                      <td className="py-2.5 px-3">
+                        <span
+                          className={`w-5 h-5 rounded-full inline-flex items-center justify-center text-[10px] font-bold ${
+                            idx === 0
+                              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                              : idx === 1
+                              ? 'bg-slate-600 text-slate-200'
+                              : 'bg-slate-800 text-slate-400'
+                          }`}
+                        >
+                          {idx + 1}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 font-semibold text-slate-200">{entry.modelName}</td>
+                      <td className="py-2.5 px-3 text-center text-slate-400">{entry.totalRuns}x</td>
+                      <td className="py-2.5 px-3 text-center text-emerald-400">{entry.avgCorrectness}%</td>
+                      <td className="py-2.5 px-3 text-center text-cyan-400">{entry.avgFaithfulness}%</td>
+                      <td className="py-2.5 px-3 text-center">
+                        <span className="px-2 py-0.5 rounded font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                          {entry.overallScore} / 100
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-center text-slate-400">{entry.avgLatencyMs} ms</td>
+                      <td className="py-2.5 px-3 text-right text-indigo-300">${entry.totalCostUsd.toFixed(4)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    )}
       </div>
     </div>
   );
