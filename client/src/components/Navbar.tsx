@@ -23,7 +23,8 @@ import {
   Workflow,
   Network,
   Swords,
-  ShieldAlert
+  ShieldAlert,
+  LineChart
 } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown.js';
 import { OrchestratorStatus } from '../../../shared/types.js';
@@ -44,6 +45,7 @@ interface NavbarProps {
   onOpenSwarm?: () => void;
   onOpenWarRoom?: () => void;
   onOpenSre?: () => void;
+  onOpenDataAnalyst?: () => void;
   onOpenActions?: () => void;
   pendingActionCount?: number;
   onOpenLogin: () => void;
@@ -74,6 +76,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSwarm,
   onOpenWarRoom,
   onOpenSre,
+  onOpenDataAnalyst,
   onOpenActions,
   pendingActionCount = 0,
   onOpenLogin,
@@ -348,6 +351,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <ShieldAlert className="w-3.5 h-3.5 text-red-400 shrink-0" />
               <span>SRE Agent</span>
+            </button>
+          )}
+
+          {/* Autonomous Data Analyst */}
+          {onOpenDataAnalyst && (
+            <button
+              type="button"
+              onClick={onOpenDataAnalyst}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-semibold shadow-sm transition shrink-0 whitespace-nowrap"
+              title="Autonomous Data Analyst & Interactive Visualizer Studio"
+            >
+              <LineChart className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+              <span>Data Analyst</span>
             </button>
           )}
 

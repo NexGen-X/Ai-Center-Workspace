@@ -214,6 +214,19 @@ export const AVAILABLE_TOOLS: Record<string, ToolDefinition> = {
       incidentId: { type: 'string', description: 'ID insiden SRE yang akan dipulihkan', required: true },
       operatorApproved: { type: 'boolean', description: 'Konfirmasi otorisasi operator' }
     }
+  },
+  data_analyze: {
+    name: 'data_analyze',
+    description: 'Menganalisis dataset (CSV, JSON, metrik sistem) secara otonom, menghitung statistik, dan menyusun spesifikasi visualisasi grafik.',
+    category: 'SYSTEM',
+    riskLevel: 'LOW',
+    requiresApproval: false,
+    parameters: {
+      sourceType: { type: 'string', description: 'Tipe: CSV | JSON | TASK_ANALYTICS | SYSTEM_METRICS', required: true },
+      queryPrompt: { type: 'string', description: 'Tujuan atau pertanyaan analisis data', required: true },
+      rawData: { type: 'string', description: 'Data mentah CSV atau JSON (jika sourceType CSV/JSON)' },
+      datasetName: { type: 'string', description: 'Nama dataset opsional' }
+    }
   }
 };
 
@@ -613,6 +626,24 @@ export async function executeToolInSandbox(
         return {
           success: true,
           output: `[SRE PEMULIHAN BERHASIL]\nID Insiden: ${remediated.id}\nStatus: ${remediated.status}\nTindakan: ${remediated.actionTaken}\nPost-Mortem: ${remediated.postMortem?.slice(0, 150)}...`,
+          durationMs: Date.now() - startTime
+        };
+      }
+
+      case 'data_analyze': {
+        const sourceType = String(input.sourceType || 'TASK_ANALYTICS') as any;
+        const queryPrompt = String(input.queryPrompt || 'Analisis data').trim();
+        const { DataAnalystService } = await import('./dataAnalystService.js');
+        const session = await DataAnalystService.analyzeData({
+          sourceType,
+          queryPrompt,
+          rawData: input.rawData,
+          datasetName: input.datasetName,
+          workspaceId: (context as any)?.workspaceId || input.workspaceId
+        });
+        return {
+          success: true,
+          output: `[ANALISIS DATA BERHASIL]\nID Sesi: ${session.id}\nJudul: "${session.title}"\nTipe Grafik: ${session.chartConfig.type.toUpperCase()}\nRingkasan: ${session.summary}\nWawasan Utama:\n${session.insights.map((ins, i) => `${i + 1}. ${ins}`).join('\n')}`,
           durationMs: Date.now() - startTime
         };
       }

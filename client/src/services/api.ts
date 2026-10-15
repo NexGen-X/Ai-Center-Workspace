@@ -75,7 +75,10 @@ import {
   WebResearchAndIngestRequest,
   WebResearchAndIngestResponse,
   SreIncident,
-  SreScanResult
+  SreScanResult,
+  DataAnalysisSession,
+  AnalyzeDataRequest,
+  QuickDataQueryType
 } from '../../../shared/types.js';
 
 const BASE_URL = '/api';
@@ -696,6 +699,26 @@ export const api = {
   approveSreIncident: (id: string) =>
     request<SreIncident>(`/sre/incidents/${id}/approve`, {
       method: 'POST'
+    }),
+
+  // Autonomous Data Analyst & Interactive Visualizer Studio
+  getDataAnalysisSessions: (workspaceId?: string) =>
+    request<DataAnalysisSession[]>(`/data-analyst/sessions${workspaceId ? `?workspaceId=${workspaceId}` : ''}`),
+  getDataAnalysisSession: (id: string) =>
+    request<DataAnalysisSession>(`/data-analyst/sessions/${id}`),
+  analyzeData: (data: AnalyzeDataRequest) =>
+    request<DataAnalysisSession>('/data-analyst/analyze', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+  runQuickDataQuery: (type: QuickDataQueryType, workspaceId?: string) =>
+    request<DataAnalysisSession>('/data-analyst/quick-query', {
+      method: 'POST',
+      body: JSON.stringify({ type, workspaceId })
+    }),
+  deleteDataAnalysisSession: (id: string) =>
+    request<{ success: boolean; message: string }>(`/data-analyst/sessions/${id}`, {
+      method: 'DELETE'
     })
 };
 

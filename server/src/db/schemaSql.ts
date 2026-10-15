@@ -449,5 +449,22 @@ CREATE TABLE IF NOT EXISTS sre_incidents (
 
 CREATE INDEX IF NOT EXISTS idx_sre_incidents_status ON sre_incidents(workspace_id, status);
 CREATE INDEX IF NOT EXISTS idx_sre_incidents_severity ON sre_incidents(severity);
+
+CREATE TABLE IF NOT EXISTS data_analysis_sessions (
+    id VARCHAR(64) PRIMARY KEY,
+    workspace_id VARCHAR(64) NOT NULL DEFAULT 'ws-default-command-center',
+    title VARCHAR(255) NOT NULL,
+    dataset_name VARCHAR(255) NOT NULL,
+    source_type VARCHAR(64) NOT NULL DEFAULT 'CSV',
+    query_prompt TEXT NOT NULL,
+    summary TEXT,
+    insights JSONB DEFAULT '[]'::jsonb,
+    stats JSONB DEFAULT '{}'::jsonb,
+    chart_config JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_data_analysis_sessions_ws ON data_analysis_sessions(workspace_id, created_at DESC);
 `;
 

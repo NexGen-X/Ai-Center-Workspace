@@ -1116,6 +1116,61 @@ export interface SreScanResult {
   detectedIncidents: SreIncident[];
 }
 
+// Autonomous Data Analyst & Interactive Visualizer Studio Types
+export type ChartType = 'bar' | 'line' | 'pie' | 'area';
+
+export interface ChartDataset {
+  label: string;
+  data: number[];
+  color?: string;
+}
+
+export interface ChartConfig {
+  type: ChartType;
+  title: string;
+  xAxisLabel?: string;
+  yAxisLabel?: string;
+  labels: string[];
+  datasets: ChartDataset[];
+}
+
+export interface DataStatisticalSummary {
+  totalRows: number;
+  columnCount: number;
+  columns: string[];
+  numericMetrics?: Record<string, { min: number; max: number; avg: number; sum: number }>;
+}
+
+export interface DataAnalysisSession {
+  id: string;
+  workspaceId: string;
+  title: string;
+  datasetName: string;
+  sourceType: 'CSV' | 'JSON' | 'SYSTEM_METRICS' | 'TASK_ANALYTICS';
+  queryPrompt: string;
+  summary: string;
+  insights: string[];
+  stats: DataStatisticalSummary;
+  chartConfig: ChartConfig;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AnalyzeDataRequest {
+  datasetName?: string;
+  sourceType: 'CSV' | 'JSON' | 'SYSTEM_METRICS' | 'TASK_ANALYTICS';
+  rawData?: string;
+  queryPrompt: string;
+  workspaceId?: string;
+}
+
+export type QuickDataQueryType =
+  | 'TASK_SUCCESS_RATES'
+  | 'AGENT_COST_DISTRIBUTION'
+  | 'SERVER_RESOURCE_TRENDS'
+  | 'HOURLY_ACTIVITY_PEAKS';
+
+
 
 
 

@@ -28,6 +28,7 @@ import { ActionApprovalModal } from './features/actions/ActionApprovalModal.js';
 import { ActionHistoryModal } from './features/actions/ActionHistoryModal.js';
 import { WarRoomModal } from './features/warroom/WarRoomModal.js';
 import { SreModal } from './features/sre/SreModal.js';
+import { DataAnalystModal } from './features/data-analyst/DataAnalystModal.js';
 import { useFeedback } from './components/common/FeedbackContext.js';
 import { ErrorBoundary } from './components/common/ErrorBoundary.js';
 import { api } from './services/api.js';
@@ -57,6 +58,7 @@ export const App: React.FC = () => {
   const [isSwarmModalOpen, setIsSwarmModalOpen] = useState(false);
   const [isWarRoomOpen, setIsWarRoomOpen] = useState(false);
   const [isSreOpen, setIsSreOpen] = useState(false);
+  const [isDataAnalystOpen, setIsDataAnalystOpen] = useState(false);
   const [isAddAgentOpen, setIsAddAgentOpen] = useState(false);
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -321,6 +323,7 @@ export const App: React.FC = () => {
         onOpenSwarm={() => setIsSwarmModalOpen(true)}
         onOpenWarRoom={() => setIsWarRoomOpen(true)}
         onOpenSre={() => setIsSreOpen(true)}
+        onOpenDataAnalyst={() => setIsDataAnalystOpen(true)}
         onOpenActions={() => setIsActionHistoryOpen(true)}
         pendingActionCount={pendingActionCount}
         onOpenLogin={() => setIsLoginOpen(true)}
@@ -612,6 +615,11 @@ export const App: React.FC = () => {
       <SreModal
         isOpen={isSreOpen}
         onClose={() => setIsSreOpen(false)}
+      />
+
+      <DataAnalystModal
+        isOpen={isDataAnalystOpen}
+        onClose={() => setIsDataAnalystOpen(false)}
       />
 
       <ConsoleDrawer
