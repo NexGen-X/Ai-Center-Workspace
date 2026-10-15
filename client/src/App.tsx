@@ -364,6 +364,7 @@ export const App: React.FC = () => {
                 onOpenDocuments={() => setIsDocumentsOpen(true)}
                 onOpenPlayground={() => setIsPlaygroundOpen(true)}
                 onOpenSettings={() => setIsSettingsOpen(true)}
+                onOpenPipeline={() => setIsPipelineOpen(true)}
                 onFallbackTo2D={() => setViewMode('2D')}
               />
             </ErrorBoundary>

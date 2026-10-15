@@ -39,6 +39,7 @@ interface Workspace3DProps {
   onOpenDocuments?: () => void;
   onOpenPlayground?: () => void;
   onOpenSettings?: () => void;
+  onOpenPipeline?: () => void;
   onFallbackTo2D: () => void;
 }
 
@@ -58,6 +59,7 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
   onOpenDocuments,
   onOpenPlayground,
   onOpenSettings,
+  onOpenPipeline,
   onFallbackTo2D
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -1536,6 +1538,11 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
           actionDesc = 'Membuka Pengaturan Sistem & Webhook';
           spokenResponse = 'Membuka pengaturan sistem';
           onOpenSettings?.();
+        } else if (transcript.includes('workflow') || transcript.includes('pipeline') || transcript.includes('alur kerja') || transcript.includes('dag')) {
+          matched = true;
+          actionDesc = 'Membuka Visual DAG Workflow Studio';
+          spokenResponse = 'Membuka Visual Workflow dan DAG Studio';
+          onOpenPipeline?.();
         } else if (transcript.includes('proyek') || transcript.includes('project')) {
           matched = true;
           actionDesc = 'Membuka Daftar Proyek';

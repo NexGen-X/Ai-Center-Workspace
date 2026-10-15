@@ -58,7 +58,12 @@ import {
   McpServer,
   McpTool,
   McpToolCallResult,
-  McpServerTemplate
+  McpServerTemplate,
+  Workflow,
+  WorkflowNode,
+  WorkflowEdge,
+  WorkflowExecution,
+  WorkflowNodeState
 } from '../../../shared/types.js';
 
 const BASE_URL = '/api';
@@ -332,7 +337,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data)
     }),
-  executePipeline: (data: { title?: string; objective: string; projectId?: string; stages: any[] }) =>
+  executePipeline: (data: { title?: string; objective: string; projectId?: string; stages: any[]; templateId?: string }) =>
     request<PipelineExecutionResult>('/pipeline/execute', {
       method: 'POST',
       body: JSON.stringify(data)
@@ -549,6 +554,59 @@ export const api = {
   },
   getMcpTemplates: async () => {
     const res = await request<{ success: boolean; data: McpServerTemplate[] }>('/mcp/templates');
+    return res.data;
+  },
+
+  // Visual DAG Workflows Studio API
+  getWorkflows: async (workspaceId?: string) => {
+    const params = new URLSearchParams();
+    if (workspaceId) params.set('workspaceId', workspaceId);
+    const res = await request<{ success: boolean; data: Workflow[] }>(`/workflows?${params.toString()}`);
+    return res.data;
+  },
+  getWorkflowById: async (id: string) => {
+    const res = await request<{ success: boolean; data: Workflow }>(`/workflows/${id}`);
+    return res.data;
+  },
+  createWorkflow: async (data: Partial<Workflow>) => {
+    const res = await request<{ success: boolean; data: Workflow }>('/workflows', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+    return res.data;
+  },
+  updateWorkflow: async (id: string, data: Partial<Workflow>) => {
+    const res = await request<{ success: boolean; data: Workflow }>(`/workflows/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+    return res.data;
+  },
+  deleteWorkflow: async (id: string) => {
+    return request<{ success: boolean; message: string }>(`/workflows/${id}`, {
+      method: 'DELETE'
+    });
+  },
+  executeWorkflow: async (id: string, initialPayload: Record<string, any> = {}) => {
+    const res = await request<{ success: boolean; data: WorkflowExecution }>(`/workflows/${id}/execute`, {
+      method: 'POST',
+      body: JSON.stringify(initialPayload)
+    });
+    return res.data;
+  },
+  getWorkflowExecution: async (executionId: string) => {
+    const res = await request<{ success: boolean; data: WorkflowExecution }>(`/workflows/executions/${executionId}`);
+    return res.data;
+  },
+  approveWorkflowExecution: async (executionId: string, approved: boolean, approver?: string) => {
+    const res = await request<{ success: boolean; data: WorkflowExecution }>(`/workflows/executions/${executionId}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ approved, approver })
+    });
+    return res.data;
+  },
+  getWorkflowTemplates: async () => {
+    const res = await request<{ success: boolean; data: Partial<Workflow>[] }>('/workflows/templates');
     return res.data;
   }
 };

@@ -887,6 +887,71 @@ export interface McpServerTemplate {
   defaultTools: string[];
 }
 
+// Visual Drag-and-Drop DAG Workflow Studio Types
+export type WorkflowNodeType =
+  | 'TRIGGER'
+  | 'AGENT'
+  | 'RAG'
+  | 'CONDITION'
+  | 'ACTION'
+  | 'MCP_TOOL'
+  | 'HUMAN_APPROVAL'
+  | 'ALERT';
+
+export interface WorkflowNode {
+  id: string;
+  type: WorkflowNodeType;
+  label: string;
+  position: { x: number; y: number };
+  config: Record<string, any>;
+}
+
+export interface WorkflowEdge {
+  id: string;
+  source: string;
+  target: string;
+  sourceHandle?: string;
+  label?: string;
+}
+
+export interface Workflow {
+  id: string;
+  workspaceId: string;
+  name: string;
+  description?: string;
+  nodes: WorkflowNode[];
+  edges: WorkflowEdge[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type WorkflowExecutionStatus =
+  | 'RUNNING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'WAITING_APPROVAL'
+  | 'CANCELLED';
+
+export interface WorkflowNodeState {
+  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'SKIPPED' | 'WAITING_APPROVAL';
+  output?: any;
+  error?: string;
+  durationMs?: number;
+}
+
+export interface WorkflowExecution {
+  id: string;
+  workflowId: string;
+  workspaceId: string;
+  status: WorkflowExecutionStatus;
+  currentNodeId?: string;
+  nodeStates: Record<string, WorkflowNodeState>;
+  contextData: Record<string, any>;
+  startedAt: string;
+  completedAt?: string;
+}
+
 
 
 

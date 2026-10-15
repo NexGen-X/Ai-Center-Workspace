@@ -364,5 +364,32 @@ CREATE TABLE IF NOT EXISTS mcp_servers (
 );
 
 CREATE INDEX IF NOT EXISTS idx_mcp_servers_status ON mcp_servers(status, enabled);
+
+CREATE TABLE IF NOT EXISTS workflows (
+    id VARCHAR(64) PRIMARY KEY,
+    workspace_id VARCHAR(64) NOT NULL DEFAULT 'ws-default-command-center',
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    nodes JSONB NOT NULL DEFAULT '[]'::jsonb,
+    edges JSONB NOT NULL DEFAULT '[]'::jsonb,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS workflow_executions (
+    id VARCHAR(64) PRIMARY KEY,
+    workflow_id VARCHAR(64) NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
+    workspace_id VARCHAR(64) NOT NULL DEFAULT 'ws-default-command-center',
+    status VARCHAR(32) NOT NULL DEFAULT 'RUNNING',
+    current_node_id VARCHAR(64),
+    node_states JSONB NOT NULL DEFAULT '{}'::jsonb,
+    context_data JSONB NOT NULL DEFAULT '{}'::jsonb,
+    started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX IF NOT EXISTS idx_workflows_workspace ON workflows(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_workflow_executions_workflow ON workflow_executions(workflow_id, started_at DESC);
 `;
 
