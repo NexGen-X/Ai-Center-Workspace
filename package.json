@@ -60,6 +60,9 @@
     "sre",
     "orchestrator"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "author": "NexGen-X / Antigravity AI Center",
   "license": "MIT"
 }
