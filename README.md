@@ -1,218 +1,245 @@
+<div align="center">
+
+```text
+    _    ___    ____                                                _ 
+   / \  |_ _|  / ___|___  _ __ ___  _ __ ___   __ _ _ __   __| |
+  / _ \  | |  | |   / _ \| '_ ` _ \| '_ ` _ \ / _` | '_ \ / _` |
+ / ___ \ | |  | |__| (_) | | | | | | | | | | | (_| | | | | (_| |
+/_/   \_\___|  \____\___/|_| |_| |_|_| |_| |_|\__,_|_| |_|\__,_|
+                                                                
+     C E N T E R   •   A U T O N O M O U S   S W A R M   O S    
+```
+
 # 🪐 AI Agent Command Center
 
-<p align="center">
-  <img src="client/public/icon-512.png" alt="AI Agent Command Center Logo" width="128" height="128" style="border-radius: 24px;" />
-</p>
+### *Next-Generation Spatial 3D/2D Orchestration Bridge & Autonomous Multi-Agent Swarm OS*
 
-<p align="center">
-  <strong>An enterprise-grade, immersive 3D/2D orchestration command center and autonomous execution platform for multi-agent AI teams.</strong>
-</p>
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/NexGen-X/Ai-Center-Workspace/ci.yml?branch=main&label=CI%20Quality%20Gate&logo=github&style=for-the-badge)](https://github.com/NexGen-X/Ai-Center-Workspace/actions)
+[![Tests Passing](https://img.shields.io/badge/TESTS-209%20PASSED%20%2F%20100%25-00FF66?style=for-the-badge&logo=vitest&logoColor=white)](https://github.com/NexGen-X/Ai-Center-Workspace/actions)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.4.5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-20+-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL%2016-pgvector%20HNSW-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector)
+[![Three.js](https://img.shields.io/badge/Three.js-WebGL%203D%20Spatial-black?style=for-the-badge&logo=three.js&logoColor=white)](https://threejs.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-9945FF?style=for-the-badge)](LICENSE)
 
-<p align="center">
-  <a href="#test-suite--quality-gate"><img src="https://img.shields.io/badge/tests-209%20passed%20%2F%20100%25-brightgreen.svg?style=flat-square" alt="Tests" /></a>
-  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/typescript-%5E5.4.5-blue.svg?style=flat-square" alt="TypeScript" /></a>
-  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node.js-%3E%3D20.0.0-green.svg?style=flat-square" alt="Node.js" /></a>
-  <a href="https://www.postgresql.org/"><img src="https://img.shields.io/badge/postgresql-16%20%2B%20pgvector-336791.svg?style=flat-square" alt="PostgreSQL" /></a>
-  <a href="https://threejs.org/"><img src="https://img.shields.io/badge/three.js-3D%20WebGL-black.svg?style=flat-square" alt="Three.js" /></a>
-  <a href="https://caddyserver.com/"><img src="https://img.shields.io/badge/caddy-auto%20https-00ADD8.svg?style=flat-square" alt="Caddy" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-purple.svg?style=flat-square" alt="License" /></a>
-</p>
+<br/>
 
----
+**AI Agent Command Center** is an enterprise-grade, cyberpunk-inspired operational bridge designed to coordinate, deliberate with, and observe autonomous multi-agent teams. Built with a fullstack reactive architecture, Three.js 3D spatial simulation, PostgreSQL 16 with native pgvector HNSW indexing, and an auto-provisioning Caddy reverse proxy, it transforms disjointed LLM chats into a cohesive, self-healing, mission-driven AI workforce.
 
-## 📑 Table of Contents
-- [Overview](#-overview)
-- [System Architecture](#-system-architecture)
-- [Key Features](#-key-features)
-  - [1. 3D Virtual Workspace & 2D Fallback](#1-3d-virtual-workspace--2d-fallback)
-  - [2. Autonomous Swarm Orchestrator & DAG Execution](#2-autonomous-swarm-orchestrator--dag-execution)
-  - [3. War Room Multi-Perspective Deliberation](#3-war-room-multi-perspective-deliberation)
-  - [4. Cognitive Memory Graph & Semantic Vector Links](#4-cognitive-memory-graph--semantic-vector-links)
-  - [5. Skill Studio & Dynamic MCP Integration](#5-skill-studio--dynamic-mcp-integration)
-  - [6. Autonomous SRE & Incident Self-Healing](#6-autonomous-sre--incident-self-healing)
-  - [7. Data Analyst Studio & Interactive SQL Visualization](#7-data-analyst-studio--interactive-sql-visualization)
-  - [8. Automated Custom Domain & SSL Provisioning](#8-automated-custom-domain--ssl-provisioning)
-  - [9. Enterprise Hardening & Defense-in-Depth](#9-enterprise-hardening--defense-in-depth)
-- [Getting Started & Local Development](#-getting-started--local-development)
-- [Production Deployment](#-production-deployment)
-- [Disaster Recovery & Automated Backup](#-disaster-recovery--automated-backup)
-- [API Reference](#-api-reference)
-- [Test Suite & Quality Gate](#-test-suite--quality-gate)
-- [Contributing & Security](#-contributing--security)
-- [License](#-license)
+[Explore Features](#-capabilities-matrix) • [Architecture](#-system-architecture) • [Security & Hardening](#-enterprise-hardening--zero-trust) • [Quickstart](#-quickstart--local-development) • [Production Runbook](#-production-deployment)
+
+</div>
 
 ---
 
-## 🌟 Overview
+## ⚡ The Paradigm Shift: Why AI Command Center?
 
-**AI Agent Command Center** is a complete, production-ready operations hub for orchestrating, observing, and collaborating with autonomous multi-agent systems. Built with modern fullstack TypeScript, Three.js, PostgreSQL with pgvector, and Caddy, it bridges the gap between raw LLM capabilities and reliable enterprise mission delivery.
+Most developer tools approach LLMs through fragmented chat windows or opaque command-line scripts. **AI Agent Command Center** introduces an operational operating system where agents function like a battle-tested engineering division:
 
-Instead of managing agents through disjointed chat interfaces, AI Command Center treats your AI team like a high-performance software organization: agents hold distinct roles (*Orchestrator, Planner, Executor, QA Auditor, DevOps, SRE, Data Analyst*), form consensus in deliberative War Rooms, execute complex DAG pipelines, maintain cognitive vector memories, and safely interact with your infrastructure inside hardened sandboxes.
+| Dimension | Standard Chat UIs (ChatGPT, LibreChat) | Scripting Frameworks (CrewAI, AutoGen CLI) | 🪐 AI Agent Command Center |
+| :--- | :---: | :---: | :---: |
+| **Spatial Observation** | Single thread | Terminal output only | **Immersive 3D Bridge (WebGL) + 2D Resilient Canvas** |
+| **Consensus Engine** | ❌ None | Basic linear routing | **War Room Formal Deliberations & Synthesis** |
+| **Memory Subsystem** | Ephemeral context window | Simple key-value store | **Cognitive Vector Graph (pgvector HNSW Cosine Cluster)** |
+| **Execution Safety** | ❌ No native sandbox | Raw host execution | **CWD-Confined Sandbox + Anti-SSRF + Clean Env** |
+| **Infrastructure SRE** | ❌ None | ❌ None | **Autonomous SRE Sentinel & Self-Healing Loop** |
+| **Data Analytics** | Raw code blocks | Textual tables | **Natural SQL Engine with Dynamic Recharts Visualizer** |
+| **Automated Deliverables**| Copy-paste snippets | Local folder writes | **Automated Git Branching, Commits & PR Synthesis** |
+| **Edge Domain & SSL** | Manual Nginx/Certbot | ❌ None | **Hostinger & Cloudflare Auto-Provisioning (Caddy)** |
+| **Zero-Regression CI** | Variable | Partial | **100% Pass Rate (209/209 Tests on PostgreSQL Service)** |
 
 ---
 
-## 🏗️ System Architecture
+## 🏛️ System Architecture
 
 ```mermaid
 flowchart TD
-    subgraph Clients ["Client Layer (Browser & Mobile)"]
-        UI_3D["3D Virtual Workspace (Three.js WebGL)"]
-        UI_2D["2D Resilient Canvas (Mobile/Low-Spec Fallback)"]
-        SSE_Client["Real-time SSE Telemetry Receiver"]
+    subgraph Edge ["🌐 Edge & Ingress Layer (Caddy Reverse Proxy)"]
+        CaddyIn["Ports :80, :443, :8088, :8443 (Zstandard / Brotli)"]
+        DNSAuto["Automated Domain Provisioner (/etc/caddy/custom_domains.caddy)"]
+        CFProxy["Cloudflare Orange Cloud & Hostinger Direct DNS Resolver"]
     end
 
-    subgraph Edge ["Edge & Reverse Proxy Layer"]
-        Caddy["Caddy Server (Ports 80, 443, 8088, 8443)"]
-        SSL_Auto["Automated Let's Encrypt / Cloudflare Proxy SSL"]
-        CaddyDomains["/etc/caddy/custom_domains.caddy"]
+    subgraph ClientLayer ["🖥️ Spatial Frontend Layer (React 18 + Vite + Three.js)"]
+        Canvas3D["3D Virtual Command Bridge (WebGL, Particle Telemetry, Orbit Controls)"]
+        Canvas2D["2D Resilient Grid Fallback (Touch-Optimized / Low-Spec Hardware)"]
+        SSEStream["Real-time Server-Sent Events (SSE) Listener (:25s Heartbeat)"]
+        Modals["Feature Studios (War Room, Memory Graph, SRE Sentinel, Data Analyst)"]
     end
 
-    subgraph Backend ["Application Layer (Node.js 20+ / Express)"]
-        MW_Sec["Security Headers & Rate Limiters (Auth, Compute, Flood)"]
-        SSE_Hub["Realtime SSE Hub (:25s Heartbeat, Auto-drain)"]
+    subgraph CoreBackend ["⚡ Backend Core (Node.js 20+ Express ESM)"]
+        SecMW["HTTP Hardening (HSTS, nosniff, SAMEORIGIN, no X-Powered-By)"]
+        RateLimiter["Adaptive Sliding-Window Rate Limiters (Auth: 15/m, Compute: 30/m, API: 300/m)"]
+        ProxyTrust["Reverse Proxy Real-IP Trust (X-Forwarded-For)"]
         
-        subgraph Engines ["Autonomous Execution Engines"]
-            Orchestrator["Task Runner & Swarm DAG Engine"]
-            WarRoom["Multi-Agent Deliberation & Consensus Engine"]
-            SRE["Autonomous SRE Sentinel & Self-Healing Loop"]
-            Analyst["Data Analyst SQL & Chart Synthesis Engine"]
-            SkillStudio["Skill Studio & MCP Tool Invoker"]
+        subgraph AutonomousEngines ["🧠 Autonomous Agent Engines"]
+            Orchestrator["Nexus Prime: Swarm DAG Decomposer & Task Runner"]
+            WarRoomEngine["Multi-Agent Deliberation & Counter-Argument Engine"]
+            SREAgent["Atlas Sentinel: Continuous Telemetry & Incident Remediation"]
+            DataAnalyst["Hypatia Engine: NL-to-SQL & Dynamic Analytical Synthesizer"]
+            SkillStudio["Skill Studio & Hot-Mounted MCP Tool Registry"]
         end
 
-        subgraph SecurityIsolation ["Isolation & Guardrails"]
-            Sandbox["Isolated Sandbox (CWD Confinement & Env Sanitization)"]
-            SSRF["Anti-SSRF Validator (Private Subnets & Cloud Metadata Guard)"]
+        subgraph SecurityJail ["🛡️ Zero-Trust Security Jail"]
+            SandboxCore["CWD Sandbox Isolation (Directory Escape Prevention)"]
+            EnvSanitizer["Subshell Environment Stripper (Zero Secret Leaking)"]
+            SSRFValidator["Canonical Anti-SSRF (Private Subnet & Cloud Metadata Blocker)"]
         end
     end
 
-    subgraph DataLayer ["Data & Storage Layer"]
-        PG[("PostgreSQL 16 Database (ai_center)")]
-        PGV["pgvector Extension (HNSW Indexes)"]
-        FS["Encrypted Backups (/var/backups/ai-center)"]
+    subgraph StorageLayer ["🗄️ Resilient Storage & Disaster Recovery"]
+        PGDB[("PostgreSQL 16 Database (Connection Pool max: 20, statement_timeout: 30s)")]
+        PGV["pgvector Extension (768-dim Embeddings, HNSW Cosine Indexing)"]
+        BackupDaemon["Automated Disaster Recovery (/var/backups/ai-center daily 02:30 UTC, gzip -9)"]
     end
 
-    Clients <-->|HTTP/HTTPS & SSE| Caddy
-    Caddy <-->|Reverse Proxy 127.0.0.1:3000| MW_Sec
-    MW_Sec --> SSE_Hub
-    MW_Sec --> Engines
-    Engines --> SecurityIsolation
-    SecurityIsolation -->|bash_exec / file_read / http_fetch| Sandbox
-    Engines <-->|PostgreSQL Pool (max 20, 30s timeout)| PG
-    PG --- PGV
-    PG -.->|Daily 02:30 UTC Cron| FS
-    SSL_Auto -.-> CaddyDomains
+    Edge <-->|Encrypted HTTPS / SSE Stream| ClientLayer
+    Edge <-->|Internal Proxy 127.0.0.1:3000| CoreBackend
+    CoreBackend --> SecurityJail
+    SecurityJail -->|Safe Tool Calling: bash_exec, file_read, http_fetch| CoreBackend
+    CoreBackend <-->|Optimized Relational Queries & Vector Similarities| StorageLayer
+    StorageLayer -.-> BackupDaemon
 ```
 
 ---
 
-## 🚀 Key Features
+## 🤖 The Autonomous AI Division (Core Agent Archetypes)
 
-### 1. 🪐 3D Virtual Workspace & 2D Fallback
-- **Immersive Command Bridge**: Real-time Three.js 3D visualization depicting agents at their desks, active holographic status rings, and live particle streams signaling inter-agent communication.
-- **Fail-safe 2D Fallback**: Automatic hardware detection gracefully falls back to a clean, lightweight 2D grid representation on mobile devices or environments without WebGL acceleration.
+AI Command Center comes pre-configured with a specialized hierarchy of autonomous agents:
 
-### 2. 🐝 Autonomous Swarm Orchestrator & DAG Execution
-- **Multi-Stage Pipelines**: Decomposes high-level objectives into sequential or parallel Directed Acyclic Graphs (DAGs) executed by specialized agents.
-- **Automated Deliverables**: Packages swarm artifacts, generates markdown summary reports, and automates Git commit/branch generation (`docs/swarm-reports/`).
-- **Crash Recovery**: Automatically recovers interrupted missions upon server restart without duplicate work.
-
-### 3. ⚔️ War Room Multi-Perspective Deliberation
-- **Multi-Agent Debates**: Orchestrates formal rounds of cross-agent debate between contradictory perspectives (e.g., Performance vs. Strict Security).
-- **Consensus Synthesis**: Produces structured decision records, identifying agreed architecture choices, residual trade-offs, and actionable next steps.
-
-### 4. 🧠 Cognitive Memory Graph & Semantic Vector Links
-- **Interconnected Memory Graph**: Graph-based visualization of agent knowledge nodes, decisions, and lessons learned.
-- **pgvector Similarity Clustering**: Generates 768-dimensional embeddings to cluster semantically related memories using cosine similarity (`<->`) with HNSW indexing.
-- **Cross-Agent Knowledge Sharing**: Allows agents to query the shared institutional memory of the entire workspace during task execution.
-
-### 5. 🛠️ Skill Studio & Dynamic MCP Integration
-- **Custom Skill Authoring**: Create, test, and hot-reload specialized agent skills with parameter schemas, execution sandboxes, and verification test cases.
-- **Model Context Protocol (MCP)**: Connects natively to MCP servers to dynamically expose external tools, file outlines, and system capabilities to your agents.
-
-### 6. 🚨 Autonomous SRE & Incident Self-Healing
-- **Continuous System Auditing**: Watches CPU, RAM, disk thresholds, and database query latencies.
-- **Automated Remediation**: Triggers self-healing actions (e.g., zombie process cleanup, database connection draining, emergency disk defragmentation).
-- **Automated Post-Mortem Reports**: Automatically writes comprehensive post-mortems documenting root causes, timeline, and mitigation steps.
-
-### 7. 📊 Data Analyst Studio & Interactive SQL Visualization
-- **Natural Language to SQL**: Translates human prompts into safe, parameterized analytical queries.
-- **Dynamic Visualizations**: Automatically formats tabular query results into interactive charts (Bar, Line, Area, Pie).
-- **Analytical Insights**: Generates automated narrative summaries detailing statistical anomalies, trends, and business recommendations.
-
-### 8. 🌐 Automated Custom Domain & SSL Provisioning
-- **Zero-Config DNS Management**: Direct UI integration for mapping custom domains from providers like **Hostinger**, **Cloudflare (Orange Cloud Proxy)**, and direct A-records.
-- **Caddy Integration**: Automatically validates DNS propagation and mounts reverse-proxy blocks in `/etc/caddy/custom_domains.caddy` with automatic Let's Encrypt TLS certificate provisioning.
-
-### 9. 🔒 Enterprise Hardening & Defense-in-Depth
-- **Rate Limiting**: In-memory token sliding window rate limiters for authentication (15/min), compute endpoints (30/min), and global flood defense (300/min).
-- **Anti-SSRF Protection**: Strictly blocks access to internal cloud metadata (`169.254.169.254`, integer/hex encodings) and isolates public web research from RFC 1918 private subnets.
-- **Sandbox Confinement**: Constrains agent file reading strictly within the workspace directory, blocking path traversal and sensitive files (`.env`, `id_rsa`, `/etc/`). Child subshell environments are sanitized to prevent secret leaking.
-- **True Graceful Shutdown**: Drains in-flight HTTP requests and cleanly shuts down schedulers and database pools on `SIGTERM`.
+```text
+ ╔═══════════════════════════════════════════════════════════════════════════════════╗
+ ║                         NEXUS PRIME (Lead Orchestrator)                           ║
+ ║           Decomposes high-level objectives into topological DAG pipelines        ║
+ ╚═══════════════════════════════════════════════════════════════════════════════════╝
+             │                                                     │
+             ▼                                                     ▼
+ ╔═════════════════════════════╗             ╔═════════════════════════════════════╗
+ ║   ATHENA STRATOS (Planner)  ║             ║      VULCAN FORGE (Executor)        ║
+ ║ Formulates dependency maps, ║             ║ Hardened tool execution, sandbox    ║
+ ║ milestones, and criteria    ║             ║ file ops, and automated pipelines   ║
+ ╚═════════════════════════════╝             ╚═════════════════════════════════════╝
+             │                                                     │
+             ▼                                                     ▼
+ ╔═════════════════════════════╗             ╔═════════════════════════════════════╗
+ ║  AEGIS SENTINEL (QA Review) ║             ║      ATLAS DEVOPS (SRE Sentinel)    ║
+ ║ "No Evidence = No Acceptance║             ║ Continuous host telemetry auditing, ║
+ ║ Independent empirical audit ║             ║ self-healing, and memory protection ║
+ ╚═════════════════════════════╝             ╚═════════════════════════════════════╝
+```
 
 ---
 
-## 💻 Getting Started & Local Development
+## 🔮 Capabilities Matrix
+
+### 1. 🪐 Spatial 3D Command Bridge & 2D Fallback
+- **Holographic Workspace**: Real-time Three.js WebGL canvas displaying agents stationed at active terminals with glowing activity rings, pulsating particle connections, and status halos.
+- **Fail-Safe Hardware Adaptability**: Automatically measures WebGL capability; seamlessly switches to a lightweight 2D interactive grid on mobile browsers or constrained headless environments.
+
+### 2. 🐝 Autonomous Swarm Orchestrator & DAG Execution
+- **Multi-Stage Decomposition**: Breaks down broad objectives into Directed Acyclic Graphs (DAGs) executed sequentially or in parallel by role-assigned agents.
+- **Automated Deliverables**: Compiles unified git diff patches, generates formatted Markdown reports, and automates Git branch creation and commits (`docs/swarm-reports/mission-{id}.md`).
+- **Mission Crash Recovery**: State persistence guarantees that interrupted missions resume seamlessly upon server reboot without duplicated subtasks.
+
+### 3. ⚔️ War Room Multi-Perspective Deliberation Engine
+- **Cross-Agent Socratic Debates**: Pit specialized agents against one another (e.g., Performance vs. Strict Security vs. Usability).
+- **Consensus & Trade-off Synthesis**: Generates formal decision records documenting consensus recommendations, architectural compromises, and actionable checklists.
+
+### 4. 🧠 Cognitive Memory Graph (pgvector HNSW)
+- **Semantic Vector Association**: Transforms agent thoughts, lessons learned, and execution outputs into 768-dimensional vector embeddings stored in PostgreSQL with pgvector.
+- **Cosine Distance Clustering**: Connects disparate memories across projects and agents with dynamic cosine similarity thresholds (`<->`).
+- **Institutional Memory Sharing**: Agents automatically retrieve relevant prior decisions before embarking on new tasks.
+
+### 5. 🛠️ Skill Studio & Model Context Protocol (MCP)
+- **Hot-Mountable Capabilities**: Create, parameterize, and test specialized agent skills on the fly without server downtime.
+- **Native MCP Ecosystem**: Integrates with Model Context Protocol servers to query file outlines, database schemas, and external tool registries.
+
+### 6. 🚨 Autonomous SRE Sentinel & Self-Healing Loop
+- **Proactive Health Auditing**: Continuous host inspection monitoring CPU saturation, RAM thresholds, disk usage, and PostgreSQL query latencies.
+- **Self-Healing Actions**: Automatically flushes lingering zombie processes, terminates orphaned worker sockets, and defragments storage.
+- **Automated Post-Mortem Generation**: Synthesizes root-cause timelines and mitigation strategies following any system anomaly.
+
+### 7. 📊 Data Analyst Studio & Natural SQL Visualization
+- **Natural Language to Parameterized SQL**: Translates human prompts into safe analytical SQL against internal metrics and databases.
+- **Dynamic Charting Engine**: Automatically selects the best visual representation (Bar, Line, Area, Pie) and renders reactive charts.
+- **Automated Statistical Insights**: Synthesizes anomalies, trends, and business takeaways from query results.
+
+### 8. 🌐 Automated Custom Domain & SSL Provisioning
+- **Zero-Friction Ingress**: Support for Hostinger domains, Cloudflare Anycast CIDRs (Orange Cloud Proxy), and Direct DNS A-records.
+- **Dynamic Caddy Sync**: In-app pre-flight DNS validation automates configuration of `/etc/caddy/custom_domains.caddy` with instant Let's Encrypt TLS provisioning.
+
+---
+
+## 🔒 Enterprise Hardening & Zero-Trust
+
+Security is not an afterthought in AI Command Center — it is baked into every layer of execution:
+
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│                        DEFENSE-IN-DEPTH MATRIX                         │
+├─────────────────────────┬──────────────────────────────────────────────┤
+│ Perimeter Security      │ HSTS (31536000s), nosniff, SAMEORIGIN,       │
+│                         │ no X-Powered-By fingerprint, trust proxy=1   │
+├─────────────────────────┼──────────────────────────────────────────────┤
+│ Abuse & DoS Defense     │ In-memory Token Sliding Window Limiter:      │
+│                         │ • Auth: 15 req/min (Brute-force protection)  │
+│                         │ • Compute: 30 req/min (LLM drain defense)    │
+│                         │ • Global API: 300 req/min (Flood protection) │
+├─────────────────────────┼──────────────────────────────────────────────┤
+│ Anti-SSRF Guardrails    │ Canonical IP resolver strictly blocks:       │
+│                         │ • Cloud metadata (169.254.169.254, hex/int)  │
+│                         │ • RFC 1918 Private subnets (10/8, 172.16/12) │
+│                         │ • Loopback probing (127.0.0.1, ::1)          │
+├─────────────────────────┼──────────────────────────────────────────────┤
+│ Sandbox Execution Jail  │ • file_read strictly confined to CWD sandbox │
+│                         │ • Blocked paths: /etc/, /proc/, .env, id_rsa │
+│                         │ • bash_exec env stripped of all secrets      │
+├─────────────────────────┼──────────────────────────────────────────────┤
+│ Cryptographic Standards │ • API Keys encrypted with AES-256-GCM        │
+│                         │ • Passwords hashed via PBKDF2 + timingSafeEq │
+│                         │ • Secrets-Free Repository Guarantee (Scanned)│
+└─────────────────────────┴──────────────────────────────────────────────┘
+```
+
+---
+
+## 🚀 Quickstart & Local Development
 
 ### Prerequisites
 - **Node.js**: `v20.x` or higher
-- **PostgreSQL**: `v16.x` with `pgvector` extension enabled
+- **PostgreSQL**: `v16.x` with `pgvector` extension
 - **npm**: `v10.x` or higher
 
-### 1. Clone & Install Dependencies
 ```bash
+# 1. Clone repository
 git clone https://github.com/NexGen-X/Ai-Center-Workspace.git
 cd Ai-Center-Workspace
 
-# Install backend dependencies
-cd server
+# 2. Install all monorepo dependencies
 npm install
 
-# Install frontend dependencies
-cd ../client
-npm install
-```
+# 3. Setup environment configuration
+cp .env.example .env
 
-### 2. Configure Environment Variables
-Create `/root/Ai-Center-Workspace/server/.env` (or set environment variables):
-```env
-PORT=3000
-NODE_ENV=development
-DATABASE_URL=postgres://routex:your_password@127.0.0.1:5432/ai_center?sslmode=disable
-ENCRYPTION_KEY=your-32-character-secret-key-2026!
+# 4. Start local development (Server & Client concurrently)
+npm run dev:server
+# In a separate terminal:
+npm run dev:client
 ```
-
-### 3. Initialize Database & Run Migrations
-Migrations are applied idempotently on server boot:
-```bash
-cd server
-npm run dev
-```
-
-### 4. Run Frontend Development Server
-In a separate terminal:
-```bash
-cd client
-npm run dev
-```
-Open [http://localhost:5173](http://localhost:5173) in your browser.
+Visit `http://localhost:5173` to access the Command Bridge.
 
 ---
 
 ## 🚢 Production Deployment
 
-AI Agent Command Center is designed to run stably as a dedicated systemd service behind Caddy.
-
-### 1. Build Production Assets
+### 1. Build Optimized Production Bundles
 ```bash
-# Build server TypeScript
-cd server && npm run build
-
-# Build client React application
-cd ../client && npm run build
+# Builds both TypeScript backend and Vite React frontend
+npm run build
 ```
 
-### 2. Systemd Service Configuration
-File: `/etc/systemd/system/ai-center.service`
+### 2. Systemd Service Deployment
+Create `/etc/systemd/system/ai-center.service`:
 ```ini
 [Unit]
 Description=AI Agent Command Center Service
@@ -238,22 +265,21 @@ SyslogIdentifier=ai-center
 
 Environment=PORT=3000
 Environment=NODE_ENV=production
-Environment=DATABASE_URL=postgres://routex:your_password@127.0.0.1:5432/ai_center?sslmode=disable
-Environment=ENCRYPTION_KEY=your-32-character-secret-key-2026!
+Environment=DATABASE_URL=postgres://user:password@127.0.0.1:5432/ai_center?sslmode=disable
+Environment=ENCRYPTION_KEY=replace-with-your-secure-32-character-secret-key-here!
 LimitNOFILE=65536
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-Enable and start the service:
 ```bash
 systemctl daemon-reload
 systemctl enable --now ai-center.service
 ```
 
-### 3. Caddy Reverse Proxy Configuration
-Sample block in `/etc/caddy/Caddyfile`:
+### 3. Edge Reverse Proxy (Caddy)
+Add the reverse proxy block in `/etc/caddy/Caddyfile`:
 ```caddy
 :80, :443 {
     encode zstd gzip
@@ -280,71 +306,98 @@ import /etc/caddy/custom_domains.caddy
 
 ---
 
-## 💾 Disaster Recovery & Automated Backup
+## 💾 Disaster Recovery & Automated Backups
 
-AI Center features an automated database backup routine that executes daily at **02:30 UTC**:
+AI Center features an automated disaster recovery engine executing daily at **02:30 UTC**:
 - **Script**: `/usr/local/bin/ai-center-backup.sh`
-- **Backup Directory**: `/var/backups/ai-center/` (Permissions: `0700`)
-- **Compression**: `gzip -9` with automated integrity verification (`gzip -t`)
-- **Retention**: 14 days with automated pruning of older snapshots
+- **Archive Path**: `/var/backups/ai-center/ai_center_prod_{timestamp}.sql.gz` (`chmod 700`)
+- **Integrity Validation**: Automated `gzip -t` verification upon every dump
+- **Retention**: 14-day rolling rotation with automatic cleanup of expired archives
 - **Cron Definition**: `/etc/cron.d/ai-center-backup`
 
-### Manual Backup & Restoration
+### One-Command Manual Backup & Restore:
 ```bash
-# Run manual backup
+# Execute manual backup now:
 /usr/local/bin/ai-center-backup.sh
 
-# Restore database from backup
+# Instant database restore:
 gunzip -c /var/backups/ai-center/ai_center_prod_YYYYMMDD_HHMMSS.sql.gz | psql -U routex -d ai_center
 ```
 
 ---
 
-## 📡 API Reference
+## 📡 REST & Telemetry API Reference
 
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/healthz` | System health, uptime, and database latency check |
-| `POST`| `/api/auth/login` | Authenticate human operator (rate-limited) |
-| `GET` | `/api/realtime` | Server-Sent Events (SSE) telemetry stream |
-| `GET` | `/api/agents` | List all registered AI team agents |
-| `POST`| `/api/swarm/missions` | Create and execute an autonomous multi-agent swarm mission |
-| `POST`| `/api/war-rooms/:id/deliberate` | Trigger a multi-agent debate and consensus round |
-| `GET` | `/api/memory-graph/nodes` | Retrieve semantic cognitive memory nodes and connections |
-| `POST`| `/api/skills` | Create and hot-mount a new agent capability |
-| `GET` | `/api/sre/incidents` | Query autonomous SRE health incidents and audit logs |
-| `POST`| `/api/data-analyst/execute-sql` | Execute parameterized SQL analysis query |
-| `POST`| `/api/system/domain/provision` | Provision custom domain with automatic Caddy TLS |
-| `GET` | `/api/monitoring/summary` | Real-time CPU, RAM, disk, and process telemetry |
+| Verb | Path | Purpose | Guardrails |
+| :---: | :--- | :--- | :---: |
+| `GET` | `/healthz` | System uptime & PostgreSQL query latency check | Public |
+| `POST` | `/api/auth/login` | Human operator session authentication | Rate-limited (15/m) |
+| `GET` | `/api/realtime` | Server-Sent Events (SSE) telemetry bus | Keep-Alive (:25s) |
+| `GET` | `/api/agents` | List all active agents & status halos | Session Bearer |
+| `POST` | `/api/swarm/missions` | Dispatch autonomous multi-agent swarm DAG | Rate-limited (30/m) |
+| `POST` | `/api/war-rooms/:id/deliberate` | Trigger formal multi-agent deliberation round | Session Bearer |
+| `GET` | `/api/memory-graph/nodes` | Retrieve cognitive semantic memory network | Session Bearer |
+| `POST` | `/api/skills` | Create and hot-mount a new agent skill | Session Bearer |
+| `GET` | `/api/sre/incidents` | Query autonomous SRE health audits | Session Bearer |
+| `POST` | `/api/data-analyst/execute-sql` | Execute parameterized analytics query | Query Timeout (30s) |
+| `POST` | `/api/system/domain/provision` | Provision custom domain with Caddy TLS | DNS Pre-flight |
+| `GET` | `/api/monitoring/summary` | Live CPU, RAM, Disk, and runtime telemetry | Rate-limited (300/m) |
 
 ---
 
-## 🧪 Test Suite & Quality Gate
+## 🧪 Verification & Quality Gate
 
-The project enforces a strict **Zero-Regression Policy** across all functional areas. 
+Every release and commit is validated against a rigorous test suite covering unit contracts, integration pipelines, database resilience, and sandbox boundaries:
 
 ```bash
-cd server
+# Run Vitest test suite across all workspaces
 npm test
 ```
 
-### Current Verification Metrics:
 ```text
+ ✓ tests/rag-memory.spec.ts (13)
+ ✓ tests/actions-sandbox.spec.ts (14)
+ ✓ tests/schedules.spec.ts (14)
+ ✓ tests/skill-studio.spec.ts (9)
+ ✓ tests/stability.spec.ts (11)
+ ✓ tests/war-room.spec.ts (8)
+ ✓ tests/memory-graph.spec.ts (9)
+ ✓ tests/workflow-dag.spec.ts (8)
+ ✓ tests/data-analyst.spec.ts (9)
+ ✓ tests/sre-agent.spec.ts (8)
+ ✓ tests/modal-interaction-contracts.spec.ts (6)
+ ✓ tests/mcp-client.spec.ts (8)
+ ✓ tests/alerting.spec.ts (6)
+ ✓ tests/document-parser.spec.ts (6)
+ ✓ tests/evals.spec.ts (5)
+ ✓ tests/streaming.spec.ts (4)
+ ✓ tests/web-research.spec.ts (7)
+ ✓ tests/domain-manager.spec.ts (8)
+ ✓ tests/ssrf.spec.ts (8)
+ ✓ tests/orchestrator-system.spec.ts (4)
+ ✓ tests/adapters.spec.ts (3)
+ ✓ tests/pipeline.spec.ts (4)
+ ✓ tests/playground-webhooks.spec.ts (3)
+ ✓ tests/crypto.spec.ts (3)
+ ✓ tests/auth.spec.ts (2)
+ ✓ tests/api.spec.ts (14)
+ ✓ tests/swarm.spec.ts (15)
+
  Test Files  27 passed (27)
       Tests  209 passed (209)
-   Duration  42.36s
+   Duration  34.40s
 ```
-*Coverage includes Unit Tests, Integration Contracts, SSRF Protection, Database Resilience, Concurrency Recovery, and Sandbox Isolation.*
 
 ---
 
-## 🤝 Contributing & Security
+## 🤝 Community & Governance
 
-- For contributions, please review [CONTRIBUTING.md](CONTRIBUTING.md).
-- To report security vulnerabilities, please refer to [SECURITY.md](SECURITY.md).
+- Review our [CONTRIBUTING.md](CONTRIBUTING.md) for branch strategies, coding standards, and testing expectations.
+- Read our [SECURITY.md](SECURITY.md) for our vulnerability disclosure policy and security audit guarantees.
 
 ---
 
 ## 📄 License
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+This software is released under the **[MIT License](LICENSE)**.  
+Copyright © 2026 **NexGen-X / Antigravity AI Center**. All rights reserved.

@@ -1,10 +1,72 @@
+# Dependencies
 node_modules/
+/.pnp
+.pnp.js
+
+# Build Outputs & Bundles
 dist/
+build/
+server/dist/
+client/dist/
+
+# Environment Variables & Secret Credentials
 .env
-.env.*.local
+.env.*
+*.env
+*.env.*
+!**/.env.example
+*.local
+credentials.json
+service-account*.json
+tokens.json
+secrets/
+
+# Private Keys & Certificates
+*.pem
+*.key
+*.pkcs12
+*.pfx
+*.p12
+*.crt
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+*.keystore
+
+# Database Dumps, Backups & Archives
+*.sql.gz
+*.dump
+*.tar.gz
+*.zip
+*.bak
+*.backup
+/var/backups/
+backups/
+
+# Logs & Telemetry
 *.log
 npm-debug.log*
 yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Sandboxed Execution Dirs
+sandbox/
 server/sandbox/*
 !server/sandbox/.gitkeep
-sandbox/
+
+# IDE & OS Metadata
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json
+*.sublime-project
+*.sublime-workspace
+
+# Test & Coverage Outputs
+coverage/
+.nyc_output/
+*.lcov
