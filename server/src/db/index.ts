@@ -14,12 +14,27 @@ export const pool = new Pool({
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
+  statement_timeout: 30000, // 30s query execution ceiling
+  query_timeout: 35000     // 35s client timeout
 });
 
 // Prevent unhandled errors on idle clients from crashing the process
 pool.on('error', (err) => {
   console.error('[PostgreSQL Pool Idle Client Error]', err);
 });
+
+/**
+ * Health check helper for PostgreSQL connection pool
+ */
+export async function checkDatabaseHealth(): Promise<{ ok: boolean; latencyMs: number; error?: string }> {
+  const start = Date.now();
+  try {
+    const res = await pool.query('SELECT 1 as alive;');
+    return { ok: res.rows[0]?.alive === 1, latencyMs: Date.now() - start };
+  } catch (err: any) {
+    return { ok: false, latencyMs: Date.now() - start, error: err.message };
+  }
+}
 
 /**
  * Run migrations and initial seeds idempotently

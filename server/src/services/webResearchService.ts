@@ -125,7 +125,7 @@ export class WebResearchService {
    * Browse a web page, sanitize HTML, extract metadata, and convert body to clean Markdown.
    */
   static async browse(url: string, maxLength: number = 8000): Promise<WebBrowseResponse> {
-    const urlValidation = validateOutgoingUrl(url);
+    const urlValidation = validateOutgoingUrl(url, { allowLocalhost: false });
     if (!urlValidation.isValid) {
       throw new Error(`Akses ditolak: ${urlValidation.error}`);
     }

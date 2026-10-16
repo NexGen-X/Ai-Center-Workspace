@@ -5,9 +5,11 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { config } from './config/index.js';
-import { initializeDatabase } from './db/index.js';
+import { initializeDatabase, checkDatabaseHealth } from './db/index.js';
 import { realtimeHub } from './services/realtime.js';
 import { v4 as uuidv4 } from 'uuid';
+import { securityHeadersMiddleware } from './middleware/securityHeaders.js';
+import { authRateLimiter, computeRateLimiter, globalApiRateLimiter } from './middleware/rateLimiter.js';
 
 import agentsRouter from './routes/agents.js';
 import providersRouter from './routes/providers.js';
@@ -44,9 +46,36 @@ import { systemLogger } from './services/logger.js';
 
 export const app = express();
 
-// Middlewares
+// Security Hardening: Trust Proxy for accurate client IP resolution behind Caddy
+app.set('trust proxy', 1);
+
+// Security Hardening: Disable fingerprinting headers
+app.disable('x-powered-by');
+
+// Global Graceful Shutdown State
+let isShuttingDown = false;
+
+// Reject new incoming traffic with 503 if server is gracefully shutting down
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (isShuttingDown) {
+    res.setHeader('Connection', 'close');
+    return res.status(503).json({
+      error: {
+        code: 'SERVER_SHUTTING_DOWN',
+        message: 'Server sedang dalam proses shutdown. Silakan coba sesaat lagi.'
+      }
+    });
+  }
+  next();
+});
+
+// Security & Standard Middlewares
+app.use(securityHeadersMiddleware);
 app.use(cors());
 app.use(express.json({ limit: '15mb' }));
+
+// DoS & Flood Protection
+app.use('/api', globalApiRateLimiter);
 
 // Request logging (sanitized, zero secret leaking)
 app.use((req: Request, _res: Response, next: NextFunction) => {
@@ -68,6 +97,12 @@ app.get('/api/realtime', (req: Request, res: Response) => {
   const clientId = `client-${uuidv4().slice(0, 8)}`;
   realtimeHub.addClient(clientId, res);
 });
+
+// Targeted Abuse-Protection Rate Limiters
+app.use('/api/auth/login', authRateLimiter);
+app.use('/api/playground/execute', computeRateLimiter);
+app.use('/api/evals/run', computeRateLimiter);
+app.use('/api/webhooks/dispatch-task', computeRateLimiter);
 
 // Mount modular feature routes
 app.use('/api/auth', authRouter);
@@ -102,9 +137,18 @@ app.use('/api/skills', skillsRouter);
 app.use('/api/memory-graph', memoryGraphRouter);
 app.use('/api/system/domain', domainRouter);
 
-// Root healthcheck
-app.get('/healthz', (_req: Request, res: Response) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+// Comprehensive Root Healthcheck with Database Connectivity Validation
+app.get('/healthz', async (_req: Request, res: Response) => {
+  const dbHealth = await checkDatabaseHealth();
+  const isHealthy = dbHealth.ok && !isShuttingDown;
+
+  res.status(isHealthy ? 200 : 503).json({
+    status: isHealthy ? 'ok' : 'degraded',
+    database: dbHealth.ok ? 'connected' : 'disconnected',
+    dbLatencyMs: dbHealth.latencyMs,
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Serve frontend static files if client/dist exists
@@ -126,8 +170,11 @@ if (fs.existsSync(clientDist)) {
   });
 }
 
-// Global Error Handler
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+// Resilient Global Error Handler (Prevents ERR_HTTP_HEADERS_SENT crashes)
+app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
+  if (res.headersSent) {
+    return next(err);
+  }
   console.error('[Error]', err);
   res.status(err.status || 500).json({
     error: {
@@ -147,24 +194,43 @@ export async function startServer() {
     console.log(`[Server] AI Agent Command Center backend listening on port ${config.port}`);
   });
 
-  // Graceful Shutdown Handler
+  // Architectural Resilience: True Graceful Shutdown Handler
   const gracefulShutdown = async (signal: string) => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
     console.log(`[Server] Received ${signal}. Initiating graceful shutdown...`);
+
+    // 10-second hard fallback timeout to avoid hanging processes
+    const forceExitTimer = setTimeout(() => {
+      console.error('[Server] Graceful shutdown timed out (10s). Forcing termination.');
+      process.exit(1);
+    }, 10000);
+    forceExitTimer.unref();
+
     try {
-      // 1. Close SSE clients
-      realtimeHub.closeAll();
-      // 2. Stop autonomous task runner and scheduler
+      // 1. Stop background daemons and schedulers
       const { taskRunner } = await import('./services/orchestrator.js');
       taskRunner.stop();
       SchedulerService.stopDaemon();
-      // 3. Stop accepting new HTTP requests
-      server.close(() => {
-        console.log('[Server] HTTP server closed.');
+
+      // 2. Disconnect real-time SSE clients
+      realtimeHub.closeAll();
+
+      // 3. Stop accepting new HTTP requests and drain active requests
+      await new Promise<void>((resolve) => {
+        server.close((err) => {
+          if (err) console.error('[Server] Error while closing HTTP server:', err);
+          else console.log('[Server] In-flight HTTP requests drained and server closed.');
+          resolve();
+        });
       });
-      // 4. Close database pool
+
+      // 4. Safely terminate database pool after HTTP connections have drained
       const { pool } = await import('./db/index.js');
       await pool.end();
-      console.log('[Server] Database pool closed. Shutdown complete.');
+      console.log('[Server] Database pool closed cleanly. Shutdown complete.');
+
+      clearTimeout(forceExitTimer);
       process.exit(0);
     } catch (shutdownErr) {
       console.error('[Server] Error during graceful shutdown:', shutdownErr);

@@ -397,15 +397,22 @@ export async function executeToolInSandbox(
         const timeout = Math.min(30000, Number(input.timeoutMs) || 15000);
         const cwd = SANDBOX_DIR;
 
+        // Clean environment to prevent secret leaking to subshells
+        const cleanEnv: Record<string, string | undefined> = {
+          PATH: process.env.PATH || '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+          HOME: SANDBOX_DIR,
+          USER: 'sandbox-agent',
+          LANG: process.env.LANG || 'en_US.UTF-8',
+          TERM: 'xterm',
+          NODE_ENV: 'test',
+          SANDBOX: '1'
+        };
+
         const { stdout, stderr } = await execAsync(cmd, {
           timeout,
           cwd,
           maxBuffer: 1024 * 1024 * 2, // 2MB output buffer
-          env: {
-            ...process.env,
-            NODE_ENV: 'test',
-            SANDBOX: '1'
-          }
+          env: cleanEnv
         });
 
         const output = (stdout || '') + (stderr ? `\n[STDERR]\n${stderr}` : '');
@@ -421,9 +428,31 @@ export async function executeToolInSandbox(
         if (!rawPath) throw new Error('Parameter "filePath" wajib diisi.');
 
         // Proteksi path traversal & file sensitif
-        const resolved = path.resolve(process.cwd(), rawPath);
-        const forbiddenFiles = ['.env', 'id_rsa', 'id_ed25519', '/etc/shadow', '/etc/passwd'];
-        if (forbiddenFiles.some(f => resolved.includes(f))) {
+        const normalized = path.normalize(rawPath).replace(/^(\.\.[\/\\])+/, '');
+        const resolved = path.resolve(process.cwd(), normalized);
+
+        // Pastikan path berada dalam workspace atau sandbox, tidak keluar ke root OS (/etc, /root, dll)
+        const isWithinCwd = resolved.startsWith(process.cwd());
+        const isWithinSandbox = resolved.startsWith(SANDBOX_DIR);
+        if (!isWithinCwd && !isWithinSandbox) {
+          throw new Error('Akses ditolak: Pembacaan file di luar direktori workspace tidak diizinkan.');
+        }
+
+        const forbiddenPatterns = [
+          /\.env($|\.)/i,
+          /id_rsa/i,
+          /id_ed25519/i,
+          /id_ecdsa/i,
+          /\.pem$/i,
+          /\.key$/i,
+          /\.git[\/\\]config/i,
+          /\/etc\//i,
+          /\/proc\//i,
+          /\/sys\//i,
+          /shadow/i,
+          /passwd/i
+        ];
+        if (forbiddenPatterns.some(p => p.test(resolved))) {
           throw new Error('Akses ditolak: File terproteksi atau sensitif tidak diizinkan dibaca.');
         }
 
@@ -471,8 +500,8 @@ export async function executeToolInSandbox(
         const rawUrl = String(input.url || '').trim();
         if (!rawUrl) throw new Error('Parameter "url" wajib diisi.');
 
-        // SSRF protection
-        const urlValidation = validateOutgoingUrl(rawUrl);
+        // SSRF protection (strictly disallow localhost & private ranges for agent http_fetch)
+        const urlValidation = validateOutgoingUrl(rawUrl, { allowLocalhost: false });
         if (!urlValidation.isValid) {
           throw new Error(`SSRF Blocked: ${urlValidation.error}`);
         }
