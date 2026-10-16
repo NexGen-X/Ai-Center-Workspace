@@ -6,6 +6,7 @@ import { AddAgentModal } from './features/team/AddAgentModal.js';
 import { AgentDetailModal } from './features/team/AgentDetailModal.js';
 import { ManageTeamModal } from './features/team/ManageTeamModal.js';
 import { LoginModal } from './components/LoginModal.js';
+import { LoginPage } from './features/auth/LoginPage.js';
 import { CalendarModal } from './features/calendar/CalendarModal.js';
 import { ReportsModal } from './features/reports/ReportsModal.js';
 import { DocumentsModal } from './features/documents/DocumentsModal.js';
@@ -46,6 +47,7 @@ export const App: React.FC = () => {
   const [providers, setProviders] = useState<ModelProviderConfig[]>([]);
   const [metrics, setMetrics] = useState<ServerMetrics | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
 
   const [loading, setLoading] = useState(true);
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
@@ -123,28 +125,51 @@ export const App: React.FC = () => {
     }
   };
 
-  // Check auth session
+  // Check auth session on mount
   useEffect(() => {
+    const token = localStorage.getItem('ai_center_token');
+    if (!token) {
+      setIsAuthChecking(false);
+      return;
+    }
+
     api.getMe()
       .then((res) => {
-        if (res.authenticated) setCurrentUser(res.user);
+        if (res.authenticated && res.user) {
+          setCurrentUser(res.user);
+        } else {
+          localStorage.removeItem('ai_center_token');
+          setCurrentUser(null);
+        }
       })
-      .catch(() => {});
+      .catch(() => {
+        localStorage.removeItem('ai_center_token');
+        setCurrentUser(null);
+      })
+      .finally(() => {
+        setIsAuthChecking(false);
+      });
   }, []);
 
   const handleLogout = async () => {
-    await api.logout().catch(() => {});
+    try {
+      await api.logout();
+    } catch {}
     localStorage.removeItem('ai_center_token');
     setCurrentUser(null);
+    toast.info('Sesi ditutup. Anda telah keluar dari Command Center.');
   };
 
-  // Initial load
+  // Initial load once authenticated
   useEffect(() => {
-    refreshAllData();
-  }, [refreshAllData]);
+    if (currentUser) {
+      refreshAllData();
+    }
+  }, [currentUser, refreshAllData]);
 
   // Server-Sent Events (SSE) setup
   useEffect(() => {
+    if (!currentUser) return;
     let eventSource: EventSource | null = null;
     let reconnectTimeout: any = null;
     let reconnectDelay = 1000;
@@ -294,7 +319,7 @@ export const App: React.FC = () => {
       clearTimeout(reconnectTimeout);
       clearInterval(metricsInterval);
     };
-  }, [refreshAllData]);
+  }, [currentUser, refreshAllData]);
 
   const handleOpenCreateTaskForProject = (projId: string) => {
     setSelectedProjectIdForTask(projId);
@@ -304,6 +329,30 @@ export const App: React.FC = () => {
   const handleSelectTask = (task: Task) => {
     setSelectedTaskId(task.id);
   };
+
+  if (isAuthChecking) {
+    return (
+      <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#070A0F] text-slate-100 font-sans">
+        <div className="relative flex items-center justify-center w-16 h-16 rounded-2xl bg-cyan-950/40 border border-cyan-500/30 shadow-[0_0_30px_rgba(6,182,212,0.3)]">
+          <div className="w-8 h-8 border-2 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin" />
+        </div>
+        <p className="mt-4 text-xs font-mono text-cyan-400 tracking-widest uppercase animate-pulse">
+          Memverifikasi Sesi Otorisasi...
+        </p>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <LoginPage
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+          toast.success(`Selamat datang, ${user.displayName || 'Operator'}!`);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0B0F17] text-slate-100 flex flex-col">

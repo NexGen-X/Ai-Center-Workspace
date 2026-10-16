@@ -499,19 +499,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           ) : (
             <div className="flex items-center gap-1.5 pl-1.5">
-              <div
+              <button
                 onClick={onOpenLogin}
-                className="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-xs cursor-pointer hover:border-slate-700 transition"
+                className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-xs font-semibold transition"
               >
-                <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-500 to-rose-400 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
-                  Y
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-white">Yulian</span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  <span className="text-[10px] text-emerald-400 font-semibold hidden xl:inline">Online</span>
-                </div>
-              </div>
+                <User className="w-3.5 h-3.5" />
+                <span>Masuk</span>
+              </button>
             </div>
           )}
         </div>
