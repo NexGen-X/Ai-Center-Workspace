@@ -156,9 +156,17 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 
-const clientDist = fs.existsSync(path.resolve(process.cwd(), 'client/dist'))
-  ? path.resolve(process.cwd(), 'client/dist')
-  : path.resolve(__dirname, '../../../../client/dist');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const candidateDistPaths = [
+  path.resolve(process.cwd(), 'client/dist'),
+  path.resolve(__dirname, '../../../client/dist'),
+  path.resolve(__dirname, '../../../../client/dist'),
+  path.resolve(__dirname, '../../client/dist')
+];
+
+const clientDist = candidateDistPaths.find(p => fs.existsSync(p)) || candidateDistPaths[0];
 
 if (fs.existsSync(clientDist)) {
   app.use(express.static(clientDist));

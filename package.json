@@ -1,9 +1,25 @@
 {
-  "name": "ai-center-workspace",
+  "name": "ai-agent-command-center",
   "version": "1.0.0",
-  "description": "AI Agent Command Center with 3D Workspace via Web UI",
-  "private": true,
+  "description": "Next-Generation Spatial 3D/2D Orchestration Bridge & Autonomous Multi-Agent Swarm OS",
+  "main": "server/dist/server/src/index.js",
   "type": "module",
+  "bin": {
+    "ai-center": "./bin/ai-center.js",
+    "ai-agent-command-center": "./bin/ai-center.js"
+  },
+  "files": [
+    "bin",
+    "server/dist",
+    "client/dist",
+    "shared",
+    "README.md",
+    "LICENSE",
+    ".env.example"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "workspaces": [
     "server",
     "client"
@@ -13,14 +29,37 @@
     "dev:client": "npm run dev -w client",
     "build": "npm run build -w server && npm run build -w client",
     "test": "npm run test -w server",
-    "start": "npm run start -w server"
+    "start": "node bin/ai-center.js",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "pg": "^8.13.0",
+    "uuid": "^9.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NexGen-X/Ai-Center-Workspace.git"
+  },
+  "homepage": "https://github.com/NexGen-X/Ai-Center-Workspace#readme",
+  "bugs": {
+    "url": "https://github.com/NexGen-X/Ai-Center-Workspace/issues"
   },
   "keywords": [
-    "ai-agent",
+    "ai",
+    "autonomous-agents",
+    "swarm",
+    "multi-agent",
     "command-center",
     "threejs",
-    "llm-orchestrator"
+    "webgl",
+    "pgvector",
+    "rag",
+    "sre",
+    "orchestrator"
   ],
-  "author": "Antigravity Engineering",
+  "author": "NexGen-X / Antigravity AI Center",
   "license": "MIT"
 }
