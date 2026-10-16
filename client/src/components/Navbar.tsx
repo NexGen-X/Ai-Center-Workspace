@@ -25,7 +25,8 @@ import {
   Swords,
   ShieldAlert,
   LineChart,
-  Wrench
+  Wrench,
+  Brain
 } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown.js';
 import { OrchestratorStatus } from '../../../shared/types.js';
@@ -48,6 +49,7 @@ interface NavbarProps {
   onOpenSre?: () => void;
   onOpenDataAnalyst?: () => void;
   onOpenSkills?: () => void;
+  onOpenMemoryGraph?: () => void;
   onOpenActions?: () => void;
   pendingActionCount?: number;
   onOpenLogin: () => void;
@@ -80,6 +82,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSre,
   onOpenDataAnalyst,
   onOpenSkills,
+  onOpenMemoryGraph,
   onOpenActions,
   pendingActionCount = 0,
   onOpenLogin,
@@ -382,6 +385,20 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>Skill Studio</span>
             </button>
           )}
+
+          {/* Cognitive Memory Graph Explorer */}
+          {onOpenMemoryGraph && (
+            <button
+              type="button"
+              onClick={onOpenMemoryGraph}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-semibold shadow-sm transition shrink-0 whitespace-nowrap"
+              title="Agent Mind Map & Cognitive Memory Graph Explorer"
+            >
+              <Brain className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <span>Memory Graph</span>
+            </button>
+          )}
+
 
           {/* Aksi Sandbox & Human-in-the-Loop */}
           {onOpenActions && (

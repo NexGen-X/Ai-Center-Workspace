@@ -30,6 +30,7 @@ import { WarRoomModal } from './features/warroom/WarRoomModal.js';
 import { SreModal } from './features/sre/SreModal.js';
 import { DataAnalystModal } from './features/data-analyst/DataAnalystModal.js';
 import { SkillStudioModal } from './features/skills/SkillStudioModal.js';
+import { MemoryGraphModal } from './features/memory/MemoryGraphModal.js';
 import { useFeedback } from './components/common/FeedbackContext.js';
 import { ErrorBoundary } from './components/common/ErrorBoundary.js';
 import { api } from './services/api.js';
@@ -61,6 +62,7 @@ export const App: React.FC = () => {
   const [isSreOpen, setIsSreOpen] = useState(false);
   const [isDataAnalystOpen, setIsDataAnalystOpen] = useState(false);
   const [isSkillsOpen, setIsSkillsOpen] = useState(false);
+  const [isMemoryGraphOpen, setIsMemoryGraphOpen] = useState(false);
   const [isAddAgentOpen, setIsAddAgentOpen] = useState(false);
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -327,6 +329,7 @@ export const App: React.FC = () => {
         onOpenSre={() => setIsSreOpen(true)}
         onOpenDataAnalyst={() => setIsDataAnalystOpen(true)}
         onOpenSkills={() => setIsSkillsOpen(true)}
+        onOpenMemoryGraph={() => setIsMemoryGraphOpen(true)}
         onOpenActions={() => setIsActionHistoryOpen(true)}
         pendingActionCount={pendingActionCount}
         onOpenLogin={() => setIsLoginOpen(true)}
@@ -628,6 +631,12 @@ export const App: React.FC = () => {
       <SkillStudioModal
         isOpen={isSkillsOpen}
         onClose={() => setIsSkillsOpen(false)}
+        agents={agents}
+      />
+
+      <MemoryGraphModal
+        isOpen={isMemoryGraphOpen}
+        onClose={() => setIsMemoryGraphOpen(false)}
         agents={agents}
       />
 

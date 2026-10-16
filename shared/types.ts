@@ -1226,6 +1226,75 @@ export interface TestSkillExecutionRequest {
   input: Record<string, any>;
 }
 
+// Cognitive Memory Graph Explorer & Mind Map Types
+export interface MemoryGraphNode {
+  id: string;
+  type: 'AGENT' | 'MEMORY';
+  label: string;
+  subLabel?: string;
+  memoryType?: AgentMemoryType;
+  agentId?: string;
+  agentName?: string;
+  importanceScore?: number;
+  context?: string;
+  taskId?: string;
+  taskTitle?: string;
+  createdAt?: string;
+  clusterGroup: string;
+  x?: number;
+  y?: number;
+  radius: number;
+  color: string;
+}
+
+export interface MemoryGraphEdge {
+  id: string;
+  source: string;
+  target: string;
+  edgeType: 'AGENT_MEMORY' | 'SEMANTIC_SIMILARITY' | 'TASK_COOCCURRENCE';
+  similarity?: number;
+  weight: number;
+  label?: string;
+}
+
+export interface MemoryGraphData {
+  nodes: MemoryGraphNode[];
+  edges: MemoryGraphEdge[];
+  stats: {
+    totalMemories: number;
+    totalAgents: number;
+    totalEdges: number;
+    averageImportance: number;
+    clustersCount: number;
+    episodicCount: number;
+    factualCount: number;
+    preferenceCount: number;
+    goalCount: number;
+  };
+}
+
+export interface PruneMemoriesRequest {
+  thresholdScore?: number;
+  agentId?: string;
+  olderThanDays?: number;
+  workspaceId?: string;
+}
+
+export interface ShareMemoryRequest {
+  memoryId: string;
+  targetAgentIds: string[];
+}
+
+export interface ConsolidateMemoriesRequest {
+  memoryIds: string[];
+  targetMemoryType: AgentMemoryType;
+  newKeyPoint: string;
+  newContext?: string;
+  targetAgentId?: string;
+  workspaceId?: string;
+}
+
+
 
 
 

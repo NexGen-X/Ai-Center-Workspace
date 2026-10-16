@@ -81,7 +81,11 @@ import {
   QuickDataQueryType,
   CustomAgentSkill,
   CreateCustomSkillRequest,
-  TestSkillExecutionRequest
+  TestSkillExecutionRequest,
+  MemoryGraphData,
+  PruneMemoriesRequest,
+  ShareMemoryRequest,
+  ConsolidateMemoriesRequest
 } from '../../../shared/types.js';
 
 const BASE_URL = '/api';
@@ -752,6 +756,38 @@ export const api = {
     request<{ success: boolean; output: any; durationMs: number; error?: string }>(`/skills/${id}/test`, {
       method: 'POST',
       body: JSON.stringify(data)
+    }),
+
+  // Cognitive Memory Graph Explorer & Mind Map
+  getMemoryGraph: (params?: { agentId?: string; minSimilarity?: number; memoryType?: string; searchQuery?: string; workspaceId?: string }) => {
+    const sp = new URLSearchParams();
+    if (params?.agentId) sp.append('agentId', params.agentId);
+    if (params?.minSimilarity !== undefined) sp.append('minSimilarity', String(params.minSimilarity));
+    if (params?.memoryType) sp.append('memoryType', params.memoryType);
+    if (params?.searchQuery) sp.append('searchQuery', params.searchQuery);
+    if (params?.workspaceId) sp.append('workspaceId', params.workspaceId);
+    const qs = sp.toString();
+    return request<MemoryGraphData>(`/memory-graph${qs ? `?${qs}` : ''}`);
+  },
+  pruneMemories: (data: PruneMemoriesRequest) =>
+    request<{ success: boolean; prunedCount: number; message: string }>('/memory-graph/prune', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+  shareMemory: (data: ShareMemoryRequest) =>
+    request<{ success: boolean; sharedCount: number; newMemoryIds: string[]; message: string }>('/memory-graph/share', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+  consolidateMemories: (data: ConsolidateMemoriesRequest) =>
+    request<{ success: boolean; consolidated: AgentMemoryItem; message: string }>('/memory-graph/consolidate', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+  seedSampleMemories: (workspaceId?: string) =>
+    request<{ success: boolean; message: string }>('/memory-graph/seed', {
+      method: 'POST',
+      body: JSON.stringify({ workspaceId })
     })
 };
 
