@@ -49,6 +49,7 @@ import { api } from '../../services/api.js';
 import { useFeedback } from '../../components/common/FeedbackContext.js';
 import { CustomSelect } from '../../components/common/CustomSelect.js';
 import { CustomCheckbox } from '../../components/common/CustomCheckbox.js';
+import { DomainSettingsTab } from './DomainSettingsTab.js';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -68,7 +69,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onWorkspaceRestored
 }) => {
   const { toast, confirm } = useFeedback();
-  const [activeTab, setActiveTab] = useState<'WORKSPACE' | 'SECURITY' | 'PROVIDERS' | 'BACKUP' | 'WEBHOOKS' | 'ALERTS' | 'MCP'>('WORKSPACE');
+  const [activeTab, setActiveTab] = useState<'WORKSPACE' | 'DOMAIN' | 'SECURITY' | 'PROVIDERS' | 'BACKUP' | 'WEBHOOKS' | 'ALERTS' | 'MCP'>('WORKSPACE');
   const [providers, setProviders] = useState<ModelProviderConfig[]>([]);
   const [loadingProviders, setLoadingProviders] = useState(false);
 
@@ -604,6 +605,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           <button
             type="button"
+            onClick={() => setActiveTab('DOMAIN')}
+            className={`py-3 border-b-2 transition flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
+              activeTab === 'DOMAIN'
+                ? 'border-cyan-400 text-cyan-300'
+                : 'border-transparent text-slate-400 hover:text-white'
+            }`}
+          >
+            <Globe className="w-4 h-4 text-cyan-400" />
+            <span>Domain &amp; SSL</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setActiveTab('SECURITY')}
             className={`py-3 border-b-2 transition flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
               activeTab === 'SECURITY'
@@ -804,6 +818,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               </div>
             </div>
+          )}
+
+          {activeTab === 'DOMAIN' && (
+            <DomainSettingsTab />
           )}
 
           {activeTab === 'SECURITY' && (

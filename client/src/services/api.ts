@@ -85,7 +85,10 @@ import {
   MemoryGraphData,
   PruneMemoriesRequest,
   ShareMemoryRequest,
-  ConsolidateMemoriesRequest
+  ConsolidateMemoriesRequest,
+  CheckDomainDnsResponse,
+  ProvisionDomainResponse,
+  DomainManagerInfoResponse
 } from '../../../shared/types.js';
 
 const BASE_URL = '/api';
@@ -788,6 +791,28 @@ export const api = {
     request<{ success: boolean; message: string }>('/memory-graph/seed', {
       method: 'POST',
       body: JSON.stringify({ workspaceId })
-    })
+    }),
+
+  // Automated Custom Domain & SSL Provisioning
+  getDomainInfo: (workspaceId?: string) => {
+    const qs = workspaceId ? `?workspaceId=${encodeURIComponent(workspaceId)}` : '';
+    return request<DomainManagerInfoResponse>(`/system/domain/info${qs}`);
+  },
+  checkDomainDns: (domainName: string) =>
+    request<CheckDomainDnsResponse>('/system/domain/check-dns', {
+      method: 'POST',
+      body: JSON.stringify({ domainName })
+    }),
+  provisionDomain: (domainName: string, workspaceId?: string) =>
+    request<ProvisionDomainResponse>('/system/domain/provision', {
+      method: 'POST',
+      body: JSON.stringify({ domainName, workspaceId })
+    }),
+  removeDomain: (id: string, workspaceId?: string) => {
+    const qs = workspaceId ? `?workspaceId=${encodeURIComponent(workspaceId)}` : '';
+    return request<{ success: boolean; message: string }>(`/system/domain/${id}${qs}`, {
+      method: 'DELETE'
+    });
+  }
 };
 

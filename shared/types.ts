@@ -1294,6 +1294,64 @@ export interface ConsolidateMemoriesRequest {
   workspaceId?: string;
 }
 
+// Automated Custom Domain & SSL Provisioning Types
+export interface CustomDomain {
+  id: string;
+  workspaceId: string;
+  domainName: string;
+  status: 'ACTIVE' | 'PENDING_DNS' | 'ERROR';
+  sslStatus: 'PROVISIONED' | 'CLOUDFLARE_MANAGED' | 'PENDING';
+  isPrimary: boolean;
+  dnsMode: 'DIRECT' | 'CLOUDFLARE_PROXY';
+  detectedIp?: string;
+  targetIp: string;
+  lastCheckedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CheckDomainDnsRequest {
+  domainName: string;
+}
+
+export interface CheckDomainDnsResponse {
+  domainName: string;
+  isConfigured: boolean;
+  detectedIps: string[];
+  serverPublicIp: string;
+  isMatch: boolean;
+  isCloudflareProxy: boolean;
+  dnsMode: 'DIRECT' | 'CLOUDFLARE_PROXY' | 'UNRESOLVED' | 'MISMATCH';
+  message: string;
+  guidance: {
+    type: string;
+    name: string;
+    targetIp: string;
+    cloudflareProxyRecommended: boolean;
+  };
+}
+
+export interface ProvisionDomainRequest {
+  domainName: string;
+  workspaceId?: string;
+}
+
+export interface ProvisionDomainResponse {
+  success: boolean;
+  domain: CustomDomain;
+  caddyReloaded: boolean;
+  accessUrl: string;
+  message: string;
+}
+
+export interface DomainManagerInfoResponse {
+  serverPublicIp: string;
+  domains: CustomDomain[];
+  primaryDomain: CustomDomain | null;
+  defaultAccessUrl: string;
+}
+
+
 
 
 

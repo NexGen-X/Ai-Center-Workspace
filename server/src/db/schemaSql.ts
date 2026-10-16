@@ -488,5 +488,22 @@ CREATE TABLE IF NOT EXISTS custom_agent_skills (
 
 CREATE INDEX IF NOT EXISTS idx_custom_skills_name ON custom_agent_skills(name);
 CREATE INDEX IF NOT EXISTS idx_custom_skills_ws ON custom_agent_skills(workspace_id, is_enabled);
+
+CREATE TABLE IF NOT EXISTS custom_domains (
+    id VARCHAR(64) PRIMARY KEY,
+    workspace_id VARCHAR(64) NOT NULL DEFAULT 'ws-default-command-center',
+    domain_name VARCHAR(255) NOT NULL UNIQUE,
+    status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
+    ssl_status VARCHAR(32) NOT NULL DEFAULT 'PROVISIONED',
+    is_primary BOOLEAN NOT NULL DEFAULT true,
+    dns_mode VARCHAR(32) NOT NULL DEFAULT 'DIRECT',
+    detected_ip VARCHAR(64),
+    target_ip VARCHAR(64) NOT NULL DEFAULT '13.212.164.108',
+    last_checked_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_custom_domains_ws ON custom_domains(workspace_id, is_primary);
 `;
 

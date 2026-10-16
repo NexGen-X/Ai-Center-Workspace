@@ -39,6 +39,7 @@ import { sreRouter } from './routes/sre.js';
 import { dataAnalystRouter } from './routes/dataAnalyst.js';
 import { skillsRouter } from './routes/skills.js';
 import memoryGraphRouter from './routes/memoryGraph.js';
+import domainRouter from './routes/domain.js';
 import { systemLogger } from './services/logger.js';
 
 export const app = express();
@@ -99,6 +100,7 @@ app.use('/api/sre', sreRouter);
 app.use('/api/data-analyst', dataAnalystRouter);
 app.use('/api/skills', skillsRouter);
 app.use('/api/memory-graph', memoryGraphRouter);
+app.use('/api/system/domain', domainRouter);
 
 // Root healthcheck
 app.get('/healthz', (_req: Request, res: Response) => {
