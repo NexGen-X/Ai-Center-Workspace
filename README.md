@@ -14,6 +14,8 @@
 
 ### *Next-Generation Spatial 3D/2D Orchestration Bridge & Autonomous Multi-Agent Swarm OS*
 
+[![NPM Version](https://img.shields.io/npm/v/ai-agent-command-center.svg?style=for-the-badge&logo=npm&logoColor=white&color=CB3837)](https://www.npmjs.com/package/ai-agent-command-center)
+[![NPM Unpacked Size](https://img.shields.io/badge/unpacked%20size-2.2%20MB-blue?style=for-the-badge&logo=npm&logoColor=white)](https://www.npmjs.com/package/ai-agent-command-center)
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/NexGen-X/Ai-Center-Workspace/ci.yml?branch=main&label=CI%20Quality%20Gate&logo=github&style=for-the-badge)](https://github.com/NexGen-X/Ai-Center-Workspace/actions)
 [![Tests Passing](https://img.shields.io/badge/TESTS-209%20PASSED%20%2F%20100%25-00FF66?style=for-the-badge&logo=vitest&logoColor=white)](https://github.com/NexGen-X/Ai-Center-Workspace/actions)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4.5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -203,9 +205,60 @@ Security is not an afterthought in AI Command Center — it is baked into every 
 
 ---
 
-## 🚀 Quickstart & Local Development
+## 🚀 Quickstart
 
-### Prerequisites
+### Method 1: Instant Zero-Install Run (Recommended)
+Run the complete Command Bridge in seconds without manually cloning or configuring dependencies:
+
+```bash
+# Instant launch (auto-provisions & opens browser on local machine)
+npx ai-agent-command-center
+
+# With custom port and database connection
+npx ai-agent-command-center --port 8080 --db "postgres://user:pass@localhost:5432/ai_center"
+```
+
+### Method 2: Global CLI Installation
+```bash
+# Install globally
+npm install -g ai-agent-command-center
+
+# Launch the Command Center
+ai-center start
+
+# View all CLI options
+ai-center --help
+```
+
+### 🧭 Intelligent Deployment Environment Auto-Detection
+`ai-agent-command-center` features built-in environment perception to seamlessly adapt between local workstations and headless cloud servers:
+
+| Target Environment | Detection Criteria | Startup Behavior |
+| :--- | :--- | :--- |
+| **Local Desktop / Laptop** | Windows, macOS, or Linux with active `$DISPLAY` / `$WAYLAND_DISPLAY` | Prints `http://localhost:3000` and **automatically opens default browser** within 1.5s. |
+| **Remote Server / Headless VPS** | Headless Linux (AWS EC2, DigitalOcean, VPS, Docker container) | **Suppresses browser invocation** (prevents X11 errors), binds Express to `0.0.0.0`, and outputs LAN & Public access URLs. |
+
+```text
+✔ AI Agent Command Center aktif & siap melayani:
+  ➜  Local:   http://localhost:3000
+  ➜  Network: http://192.168.1.50:3000
+  ➜  Mode:    Remote Server / VPS (Headless — browser lokal dinonaktifkan)
+```
+
+### CLI Command & Flags Reference
+| Flag | Alias | Description | Default |
+| :--- | :---: | :--- | :--- |
+| `--port <num>` | `-p` | Port for the backend API and frontend static server | `3000` or `$PORT` |
+| `--db <url>` | `-d` | PostgreSQL connection URL with pgvector support | `$DATABASE_URL` |
+| `--no-open` | | Do not launch the browser automatically on local desktop | `false` |
+| `--version` | `-v` | Print the current installed CLI version | `1.0.0` |
+| `--help` | `-h` | Display help guidelines and usage examples | |
+
+---
+
+### Method 3: Monorepo Developer Setup (From Source)
+
+#### Prerequisites
 - **Node.js**: `v20.x` or higher
 - **PostgreSQL**: `v16.x` with `pgvector` extension
 - **npm**: `v10.x` or higher
@@ -226,7 +279,7 @@ npm run dev:server
 # In a separate terminal:
 npm run dev:client
 ```
-Visit `http://localhost:5173` to access the Command Bridge.
+Visit `http://localhost:5173` to access the Vite HMR development server.
 
 ---
 
