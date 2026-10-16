@@ -266,7 +266,16 @@ process.on('unhandledRejection', (reason: any) => {
 // Auto-start if executed directly
 if (process.env.NODE_ENV !== 'test') {
   startServer().catch(err => {
-    console.error('Failed to start server:', err);
+    if (err && (err.code === '28P01' || err.code === 'ECONNREFUSED' || err.message?.includes('password authentication failed'))) {
+      console.error(`\n\x1b[31m[AI Center Error] Gagal terhubung ke basis data PostgreSQL:\x1b[0m`);
+      console.error(`\x1b[33mRincian:\x1b[0m ${err.message}`);
+      console.error(`\n\x1b[36mPanduan Perbaikan:\x1b[0m`);
+      console.error(`  1. Pastikan PostgreSQL berjalan dan database sudah dibuat.`);
+      console.error(`  2. Pastikan username dan password di DATABASE_URL sudah sesuai.`);
+      console.error(`  3. Contoh: DATABASE_URL="postgres://user:password@localhost:5432/ai_center" npx ai-agent-command-center\n`);
+    } else {
+      console.error('Failed to start server:', err);
+    }
     process.exit(1);
   });
 }

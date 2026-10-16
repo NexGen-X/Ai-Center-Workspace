@@ -125,6 +125,22 @@ if (!process.env.DATABASE_URL) {
   console.log(`  npx ai-agent-command-center --db "postgres://user:pass@localhost:5432/ai_center"\x1b[0m\n`);
 }
 
+// Resolves external Public IP asynchronously for cloud VPS
+async function getPublicIp() {
+  try {
+    const res = await fetch('https://api.ipify.org?format=json', {
+      signal: AbortSignal.timeout(1200)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data.ip;
+    }
+  } catch {
+    // Graceful silent fallback if offline or timeout
+  }
+  return null;
+}
+
 // Function to auto-open browser (strictly on local desktop with GUI display)
 function openBrowser(targetUrl) {
   if (noOpen || envInfo.isRemoteVPS) return;
@@ -157,25 +173,44 @@ async function launch() {
     await import(serverModulePath);
 
     console.log(`\n\x1b[1m\x1b[32m✔ AI Agent Command Center aktif & siap melayani:\x1b[0m`);
-    console.log(`  \x1b[36m➜\x1b[0m  \x1b[1mLocal:\x1b[0m   \x1b[4m${localUrl}\x1b[0m`);
+    console.log(`  \x1b[36m➜\x1b[0m  \x1b[1mLocal:\x1b[0m    \x1b[4m${localUrl}\x1b[0m`);
     
-    if (envInfo.networkIps.length > 0) {
-      envInfo.networkIps.forEach(ip => {
-        console.log(`  \x1b[36m➜\x1b[0m  \x1b[1mNetwork:\x1b[0m \x1b[4mhttp://${ip}:${port}\x1b[0m`);
-      });
-    }
-
     if (envInfo.isRemoteVPS) {
-      console.log(`  \x1b[33m➜\x1b[0m  \x1b[1mMode:\x1b[0m    Remote Server / VPS (Headless — browser lokal dinonaktifkan)`);
+      const publicIp = await getPublicIp();
+      if (publicIp) {
+        console.log(`  \x1b[36m➜\x1b[0m  \x1b[1mPublic:\x1b[0m   \x1b[4mhttp://${publicIp}:${port}\x1b[0m (Cloud VPS / Remote)`);
+      }
+      if (envInfo.networkIps.length > 0) {
+        envInfo.networkIps.forEach(ip => {
+          if (ip !== publicIp) {
+            console.log(`  \x1b[36m➜\x1b[0m  \x1b[1mInternal:\x1b[0m \x1b[4mhttp://${ip}:${port}\x1b[0m (VPC / LAN)`);
+          }
+        });
+      }
+      console.log(`  \x1b[33m➜\x1b[0m  \x1b[1mMode:\x1b[0m     Remote Server / VPS (Headless — browser lokal dinonaktifkan)`);
     } else {
-      console.log(`  \x1b[35m➜\x1b[0m  \x1b[1mMode:\x1b[0m    Local Desktop (Membuka browser otomatis...)`);
+      if (envInfo.networkIps.length > 0) {
+        envInfo.networkIps.forEach(ip => {
+          console.log(`  \x1b[36m➜\x1b[0m  \x1b[1mNetwork:\x1b[0m  \x1b[4mhttp://${ip}:${port}\x1b[0m`);
+        });
+      }
+      console.log(`  \x1b[35m➜\x1b[0m  \x1b[1mMode:\x1b[0m     Local Desktop (Membuka browser otomatis...)`);
       setTimeout(() => {
         openBrowser(localUrl);
       }, 1500);
     }
     console.log('');
   } catch (err) {
-    console.error(`\x1b[31m[AI Center Startup Error]\x1b[0m`, err);
+    if (err && (err.code === '28P01' || err.code === 'ECONNREFUSED' || err.message?.includes('password authentication failed'))) {
+      console.error(`\n\x1b[31m[AI Center Database Error] Gagal terhubung ke database PostgreSQL:\x1b[0m`);
+      console.error(`\x1b[33mDetail:\x1b[0m ${err.message}`);
+      console.error(`\n\x1b[36mPanduan Solusi:\x1b[0m`);
+      console.error(`  1. Pastikan PostgreSQL berjalan dan database sudah dibuat.`);
+      console.error(`  2. Pastikan username dan password di parameter --db atau DATABASE_URL benar.`);
+      console.error(`  3. Contoh: ai-center start --db "postgres://user:password@localhost:5432/ai_center"\n`);
+    } else {
+      console.error(`\x1b[31m[AI Center Startup Error]\x1b[0m`, err);
+    }
     process.exit(1);
   }
 }

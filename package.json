@@ -1,6 +1,6 @@
 {
   "name": "ai-agent-command-center",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Next-Generation Spatial 3D/2D Orchestration Bridge & Autonomous Multi-Agent Swarm OS",
   "main": "server/dist/server/src/index.js",
   "type": "module",
@@ -37,7 +37,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "pg": "^8.13.0",
-    "uuid": "^9.0.1"
+    "uuid": "^14.0.3"
   },
   "repository": {
     "type": "git",
