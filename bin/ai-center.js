@@ -7,6 +7,7 @@
 
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 import { fileURLToPath } from 'url';
 import { exec } from 'child_process';
 import dotenv from 'dotenv';
@@ -90,6 +91,32 @@ if (fs.existsSync(cwdEnvPath)) {
   dotenv.config({ path: cwdEnvPath });
 }
 
+// Environment Detection: Local Machine (Laptop/PC) vs Remote Server (VPS/Cloud)
+function detectDeploymentEnvironment() {
+  const isWindows = process.platform === 'win32';
+  const isMac = process.platform === 'darwin';
+  const hasDisplay = Boolean(process.env.DISPLAY || process.env.WAYLAND_DISPLAY);
+  const isLocalDesktop = isWindows || isMac || hasDisplay;
+
+  const interfaces = os.networkInterfaces();
+  const networkIps = [];
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name] || []) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        networkIps.push(iface.address);
+      }
+    }
+  }
+
+  return {
+    isLocalDesktop,
+    isRemoteVPS: !isLocalDesktop,
+    networkIps
+  };
+}
+
+const envInfo = detectDeploymentEnvironment();
+
 // Database URL verification & fallback guidance
 if (!process.env.DATABASE_URL) {
   console.warn(`\x1b[33m[AI Center] PERINGATAN: Variabel DATABASE_URL belum dikonfigurasi.\x1b[0m`);
@@ -98,9 +125,9 @@ if (!process.env.DATABASE_URL) {
   console.log(`  npx ai-agent-command-center --db "postgres://user:pass@localhost:5432/ai_center"\x1b[0m\n`);
 }
 
-// Function to auto-open browser
+// Function to auto-open browser (strictly on local desktop with GUI display)
 function openBrowser(targetUrl) {
-  if (noOpen) return;
+  if (noOpen || envInfo.isRemoteVPS) return;
   const startCmd =
     process.platform === 'darwin'
       ? 'open'
@@ -108,14 +135,14 @@ function openBrowser(targetUrl) {
       ? 'start'
       : 'xdg-open';
 
-  exec(`${startCmd} ${targetUrl}`, (err) => {
-    // Silently ignore if running on headless server without graphical display
+  exec(`${startCmd} ${targetUrl}`, () => {
+    // Silently ignore failures on headless environments
   });
 }
 
 // Launch backend server
 const port = process.env.PORT || 3000;
-const serverUrl = `http://localhost:${port}`;
+const localUrl = `http://localhost:${port}`;
 
 async function launch() {
   try {
@@ -126,15 +153,27 @@ async function launch() {
       process.exit(1);
     }
 
-    // Import compiled server
+    // Import compiled server (auto binds to 0.0.0.0)
     await import(serverModulePath);
 
-    console.log(`\x1b[32m[AI Center] Command Bridge siap diakses: \x1b[1m\x1b[4m${serverUrl}\x1b[0m`);
+    console.log(`\n\x1b[1m\x1b[32m✔ AI Agent Command Center aktif & siap melayani:\x1b[0m`);
+    console.log(`  \x1b[36m➜\x1b[0m  \x1b[1mLocal:\x1b[0m   \x1b[4m${localUrl}\x1b[0m`);
     
-    // Slight delay before opening browser to ensure socket is bound
-    setTimeout(() => {
-      openBrowser(serverUrl);
-    }, 1500);
+    if (envInfo.networkIps.length > 0) {
+      envInfo.networkIps.forEach(ip => {
+        console.log(`  \x1b[36m➜\x1b[0m  \x1b[1mNetwork:\x1b[0m \x1b[4mhttp://${ip}:${port}\x1b[0m`);
+      });
+    }
+
+    if (envInfo.isRemoteVPS) {
+      console.log(`  \x1b[33m➜\x1b[0m  \x1b[1mMode:\x1b[0m    Remote Server / VPS (Headless — browser lokal dinonaktifkan)`);
+    } else {
+      console.log(`  \x1b[35m➜\x1b[0m  \x1b[1mMode:\x1b[0m    Local Desktop (Membuka browser otomatis...)`);
+      setTimeout(() => {
+        openBrowser(localUrl);
+      }, 1500);
+    }
+    console.log('');
   } catch (err) {
     console.error(`\x1b[31m[AI Center Startup Error]\x1b[0m`, err);
     process.exit(1);

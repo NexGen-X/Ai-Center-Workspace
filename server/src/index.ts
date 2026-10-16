@@ -198,8 +198,8 @@ export async function startServer() {
   await SwarmService.recoverInterruptedMissions();
   const { SchedulerService } = await import('./services/schedulerService.js');
   SchedulerService.startDaemon(30000);
-  const server = app.listen(config.port, () => {
-    console.log(`[Server] AI Agent Command Center backend listening on port ${config.port}`);
+  const server = app.listen(config.port, '0.0.0.0', () => {
+    console.log(`[Server] AI Agent Command Center backend listening on port ${config.port} (0.0.0.0)`);
   });
 
   // Architectural Resilience: True Graceful Shutdown Handler
