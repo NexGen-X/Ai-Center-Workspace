@@ -1,6 +1,8 @@
 export const SCHEMA_SQL = `-- Database Schema for AI Agent Command Center
 -- PostgreSQL 16 compatible
 
+CREATE EXTENSION IF NOT EXISTS vector;
+
 CREATE TABLE IF NOT EXISTS workspaces (
     id VARCHAR(64) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
