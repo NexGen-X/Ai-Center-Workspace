@@ -1170,6 +1170,62 @@ export type QuickDataQueryType =
   | 'SERVER_RESOURCE_TRENDS'
   | 'HOURLY_ACTIVITY_PEAKS';
 
+// No-Code Agent Skill Builder & Dynamic Tool Studio Types
+export type ToolCategory = 'API' | 'DATABASE' | 'SYSTEM' | 'UTILITY' | 'INTEGRATION' | 'CUSTOM';
+
+export interface CustomSkillParameter {
+  type: 'string' | 'number' | 'boolean' | 'object';
+  description: string;
+  required?: boolean;
+  defaultValue?: any;
+}
+
+export interface CustomSkillRestConfig {
+  endpointUrl: string;
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  headers?: Record<string, string>;
+  bodyTemplate?: string;
+}
+
+export interface CustomAgentSkill {
+  id: string;
+  workspaceId: string;
+  name: string;
+  displayName: string;
+  description: string;
+  category: ToolCategory | 'CUSTOM';
+  riskLevel: ToolRiskLevel;
+  requiresApproval: boolean;
+  executionType: 'REST_API' | 'MOCK_RESPONSE';
+  parametersSchema: Record<string, CustomSkillParameter>;
+  restConfig?: CustomSkillRestConfig;
+  mockOutputTemplate?: string;
+  allowedAgentIds: string[];
+  isEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateCustomSkillRequest {
+  name: string;
+  displayName: string;
+  description: string;
+  category?: ToolCategory | 'CUSTOM';
+  riskLevel?: ToolRiskLevel;
+  requiresApproval?: boolean;
+  executionType: 'REST_API' | 'MOCK_RESPONSE';
+  parametersSchema: Record<string, CustomSkillParameter>;
+  restConfig?: CustomSkillRestConfig;
+  mockOutputTemplate?: string;
+  allowedAgentIds?: string[];
+  isEnabled?: boolean;
+  workspaceId?: string;
+}
+
+export interface TestSkillExecutionRequest {
+  input: Record<string, any>;
+}
+
 
 
 

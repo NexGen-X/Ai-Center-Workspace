@@ -37,6 +37,7 @@ import { warRoomsRouter } from './routes/warRooms.js';
 import { webResearchRouter } from './routes/webResearch.js';
 import { sreRouter } from './routes/sre.js';
 import { dataAnalystRouter } from './routes/dataAnalyst.js';
+import { skillsRouter } from './routes/skills.js';
 import { systemLogger } from './services/logger.js';
 
 export const app = express();
@@ -95,6 +96,7 @@ app.use('/api/war-rooms', warRoomsRouter);
 app.use('/api/web-research', webResearchRouter);
 app.use('/api/sre', sreRouter);
 app.use('/api/data-analyst', dataAnalystRouter);
+app.use('/api/skills', skillsRouter);
 
 // Root healthcheck
 app.get('/healthz', (_req: Request, res: Response) => {

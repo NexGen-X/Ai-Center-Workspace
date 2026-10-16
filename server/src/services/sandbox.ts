@@ -311,6 +311,36 @@ export function evaluateActionRisk(toolName: string, input: Record<string, any>)
 }
 
 /**
+ * Evaluasi risiko aksi secara asinkron termasuk memeriksa custom skills
+ */
+export async function evaluateActionRiskAsync(toolName: string, input: Record<string, any>): Promise<{
+  riskLevel: ToolRiskLevel;
+  requiresApproval: boolean;
+  reason?: string;
+}> {
+  if (toolName.startsWith('mcp:') || toolName === 'mcp_call') {
+    return { riskLevel: 'LOW', requiresApproval: false };
+  }
+
+  const tool = AVAILABLE_TOOLS[toolName];
+  if (tool) {
+    return evaluateActionRisk(toolName, input);
+  }
+
+  const { SkillStudioService } = await import('./skillStudioService.js');
+  const skill = await SkillStudioService.getSkill(toolName);
+  if (skill) {
+    return {
+      riskLevel: skill.riskLevel,
+      requiresApproval: skill.requiresApproval,
+      reason: `Skill kustom "${skill.displayName}" (${skill.riskLevel})`
+    };
+  }
+
+  return { riskLevel: 'HIGH', requiresApproval: true, reason: 'Tool tidak dikenal' };
+}
+
+/**
  * Eksekutor Tool Sandbox
  */
 export async function executeToolInSandbox(
@@ -648,8 +678,20 @@ export async function executeToolInSandbox(
         };
       }
 
-      default:
+      default: {
+        const { SkillStudioService } = await import('./skillStudioService.js');
+        const customSkill = await SkillStudioService.getSkill(toolName);
+        if (customSkill) {
+          const res = await SkillStudioService.executeCustomSkill(toolName, input, context);
+          return {
+            success: res.success,
+            output: typeof res.output === 'object' ? JSON.stringify(res.output, null, 2) : String(res.output),
+            error: res.error,
+            durationMs: res.durationMs
+          };
+        }
         throw new Error(`Tool "${toolName}" tidak didukung oleh sandbox engine.`);
+      }
     }
   } catch (err: any) {
     systemLogger.warn('SECURITY', `Kegagalan eksekusi sandbox tool [${toolName}]: ${err.message}`);

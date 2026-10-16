@@ -78,7 +78,10 @@ import {
   SreScanResult,
   DataAnalysisSession,
   AnalyzeDataRequest,
-  QuickDataQueryType
+  QuickDataQueryType,
+  CustomAgentSkill,
+  CreateCustomSkillRequest,
+  TestSkillExecutionRequest
 } from '../../../shared/types.js';
 
 const BASE_URL = '/api';
@@ -719,6 +722,36 @@ export const api = {
   deleteDataAnalysisSession: (id: string) =>
     request<{ success: boolean; message: string }>(`/data-analyst/sessions/${id}`, {
       method: 'DELETE'
+    }),
+
+  // No-Code Agent Skill Builder & Dynamic Tool Studio
+  getCustomSkills: (isEnabledOnly?: boolean, workspaceId?: string) => {
+    const params = new URLSearchParams();
+    if (isEnabledOnly) params.append('enabled', 'true');
+    if (workspaceId) params.append('workspaceId', workspaceId);
+    const qs = params.toString();
+    return request<CustomAgentSkill[]>(`/skills${qs ? `?${qs}` : ''}`);
+  },
+  getCustomSkill: (id: string) =>
+    request<CustomAgentSkill>(`/skills/${id}`),
+  createCustomSkill: (data: CreateCustomSkillRequest) =>
+    request<CustomAgentSkill>('/skills', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+  updateCustomSkill: (id: string, data: Partial<CreateCustomSkillRequest>) =>
+    request<CustomAgentSkill>(`/skills/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    }),
+  deleteCustomSkill: (id: string) =>
+    request<{ success: boolean; message: string }>(`/skills/${id}`, {
+      method: 'DELETE'
+    }),
+  testCustomSkill: (id: string, data: TestSkillExecutionRequest & { agentId?: string }) =>
+    request<{ success: boolean; output: any; durationMs: number; error?: string }>(`/skills/${id}/test`, {
+      method: 'POST',
+      body: JSON.stringify(data)
     })
 };
 

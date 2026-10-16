@@ -55,6 +55,7 @@ describe('Modal & Dialog UI/UX Standardization Contracts', () => {
       'features/warroom/WarRoomModal.tsx',
       'features/sre/SreModal.tsx',
       'features/data-analyst/DataAnalystModal.tsx',
+      'features/skills/SkillStudioModal.tsx',
       'components/LoginModal.tsx',
       'components/terminal/ConsoleDrawer.tsx',
       'components/common/FeedbackContext.tsx'

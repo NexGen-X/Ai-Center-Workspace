@@ -24,7 +24,8 @@ import {
   Network,
   Swords,
   ShieldAlert,
-  LineChart
+  LineChart,
+  Wrench
 } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown.js';
 import { OrchestratorStatus } from '../../../shared/types.js';
@@ -46,6 +47,7 @@ interface NavbarProps {
   onOpenWarRoom?: () => void;
   onOpenSre?: () => void;
   onOpenDataAnalyst?: () => void;
+  onOpenSkills?: () => void;
   onOpenActions?: () => void;
   pendingActionCount?: number;
   onOpenLogin: () => void;
@@ -77,6 +79,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenWarRoom,
   onOpenSre,
   onOpenDataAnalyst,
+  onOpenSkills,
   onOpenActions,
   pendingActionCount = 0,
   onOpenLogin,
@@ -364,6 +367,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <LineChart className="w-3.5 h-3.5 text-blue-400 shrink-0" />
               <span>Data Analyst</span>
+            </button>
+          )}
+
+          {/* No-Code Agent Skill Builder */}
+          {onOpenSkills && (
+            <button
+              type="button"
+              onClick={onOpenSkills}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-semibold shadow-sm transition shrink-0 whitespace-nowrap"
+              title="No-Code Agent Skill Builder & Dynamic Tool Studio"
+            >
+              <Wrench className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+              <span>Skill Studio</span>
             </button>
           )}
 

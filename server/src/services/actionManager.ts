@@ -5,7 +5,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { pool } from '../db/index.js';
 import { AgentAction, ActionApprovalStatus } from '../../../shared/types.js';
-import { evaluateActionRisk, executeToolInSandbox } from './sandbox.js';
+import { evaluateActionRisk, evaluateActionRiskAsync, executeToolInSandbox } from './sandbox.js';
 import { realtimeHub } from './realtime.js';
 import { systemLogger } from './logger.js';
 
@@ -39,7 +39,7 @@ export class ActionManager {
     }
 
     // Evaluasi tingkat risiko & kebutuhan approval
-    const riskEval = evaluateActionRisk(toolName, toolInput);
+    const riskEval = await evaluateActionRiskAsync(toolName, toolInput);
     const requiresApproval = autoApprove ? false : riskEval.requiresApproval;
     const initialStatus: ActionApprovalStatus = requiresApproval ? 'PENDING' : 'APPROVED';
 

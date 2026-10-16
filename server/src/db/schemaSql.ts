@@ -466,5 +466,27 @@ CREATE TABLE IF NOT EXISTS data_analysis_sessions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_data_analysis_sessions_ws ON data_analysis_sessions(workspace_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS custom_agent_skills (
+    id VARCHAR(64) PRIMARY KEY,
+    workspace_id VARCHAR(64) NOT NULL DEFAULT 'ws-default-command-center',
+    name VARCHAR(64) NOT NULL UNIQUE,
+    display_name VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    category VARCHAR(64) NOT NULL DEFAULT 'CUSTOM',
+    risk_level VARCHAR(32) NOT NULL DEFAULT 'LOW',
+    requires_approval BOOLEAN DEFAULT FALSE,
+    execution_type VARCHAR(32) NOT NULL DEFAULT 'REST_API',
+    parameters_schema JSONB NOT NULL DEFAULT '{}'::jsonb,
+    rest_config JSONB DEFAULT '{}'::jsonb,
+    mock_output_template TEXT,
+    allowed_agent_ids JSONB DEFAULT '[]'::jsonb,
+    is_enabled BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_custom_skills_name ON custom_agent_skills(name);
+CREATE INDEX IF NOT EXISTS idx_custom_skills_ws ON custom_agent_skills(workspace_id, is_enabled);
 `;
 
