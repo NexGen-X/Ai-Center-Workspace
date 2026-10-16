@@ -282,7 +282,13 @@ export class SwarmArtifactService {
       const commitMsg = options?.commitMessage?.trim() ||
         `feat(swarm): automated deliverables for "${bundle.missionTitle}" [${missionId}]`;
 
-      await execFileAsync('git', ['commit', '-m', commitMsg], { cwd: repoRoot });
+      await execFileAsync('git', [
+        '-c', 'user.name=AI Agent Swarm',
+        '-c', 'user.email=swarm@ai-center.local',
+        'commit',
+        '-m',
+        commitMsg
+      ], { cwd: repoRoot });
 
       // Retrieve new commit hash
       const { stdout: hashOut } = await execFileAsync('git', ['rev-parse', 'HEAD'], { cwd: repoRoot });
