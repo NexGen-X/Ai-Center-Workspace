@@ -1,0 +1,14 @@
+node_modules
+.git
+.github
+.env
+*.log
+client/node_modules
+server/node_modules
+client/dist
+server/dist
+sandbox
+docs/swarm-reports
+.system_generated
+coverage
+dist
