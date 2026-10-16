@@ -7,6 +7,7 @@ import { AgentDetailModal } from './features/team/AgentDetailModal.js';
 import { ManageTeamModal } from './features/team/ManageTeamModal.js';
 import { LoginModal } from './components/LoginModal.js';
 import { LoginPage } from './features/auth/LoginPage.js';
+import { ForcePasswordChangeModal } from './features/auth/ForcePasswordChangeModal.js';
 import { CalendarModal } from './features/calendar/CalendarModal.js';
 import { ReportsModal } from './features/reports/ReportsModal.js';
 import { DocumentsModal } from './features/documents/DocumentsModal.js';
@@ -350,6 +351,19 @@ export const App: React.FC = () => {
           setCurrentUser(user);
           toast.success(`Selamat datang, ${user.displayName || 'Operator'}!`);
         }}
+      />
+    );
+  }
+
+  if (currentUser?.mustChangePassword) {
+    return (
+      <ForcePasswordChangeModal
+        currentUser={currentUser}
+        onSuccess={(updatedUser) => {
+          setCurrentUser(updatedUser);
+          toast.success('Kredensial keamanan berhasil diperbarui! Selamat bertugas.');
+        }}
+        onLogout={handleLogout}
       />
     );
   }

@@ -220,38 +220,47 @@ npx ai-agent-command-center --port 8080 --db "postgres://user:pass@localhost:543
 
 ### Method 2: Global CLI Installation
 ```bash
-# Install globally
+# Install globally via npm
 npm install -g ai-agent-command-center
 
-# Launch the Command Center
-ai-center start
+# Quick Interactive Menu (just type ai-center)
+ai-center
 
-# View all CLI options
-ai-center --help
+# Or run subcommands directly:
+ai-center start          # Starts in background (daemon) & enables autostart across VPS reboots
+ai-center status         # Inspect telemetry, port, memory, and database status
+ai-center logs           # Stream live logs in real-time
+ai-center stop           # Stop the Command Center
+ai-center restart        # Restart the Command Center
+ai-center reset-admin    # Emergency reset of admin credentials via terminal
+ai-center --help         # View all options
 ```
 
-### 🧭 Intelligent Deployment Environment Auto-Detection
-`ai-agent-command-center` features built-in environment perception to seamlessly adapt between local workstations and headless cloud servers:
+### 🧭 Intelligent Deployment & Autostart Persistence
+`ai-agent-command-center` automatically manages background execution and service resilience:
+- **Automatic Daemon Execution**: `ai-center start` automatically forks into the background without needing `--daemon`, returning terminal control immediately.
+- **Reboot Resilience**: On Linux VPS (systemd), `ai-center start` registers and enables `/etc/systemd/system/ai-center.service` so the platform automatically starts whenever your server reboots.
+- **Ephemeral Auto-Fill & Security Hardening**: The default login auto-fill helper is strictly ephemeral. Upon initial login, operators are immediately routed to a mandatory credential change gate. Once personalized, the auto-fill helper is permanently locked down. Emergency access is always possible via `ai-center reset-admin`.
 
-| Target Environment | Detection Criteria | Startup Behavior |
-| :--- | :--- | :--- |
-| **Local Desktop / Laptop** | Windows, macOS, or Linux with active `$DISPLAY` / `$WAYLAND_DISPLAY` | Prints `http://localhost:3000` and **automatically opens default browser** within 1.5s. |
-| **Remote Server / Headless VPS** | Headless Linux (AWS EC2, DigitalOcean, VPS, Docker container) | **Suppresses browser invocation** (prevents X11 errors), binds Express to `0.0.0.0`, and outputs LAN & Public access URLs. |
+### CLI Subcommands Reference
+| Command | Description |
+| :--- | :--- |
+| `ai-center` | Displays the interactive terminal control menu (Options 1–7) |
+| `ai-center start` | Starts the server as a background daemon & registers systemd autostart on reboot |
+| `ai-center stop` | Gracefully stops the background service and releases port `3000` |
+| `ai-center restart` | Restarts the background service and validates `/healthz` |
+| `ai-center status` | Displays live telemetry: service state, PID, port, database latency, and public URL |
+| `ai-center logs` | Streams real-time systemd journal / daemon logs (`Ctrl+C` to exit) |
+| `ai-center reset-admin` | Prompts or accepts `--email` & `--password` to directly reset admin credentials in PostgreSQL |
 
-```text
-✔ AI Agent Command Center aktif & siap melayani:
-  ➜  Local:   http://localhost:3000
-  ➜  Network: http://192.168.1.50:3000
-  ➜  Mode:    Remote Server / VPS (Headless — browser lokal dinonaktifkan)
-```
-
-### CLI Command & Flags Reference
+### CLI Options & Flags
 | Flag | Alias | Description | Default |
 | :--- | :---: | :--- | :--- |
 | `--port <num>` | `-p` | Port for the backend API and frontend static server | `3000` or `$PORT` |
 | `--db <url>` | `-d` | PostgreSQL connection URL with pgvector support | `$DATABASE_URL` |
-| `--no-open` | | Do not launch the browser automatically on local desktop | `false` |
-| `--version` | `-v` | Print the current installed CLI version | `1.0.0` |
+| `--email <email>` | | Target admin email for `reset-admin` | |
+| `--password <pass>` | `--pass` | New admin password (min 8 chars) for `reset-admin` | |
+| `--version` | `-v` | Print the current installed CLI version | `1.0.3` |
 | `--help` | `-h` | Display help guidelines and usage examples | |
 
 ---

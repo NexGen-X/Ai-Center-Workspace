@@ -137,7 +137,11 @@ export const api = {
   }),
   getMe: () => request<{ authenticated: boolean; user?: any }>('/auth/me'),
   logout: () => request<{ success: boolean }>('/auth/logout', { method: 'POST' }),
-  getSetupHint: () => request<{ defaultEmail: string; hint: string }>('/auth/setup-hint'),
+  getSetupHint: () => request<{ available?: boolean; defaultEmail?: string; hint?: string; message?: string }>('/auth/setup-hint'),
+  updateCredentials: (data: { newEmail: string; newDisplayName?: string; newPassword: string }) => request<{ success: boolean; user: any }>('/auth/update-credentials', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
   changePassword: (currentPassword: string, newPassword: string) => request<{ success: boolean }>('/auth/change-password', {
     method: 'POST',
     body: JSON.stringify({ currentPassword, newPassword })

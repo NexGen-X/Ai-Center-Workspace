@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS human_users (
     password_hash TEXT,
     role VARCHAR(32) DEFAULT 'ADMIN',
     session_token TEXT,
+    must_change_password BOOLEAN DEFAULT TRUE,
     last_login_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

@@ -13,11 +13,17 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [setupHint, setSetupHint] = useState<{ defaultEmail: string; hint: string } | null>(null);
+  const [setupHint, setSetupHint] = useState<{ defaultEmail?: string; hint?: string; available?: boolean } | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      api.getSetupHint().then(setSetupHint).catch(() => {});
+      api.getSetupHint().then((res) => {
+        if (res && res.available) {
+          setSetupHint(res);
+        } else {
+          setSetupHint(null);
+        }
+      }).catch(() => setSetupHint(null));
       setError(null);
     }
   }, [isOpen]);
@@ -53,7 +59,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
   };
 
   const handleUseHint = () => {
-    if (setupHint) {
+    if (setupHint && setupHint.defaultEmail) {
       setEmail(setupHint.defaultEmail);
       setPassword('Admin#AiCenter2026!');
     }

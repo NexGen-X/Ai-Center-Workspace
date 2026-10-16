@@ -46,6 +46,9 @@ export async function initializeDatabase(): Promise<void> {
     
     // Run schema migrations idempotently
     await client.query(SCHEMA_SQL);
+    await client.query(`
+      ALTER TABLE human_users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT TRUE;
+    `);
     console.log('[DB] Schema migrations applied successfully.');
 
     // Seed default workspace
@@ -55,13 +58,12 @@ export async function initializeDatabase(): Promise<void> {
       ON CONFLICT (id) DO NOTHING;
     `, [config.defaultWorkspaceId, 'Command Center Headquarters']);
 
-    // Seed default human operator user
+    // Seed default human operator user (only if not already created)
     const defaultPasswordHash = hashPassword('Admin#AiCenter2026!');
     await client.query(`
-      INSERT INTO human_users (id, email, display_name, password_hash)
-      VALUES ($1, $2, $3, $4)
-      ON CONFLICT (id) DO UPDATE
-      SET password_hash = COALESCE(human_users.password_hash, EXCLUDED.password_hash);
+      INSERT INTO human_users (id, email, display_name, password_hash, must_change_password)
+      VALUES ($1, $2, $3, $4, TRUE)
+      ON CONFLICT (id) DO NOTHING;
     `, ['user-admin', 'operator@ai-center.local', 'Lead Command Operator', defaultPasswordHash]);
 
     // Seed default Route-X provider if not exists
