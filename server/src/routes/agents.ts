@@ -10,6 +10,7 @@ import { CreateAgentRequest, AIAgent } from '../../../shared/types.js';
 import { realtimeHub } from '../services/realtime.js';
 import { executeAgentTask } from '../services/orchestrator.js';
 import { ConnectionRouter } from '../adapters/router.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -63,7 +64,7 @@ router.get('/', async (_req: Request, res: Response) => {
 });
 
 // POST /api/agents — Create new AI Team member
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', requireAuth, async (req: Request, res: Response) => {
   const client = await pool.connect();
   try {
     const body: CreateAgentRequest = req.body;
@@ -182,7 +183,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 });
 
 // PATCH /api/agents/:id — Update agent configuration
-router.patch('/:id', async (req: Request, res: Response) => {
+router.patch('/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const { name, role, description, systemPrompt, modelId, enabled, status, parameters } = req.body;
     const updates: string[] = [];
@@ -273,7 +274,7 @@ router.patch('/:id', async (req: Request, res: Response) => {
 });
 
 // POST /api/agents/:id/ping — Live test connection & latency for registered agent
-router.post('/:id/ping', async (req: Request, res: Response) => {
+router.post('/:id/ping', requireAuth, async (req: Request, res: Response) => {
   try {
     const agentRes = await pool.query(`
       SELECT 
@@ -337,7 +338,7 @@ router.get('/:id/runs', async (req: Request, res: Response) => {
 });
 
 // POST /api/agents/:id/execute — Execute agent directly with prompt
-router.post('/:id/execute', async (req: Request, res: Response) => {
+router.post('/:id/execute', requireAuth, async (req: Request, res: Response) => {
   try {
     const { prompt } = req.body;
     if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
@@ -352,7 +353,7 @@ router.post('/:id/execute', async (req: Request, res: Response) => {
 });
 
 // DELETE /api/agents/:id — Delete agent
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const result = await pool.query('DELETE FROM ai_agents WHERE id = $1 RETURNING name', [req.params.id]);
     if (result.rows.length === 0) {

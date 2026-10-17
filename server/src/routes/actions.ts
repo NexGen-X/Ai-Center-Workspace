@@ -61,10 +61,13 @@ router.post('/request', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/actions/:id/approve — Operator approves an action
-router.post('/:id/approve', async (req: Request, res: Response) => {
+import { requireAuth, AuthenticatedRequest } from '../middleware/auth.js';
+
+// POST /api/actions/:id/approve — Operator approves an action (Protected)
+router.post('/:id/approve', requireAuth, async (req: Request, res: Response) => {
   try {
-    const operatorId = req.body.operatorId || 'lead-operator';
+    const authReq = req as AuthenticatedRequest;
+    const operatorId = authReq.user?.displayName || authReq.user?.id || 'lead-operator';
     const action = await ActionManager.executeAction(req.params.id, operatorId);
     res.json(action);
   } catch (err: any) {
@@ -72,10 +75,11 @@ router.post('/:id/approve', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/actions/:id/reject — Operator rejects an action
-router.post('/:id/reject', async (req: Request, res: Response) => {
+// POST /api/actions/:id/reject — Operator rejects an action (Protected)
+router.post('/:id/reject', requireAuth, async (req: Request, res: Response) => {
   try {
-    const operatorId = req.body.operatorId || 'lead-operator';
+    const authReq = req as AuthenticatedRequest;
+    const operatorId = authReq.user?.displayName || authReq.user?.id || 'lead-operator';
     const reason = req.body.reason;
     const action = await ActionManager.rejectAction(req.params.id, operatorId, reason);
     res.json(action);

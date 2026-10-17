@@ -5,6 +5,7 @@
 import { Router, Request, Response } from 'express';
 import { SreAgentService } from '../services/sreAgentService.js';
 import { systemLogger } from '../services/logger.js';
+import { requireAuth } from '../middleware/auth.js';
 
 export const sreRouter = Router();
 
@@ -38,7 +39,7 @@ sreRouter.get('/incidents/:id', async (req: Request, res: Response) => {
 });
 
 // POST /api/sre/scan — Trigger system health scan and anomaly detection
-sreRouter.post('/scan', async (req: Request, res: Response) => {
+sreRouter.post('/scan', requireAuth, async (req: Request, res: Response) => {
   try {
     const workspaceId = (req.body?.workspaceId as string) || 'ws-default-command-center';
     const result = await SreAgentService.scanSystemHealth(workspaceId);
@@ -50,7 +51,7 @@ sreRouter.post('/scan', async (req: Request, res: Response) => {
 });
 
 // POST /api/sre/incidents/:id/investigate — Autonomous deep diagnostic investigation
-sreRouter.post('/incidents/:id/investigate', async (req: Request, res: Response) => {
+sreRouter.post('/incidents/:id/investigate', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updated = await SreAgentService.investigateIncident(id);
@@ -62,7 +63,7 @@ sreRouter.post('/incidents/:id/investigate', async (req: Request, res: Response)
 });
 
 // POST /api/sre/incidents/:id/remediate — Execute remediation playbook
-sreRouter.post('/incidents/:id/remediate', async (req: Request, res: Response) => {
+sreRouter.post('/incidents/:id/remediate', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { operatorApproved } = req.body || {};
@@ -75,7 +76,7 @@ sreRouter.post('/incidents/:id/remediate', async (req: Request, res: Response) =
 });
 
 // POST /api/sre/incidents/:id/approve — Operator approves remediation and triggers execution
-sreRouter.post('/incidents/:id/approve', async (req: Request, res: Response) => {
+sreRouter.post('/incidents/:id/approve', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updated = await SreAgentService.approveIncidentRemediation(id);

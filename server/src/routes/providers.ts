@@ -11,6 +11,7 @@ import { ConnectionRouter } from '../adapters/router.js';
 import { encryptSecret, decryptSecret, maskApiKey } from '../utils/crypto.js';
 import { validateOutgoingUrl } from '../utils/ssrf.js';
 import { realtimeHub } from '../services/realtime.js';
+import { requireAuth } from '../middleware/auth.js';
 import { v4 as uuidv4 } from 'uuid';
 import {
   TestConnectionRequest,
@@ -95,7 +96,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 });
 
 // POST /api/providers — Create a new model provider
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', requireAuth, async (req: Request, res: Response) => {
   try {
     const body: CreateProviderRequest = req.body;
 
@@ -180,7 +181,7 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // PUT /api/providers/:id — Update provider configuration & optionally replace API key
-router.put('/:id', async (req: Request, res: Response) => {
+router.put('/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const body: UpdateProviderRequest = req.body;
@@ -252,7 +253,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 });
 
 // DELETE /api/providers/:id — Delete provider with agent dependency protection
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -291,7 +292,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
 });
 
 // POST /api/providers/:id/test-connection — Test connection of a specific saved provider by ID
-router.post('/:id/test-connection', async (req: Request, res: Response) => {
+router.post('/:id/test-connection', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const rowRes = await pool.query('SELECT * FROM model_providers WHERE id = $1', [id]);
@@ -360,7 +361,7 @@ router.post('/:id/test-connection', async (req: Request, res: Response) => {
 });
 
 // POST /api/providers/test-connection — Test connection live (ad-hoc or existing)
-router.post('/test-connection', async (req: Request, res: Response) => {
+router.post('/test-connection', requireAuth, async (req: Request, res: Response) => {
   try {
     const body: TestConnectionRequest = req.body;
     let apiKey = body.apiKey;
@@ -420,7 +421,7 @@ router.post('/test-connection', async (req: Request, res: Response) => {
 });
 
 // POST /api/providers/discover-models — Query upstream models
-router.post('/discover-models', async (req: Request, res: Response) => {
+router.post('/discover-models', requireAuth, async (req: Request, res: Response) => {
   try {
     const { baseUrl, apiKey, providerType, existingProviderId } = req.body;
     let effectiveApiKey = apiKey;

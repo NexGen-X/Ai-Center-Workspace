@@ -6,6 +6,7 @@
 import { Router, Request, Response } from 'express';
 import { McpClientService, POPULAR_MCP_TEMPLATES } from '../services/mcpClientService.js';
 import { systemLogger } from '../services/logger.js';
+import { requireAuth } from '../middleware/auth.js';
 
 export const mcpRouter = Router();
 
@@ -40,7 +41,7 @@ mcpRouter.get('/servers/:id', async (req: Request, res: Response) => {
 });
 
 // POST /api/mcp/servers - Register a new MCP server
-mcpRouter.post('/servers', async (req: Request, res: Response) => {
+mcpRouter.post('/servers', requireAuth, async (req: Request, res: Response) => {
   try {
     const { name, description, transport, command, args, env, url, enabled } = req.body;
 
@@ -78,7 +79,7 @@ mcpRouter.post('/servers', async (req: Request, res: Response) => {
 });
 
 // PUT /api/mcp/servers/:id - Update an MCP server configuration
-mcpRouter.put('/servers/:id', async (req: Request, res: Response) => {
+mcpRouter.put('/servers/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const updated = await McpClientService.updateServer(req.params.id, req.body);
     if (!updated) {
@@ -94,7 +95,7 @@ mcpRouter.put('/servers/:id', async (req: Request, res: Response) => {
 });
 
 // DELETE /api/mcp/servers/:id - Delete an MCP server
-mcpRouter.delete('/servers/:id', async (req: Request, res: Response) => {
+mcpRouter.delete('/servers/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const deleted = await McpClientService.deleteServer(req.params.id);
     if (!deleted) {
@@ -110,7 +111,7 @@ mcpRouter.delete('/servers/:id', async (req: Request, res: Response) => {
 });
 
 // POST /api/mcp/servers/:id/test - Test connection, run initialize handshake & refresh tools
-mcpRouter.post('/servers/:id/test', async (req: Request, res: Response) => {
+mcpRouter.post('/servers/:id/test', requireAuth, async (req: Request, res: Response) => {
   try {
     const testResult = await McpClientService.testAndRefreshServer(req.params.id);
     res.json({
@@ -139,7 +140,7 @@ mcpRouter.get('/tools', async (_req: Request, res: Response) => {
 });
 
 // POST /api/mcp/tools/call - Invoke an MCP tool
-mcpRouter.post('/tools/call', async (req: Request, res: Response) => {
+mcpRouter.post('/tools/call', requireAuth, async (req: Request, res: Response) => {
   try {
     const { serverId, toolName, arguments: toolArgs } = req.body;
 

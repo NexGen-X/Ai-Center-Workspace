@@ -5,6 +5,7 @@
  */
 
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
+import path from 'path';
 import { pool } from '../db/index.js';
 import { systemLogger } from './logger.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -15,6 +16,50 @@ import {
   McpServerTemplate,
   McpTransport
 } from '../../../shared/types.js';
+
+const ALLOWED_MCP_COMMANDS = new Set([
+  'npx',
+  'node',
+  'python',
+  'python3',
+  'uvx',
+  'docker'
+]);
+
+const DANGEROUS_MCP_PATTERNS = [
+  /rm\s/,
+  /bash\b/,
+  /sh\b/,
+  /zsh\b/,
+  /curl\b/,
+  /wget\b/,
+  /nc\b/,
+  /netcat\b/,
+  /chmod\b/,
+  /chown\b/,
+  /mkfs\b/,
+  /dd\b/,
+  /shutdown\b/,
+  /reboot\b/,
+  />\s*\//,
+  /\|\s*sh/,
+  /\|\s*bash/
+];
+
+export function validateMcpCommand(command?: string, args?: string[]) {
+  if (!command) return;
+  const baseCmd = path.basename(command).toLowerCase();
+  if (!ALLOWED_MCP_COMMANDS.has(baseCmd)) {
+    throw new Error(`Perintah '${command}' tidak diizinkan untuk server MCP stdio. Hanya executable yang disetujui [npx, node, python, python3, uvx, docker] yang diperbolehkan.`);
+  }
+
+  const fullLine = `${command} ${(args || []).join(' ')}`;
+  for (const pattern of DANGEROUS_MCP_PATTERNS) {
+    if (pattern.test(fullLine)) {
+      throw new Error(`Argumen perintah MCP terdeteksi mengandung pola berbahaya (${pattern.toString()}).`);
+    }
+  }
+}
 
 interface PendingRequest {
   resolve: (value: any) => void;
@@ -300,6 +345,11 @@ export class McpClientService {
     const id = data.id || `mcp-${uuidv4().slice(0, 8)}`;
     const transport = data.transport || 'stdio';
     const enabled = data.enabled !== undefined ? data.enabled : true;
+
+    if (transport === 'stdio') {
+      validateMcpCommand(data.command, data.args);
+    }
+
     const argsJson = JSON.stringify(data.args || []);
     const envJson = JSON.stringify(data.env || {});
 
@@ -350,7 +400,13 @@ export class McpClientService {
     const description = updates.description !== undefined ? updates.description : existing.description;
     const transport = updates.transport !== undefined ? updates.transport : existing.transport;
     const command = updates.command !== undefined ? updates.command : existing.command;
-    const argsJson = JSON.stringify(updates.args !== undefined ? updates.args : existing.args);
+    const args = updates.args !== undefined ? updates.args : existing.args;
+
+    if (transport === 'stdio' && command) {
+      validateMcpCommand(command, args);
+    }
+
+    const argsJson = JSON.stringify(args);
     const envJson = JSON.stringify(updates.env !== undefined ? updates.env : existing.env);
     const url = updates.url !== undefined ? updates.url : existing.url;
     const enabled = updates.enabled !== undefined ? updates.enabled : existing.enabled;
@@ -398,6 +454,8 @@ export class McpClientService {
         if (!server.command) {
           throw new Error('Command is required for stdio MCP transport');
         }
+
+        validateMcpCommand(server.command, server.args);
 
         // Recycle existing connection or create new
         this.disconnectServer(id);

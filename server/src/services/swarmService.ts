@@ -518,6 +518,25 @@ export class SwarmService {
         );
       }
 
+      // Check for any deadlocked or unexecutable pending subtasks (e.g. cycle or missing dependency)
+      const pendingSubtasks = subtasks.filter(st => st.status === 'PENDING');
+      for (const st of pendingSubtasks) {
+        st.status = 'FAILED';
+        st.error = 'Subtugas dibatalkan karena dependensi tidak terpenuhi atau terdeteksi siklus/deadlock pada DAG.';
+        st.completedAt = new Date().toISOString();
+        realtimeHub.broadcast('swarm.subtask_completed', {
+          missionId,
+          subtask: st
+        });
+      }
+
+      if (pendingSubtasks.length > 0) {
+        await pool.query(
+          `UPDATE swarm_missions SET subtasks_json = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+          [JSON.stringify(subtasks), missionId]
+        );
+      }
+
       // Check if any subtask failed
       const hasFailures = subtasks.some(st => st.status === 'FAILED');
       const missionStatus: SwarmMissionStatus = hasFailures ? 'FAILED' : 'COMPLETED';
