@@ -206,6 +206,9 @@ export const api = {
     method: 'POST',
     body: JSON.stringify({ agentId, prompt })
   }),
+  autoSwarmTask: (taskId: string) => request<{ success: boolean; message: string; mission: any }>(`/tasks/${taskId}/auto-swarm`, {
+    method: 'POST'
+  }),
 
   // Projects
   getProjects: () => request<(Project & { totalTasks: number; completedTasks: number })[]>('/projects'),

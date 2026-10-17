@@ -65,6 +65,7 @@ export const TaskList: React.FC<TaskListProps> = ({
   const [projectFilter, setProjectFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [executingTaskId, setExecutingTaskId] = useState<string | null>(null);
+  const [swarmingTaskId, setSwarmingTaskId] = useState<string | null>(null);
 
   // Drag and Drop state
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
@@ -119,6 +120,23 @@ export const TaskList: React.FC<TaskListProps> = ({
       toast.error(err.message || 'Gagal mengeksekusi tugas.', 'Eksekusi Gagal');
     } finally {
       setExecutingTaskId(null);
+    }
+  };
+
+  const handleAutoSwarmTask = async (task: Task, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSwarmingTaskId(task.id);
+    audioService.playExecute();
+    try {
+      const res = await api.autoSwarmTask(task.id);
+      onTaskUpdated();
+      audioService.playSuccess();
+      toast.success(res.message || `Misi Swarm untuk "${task.title}" berhasil diluncurkan ke seluruh tim!`, 'Swarm Aktif');
+    } catch (err: any) {
+      audioService.playAlert();
+      toast.error(err.message || 'Gagal meluncurkan misi swarm.', 'Swarm Gagal');
+    } finally {
+      setSwarmingTaskId(null);
     }
   };
 
@@ -370,16 +388,31 @@ export const TaskList: React.FC<TaskListProps> = ({
                             )}
                           </div>
 
-                          {/* Execute button */}
+                          {/* Execute & Swarm buttons */}
                           {task.status !== 'DONE' && (
-                            <button
-                              onClick={(e) => handleExecuteTask(task, e)}
-                              disabled={executingTaskId === task.id}
-                              className="px-2 py-0.5 rounded bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/30 text-[10px] font-semibold flex items-center gap-1 transition"
-                            >
-                              <Play className={`w-2.5 h-2.5 ${executingTaskId === task.id ? 'animate-spin' : ''}`} />
-                              <span>{executingTaskId === task.id ? '...' : 'Run'}</span>
-                            </button>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={(e) => handleAutoSwarmTask(task, e)}
+                                disabled={swarmingTaskId === task.id || executingTaskId === task.id}
+                                className="px-1.5 py-0.5 rounded bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/30 text-[10px] font-semibold flex items-center gap-1 transition"
+                                title="Bagi kerja ke Tim Swarm (Multi-Agent DAG)"
+                              >
+                                <Sparkles className={`w-2.5 h-2.5 ${swarmingTaskId === task.id ? 'animate-spin text-indigo-200' : 'text-indigo-400'}`} />
+                                <span>{swarmingTaskId === task.id ? '...' : 'Swarm'}</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={(e) => handleExecuteTask(task, e)}
+                                disabled={executingTaskId === task.id || swarmingTaskId === task.id}
+                                className="px-2 py-0.5 rounded bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/30 text-[10px] font-semibold flex items-center gap-1 transition"
+                                title="Jalankan langsung dengan agen terkait"
+                              >
+                                <Play className={`w-2.5 h-2.5 ${executingTaskId === task.id ? 'animate-spin' : ''}`} />
+                                <span>{executingTaskId === task.id ? '...' : 'Run'}</span>
+                              </button>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -459,14 +492,28 @@ export const TaskList: React.FC<TaskListProps> = ({
 
                   <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                     {task.status !== 'DONE' && (
-                      <button
-                        onClick={(e) => handleExecuteTask(task, e)}
-                        disabled={executingTaskId === task.id}
-                        className="px-2 py-1 rounded bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 text-[11px] font-semibold flex items-center gap-1 transition"
-                      >
-                        <Play className={`w-3 h-3 ${executingTaskId === task.id ? 'animate-spin' : ''}`} />
-                        <span>{executingTaskId === task.id ? 'Memproses...' : 'Eksekusi'}</span>
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={(e) => handleAutoSwarmTask(task, e)}
+                          disabled={swarmingTaskId === task.id || executingTaskId === task.id}
+                          className="px-2 py-1 rounded bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-[11px] font-semibold flex items-center gap-1 transition"
+                          title="Bagi kerja ke Tim Swarm (Multi-Agent DAG)"
+                        >
+                          <Sparkles className={`w-3 h-3 ${swarmingTaskId === task.id ? 'animate-spin text-indigo-200' : 'text-indigo-400'}`} />
+                          <span>{swarmingTaskId === task.id ? 'Membagi...' : 'Swarm'}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={(e) => handleExecuteTask(task, e)}
+                          disabled={executingTaskId === task.id || swarmingTaskId === task.id}
+                          className="px-2 py-1 rounded bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 text-[11px] font-semibold flex items-center gap-1 transition"
+                        >
+                          <Play className={`w-3 h-3 ${executingTaskId === task.id ? 'animate-spin' : ''}`} />
+                          <span>{executingTaskId === task.id ? 'Memproses...' : 'Eksekusi'}</span>
+                        </button>
+                      </>
                     )}
 
                     {task.status === 'TODO' && (

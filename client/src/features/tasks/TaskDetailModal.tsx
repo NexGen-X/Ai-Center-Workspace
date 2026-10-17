@@ -63,6 +63,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
   // Execution state
   const [isExecuting, setIsExecuting] = useState(false);
+  const [isSwarmLaunching, setIsSwarmLaunching] = useState(false);
   const [lastRun, setLastRun] = useState<AgentRun | null>(null);
   const [streamingText, setStreamingText] = useState('');
   const [streamingThoughts, setStreamingThoughts] = useState('');
@@ -231,6 +232,21 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     } finally {
       setIsExecuting(false);
       setIsThinking(false);
+    }
+  };
+
+  const handleAutoSwarm = async () => {
+    if (!task) return;
+    try {
+      setIsSwarmLaunching(true);
+      const res = await api.autoSwarmTask(task.id);
+      toast.success(res.message || 'Misi Swarm berhasil diluncurkan ke seluruh tim spesialis!', 'Swarm Diluncurkan');
+      await loadTask(task.id);
+      onTaskUpdated();
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal meluncurkan misi swarm.', 'Swarm Error');
+    } finally {
+      setIsSwarmLaunching(false);
     }
   };
 
@@ -510,25 +526,39 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
               </div>
 
               {/* Quick Execution Box */}
-              <div className="p-4 rounded-xl bg-gradient-to-r from-blue-950/40 to-slate-900 border border-blue-500/30 flex items-center justify-between gap-4 flex-wrap">
+              <div className="p-4 rounded-xl bg-gradient-to-r from-blue-950/40 via-indigo-950/30 to-slate-900 border border-blue-500/30 flex items-center justify-between gap-4 flex-wrap">
                 <div>
                   <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
                     <Play className="w-3.5 h-3.5 text-blue-400" />
-                    <span>Orkestrasikan ke AI Agent</span>
+                    <span>Eksekusi & Pembagian Kerja AI Tim</span>
                   </h4>
                   <p className="text-[11px] text-slate-400 mt-0.5">
-                    Jalankan model LLM untuk menyelesaikan tugas ini dan merekam hasil inferensi.
+                    Jalankan agen mandiri dengan kapabilitas delegasi tim, atau otomatis bagi ke seluruh spesialis Swarm.
                   </p>
                 </div>
 
-                <button
-                  onClick={handleExecute}
-                  disabled={isExecuting}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-lg shadow-blue-500/20 transition active:scale-95 disabled:opacity-50"
-                >
-                  <Play className={`w-3.5 h-3.5 ${isExecuting ? 'animate-spin' : ''}`} />
-                  <span>{isExecuting ? 'Mengeksekusi...' : 'Jalankan Task Sekarang'}</span>
-                </button>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={handleAutoSwarm}
+                    disabled={isExecuting || isSwarmLaunching}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-indigo-600/90 hover:bg-indigo-500 text-white text-xs font-bold border border-indigo-400/40 shadow-lg shadow-indigo-500/20 transition active:scale-95 disabled:opacity-50"
+                    title="Dekomposisi tugas ini menjadi Swarm DAG dan bagikan ke seluruh spesialis tim (Planner, Coder, QA, DevOps)"
+                  >
+                    <Sparkles className={`w-3.5 h-3.5 text-indigo-200 ${isSwarmLaunching ? 'animate-spin' : ''}`} />
+                    <span>{isSwarmLaunching ? 'Meluncurkan Swarm...' : '⚡ Bagi Kerja ke Tim Swarm'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleExecute}
+                    disabled={isExecuting || isSwarmLaunching}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-lg shadow-blue-500/20 transition active:scale-95 disabled:opacity-50"
+                  >
+                    <Play className={`w-3.5 h-3.5 ${isExecuting ? 'animate-spin' : ''}`} />
+                    <span>{isExecuting ? 'Mengeksekusi...' : 'Jalankan Task Sekarang'}</span>
+                  </button>
+                </div>
               </div>
 
               {/* Live Token Streaming & Reasoning Trace Banner */}

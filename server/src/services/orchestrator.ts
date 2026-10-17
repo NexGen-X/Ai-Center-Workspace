@@ -102,6 +102,36 @@ export async function executeAgentTask(
     : (Array.isArray(row.capabilities) ? row.capabilities : []);
 
   let effectiveSystemPrompt = row.system_prompt;
+
+  // Inter-Agent Delegation & Team Roster Injection for Orchestrators & Planners
+  try {
+    const isOrchestrator = row.role === 'Orchestrator' || row.role === 'Planner' || capabilities.includes('agent_delegation');
+    if (isOrchestrator || capabilities.includes('tool_calling')) {
+      const teamRes = await pool.query(
+        `SELECT id, name, role, description FROM ai_agents WHERE enabled = TRUE AND id != $1 ORDER BY created_at ASC`,
+        [agentId]
+      );
+      if (teamRes.rows.length > 0) {
+        const teamRoster = teamRes.rows.map(a => `- **${a.name}** (${a.role}): ${a.description || 'Spesialis teknis'}`).join('\n');
+        effectiveSystemPrompt += `\n\n[TIM SPESIALIS & KEMAMPUAN DELEGASI MULTI-AGENT]
+Sebagai koordinator/orkestrator, Anda dapat mendelegasikan tugas ke anggota tim spesialis di bidangnya masing-masing:
+${teamRoster}
+
+Tool Delegasi yang tersedia:
+1. delegate_task: Mengirimkan tugas teknis ke agen spesialis (misal: minta Vulcan Forge menulis kode, Aegis Sentinel mengaudit keamanan):
+\`\`\`action
+{"tool": "delegate_task", "input": {"targetAgentName": "Vulcan Forge", "subtaskInstruction": "Implementasikan fungsi..."}}
+\`\`\`
+2. dispatch_swarm: Jika tugas berskala besar yang membutuhkan rantai eksekusi seluruh tim secara paralel (Planner -> Executor -> QA -> DevOps):
+\`\`\`action
+{"tool": "dispatch_swarm", "input": {"objective": "Deskripsi objektif lengkap...", "title": "Judul Misi"}}
+\`\`\``;
+      }
+    }
+  } catch (rosterErr) {
+    // Non-blocking roster injection
+  }
+
   if (capabilities.includes('tool_calling') || capabilities.includes('code_generation') || capabilities.includes('server_telemetry')) {
     effectiveSystemPrompt += `\n\n[SANDBOX TOOLS TERSEDIA]
 Anda memiliki akses ke Sandbox Tools untuk mengeksekusi aksi nyata di lingkungan:
@@ -113,6 +143,8 @@ Anda memiliki akses ke Sandbox Tools untuk mengeksekusi aksi nyata di lingkungan
 6. knowledge_search: {"query": "kata kunci"} (mencari SOP dan dokumen teknis relevan dari pgvector)
 7. memory_store: {"keyPoint": "...", "memoryType": "EPISODIC"} (menyimpan catatan ke memori jangka panjang)
 8. memory_search: {"query": "..."} (mencari arsip memori masa lalu agen)
+9. delegate_task: {"targetAgentName": "...", "subtaskInstruction": "..."} (mendelegasikan tugas ke anggota tim spesialis)
+10. dispatch_swarm: {"objective": "..."} (meluncurkan misi Swarm multi-agent otonom)
 
 Untuk memanggil tool, sertakan blok JSON dalam format:
 \`\`\`action

@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Task, TaskStatus } from '../../../shared/types.js';
 import { executeAgentTask } from '../services/orchestrator.js';
 import { realtimeHub } from '../services/realtime.js';
+import { SwarmService } from '../services/swarmService.js';
 
 const router = Router();
 
@@ -326,6 +327,50 @@ router.post('/:id/execute', async (req: Request, res: Response) => {
     const runResult = await executeAgentTask(agentId, prompt, task.id);
 
     res.json(runResult);
+  } catch (err: any) {
+    res.status(500).json({ error: { message: err.message } });
+  }
+});
+
+// POST /api/tasks/:id/auto-swarm — Convert task into full Autonomous Swarm Mission & DAG
+router.post('/:id/auto-swarm', async (req: Request, res: Response) => {
+  try {
+    const taskRes = await pool.query('SELECT * FROM tasks WHERE id = $1', [req.params.id]);
+    if (taskRes.rows.length === 0) {
+      return res.status(404).json({ error: { message: 'Tugas tidak ditemukan.' } });
+    }
+    const task = taskRes.rows[0];
+    const objective = `${task.title}. ${task.description || ''}`.trim();
+
+    const plan = await SwarmService.planMission(objective, task.workspace_id || 'ws-default-command-center');
+    const mission = await SwarmService.dispatchMission({
+      title: task.title,
+      objective,
+      workspaceId: task.workspace_id || 'ws-default-command-center',
+      coordinatorAgentId: task.assigned_agent_id || undefined,
+      subtasks: plan.subtasks
+    });
+
+    // Update task status to IN_PROGRESS and append note
+    await pool.query(`
+      UPDATE tasks 
+      SET status = 'IN_PROGRESS', 
+          description = COALESCE(description, '') || $1,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2;
+    `, [`\n\n[TERHUBUNG KE SWARM MISSION]: ID ${mission.id} dengan ${mission.subtasks.length} subtugas kolaboratif.`, task.id]);
+
+    realtimeHub.broadcast('task.updated', { taskId: task.id, status: 'IN_PROGRESS' });
+    realtimeHub.broadcast('activity.created', {
+      actorName: 'Swarm Orchestrator',
+      summary: `Tugas "${task.title}" didekomposisi menjadi Swarm Mission (${mission.subtasks.length} subtugas)`
+    });
+
+    res.json({
+      success: true,
+      message: `Tugas "${task.title}" berhasil didekomposisi menjadi Swarm Mission dengan ${mission.subtasks.length} subtugas.`,
+      mission
+    });
   } catch (err: any) {
     res.status(500).json({ error: { message: err.message } });
   }

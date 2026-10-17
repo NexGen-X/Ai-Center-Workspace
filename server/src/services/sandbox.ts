@@ -227,6 +227,30 @@ export const AVAILABLE_TOOLS: Record<string, ToolDefinition> = {
       rawData: { type: 'string', description: 'Data mentah CSV atau JSON (jika sourceType CSV/JSON)' },
       datasetName: { type: 'string', description: 'Nama dataset opsional' }
     }
+  },
+  delegate_task: {
+    name: 'delegate_task',
+    description: 'Mendelegasikan pekerjaan teknis secara langsung ke agen spesialis lain dalam tim (misal: "Vulcan Forge" atau peran "Executor" untuk koding, "Aegis Sentinel" atau "QA / Reviewer" untuk audit kualitas & keamanan, "Atlas Sentinel" atau "DevOps" untuk deployment & infrastruktur, "Hypatia Mind" untuk data, "Aria Intel" untuk riset).',
+    category: 'SYSTEM',
+    riskLevel: 'LOW',
+    requiresApproval: false,
+    parameters: {
+      targetAgentRole: { type: 'string', description: 'Peran spesialis: Executor | QA / Reviewer | DevOps | Data Analyst | Researcher | Planner' },
+      targetAgentName: { type: 'string', description: 'Nama spesifik agen tujuan (misal: Vulcan Forge, Aegis Sentinel, Atlas Sentinel, Hypatia Mind, Aria Intel)' },
+      subtaskInstruction: { type: 'string', description: 'Instruksi spesifik yang harus dikerjakan oleh agen spesialis tersebut', required: true },
+      contextData: { type: 'string', description: 'Konteks tambahan, kode sumber, atau data pendukung' }
+    }
+  },
+  dispatch_swarm: {
+    name: 'dispatch_swarm',
+    description: 'Mendekomposisi dan meluncurkan misi Multi-Agent Swarm (DAG Mesh) secara otomatis untuk membagi objektif besar ke seluruh tim spesialis secara paralel bertahap.',
+    category: 'SYSTEM',
+    riskLevel: 'LOW',
+    requiresApproval: false,
+    parameters: {
+      objective: { type: 'string', description: 'Objektif atau instruksi lengkap misi yang akan didekomposisi', required: true },
+      title: { type: 'string', description: 'Judul ringkas misi swarm' }
+    }
   }
 };
 
@@ -703,6 +727,115 @@ export async function executeToolInSandbox(
         return {
           success: true,
           output: `[ANALISIS DATA BERHASIL]\nID Sesi: ${session.id}\nJudul: "${session.title}"\nTipe Grafik: ${session.chartConfig.type.toUpperCase()}\nRingkasan: ${session.summary}\nWawasan Utama:\n${session.insights.map((ins, i) => `${i + 1}. ${ins}`).join('\n')}`,
+          durationMs: Date.now() - startTime
+        };
+      }
+
+      case 'delegate_task': {
+        const instruction = String(input.subtaskInstruction || input.instruction || '').trim();
+        if (!instruction) throw new Error('Parameter "subtaskInstruction" wajib diisi.');
+        const targetRole = input.targetAgentRole ? String(input.targetAgentRole).trim() : undefined;
+        const targetName = input.targetAgentName ? String(input.targetAgentName).trim() : undefined;
+        const contextData = input.contextData ? String(input.contextData).trim() : '';
+
+        const { pool } = await import('../db/index.js');
+        const { executeAgentTask } = await import('./orchestrator.js');
+        const { realtimeHub } = await import('./realtime.js');
+
+        // Cari agen target yang cocok
+        let targetAgentRow: any = null;
+        if (targetName) {
+          const res = await pool.query(`SELECT * FROM ai_agents WHERE enabled = TRUE AND name ILIKE $1 LIMIT 1`, [`%${targetName}%`]);
+          if (res.rows.length > 0) targetAgentRow = res.rows[0];
+        }
+        if (!targetAgentRow && targetRole) {
+          const res = await pool.query(`SELECT * FROM ai_agents WHERE enabled = TRUE AND role ILIKE $1 LIMIT 1`, [`%${targetRole}%`]);
+          if (res.rows.length > 0) targetAgentRow = res.rows[0];
+        }
+        if (!targetAgentRow) {
+          const callerId = context?.agentId;
+          const res = await pool.query(`SELECT * FROM ai_agents WHERE enabled = TRUE AND id != $1 ORDER BY created_at ASC LIMIT 1`, [callerId || '']);
+          if (res.rows.length > 0) targetAgentRow = res.rows[0];
+        }
+
+        if (!targetAgentRow) {
+          throw new Error('Tidak ditemukan agen spesialis yang sesuai untuk menerima delegasi tugas.');
+        }
+
+        const callerId = context?.agentId;
+        let callerName = 'Orchestrator';
+        if (callerId) {
+          const cRes = await pool.query(`SELECT name FROM ai_agents WHERE id = $1`, [callerId]);
+          if (cRes.rows.length > 0) callerName = cRes.rows[0].name;
+        }
+
+        // Broadcast SSE live delegation to UI & 3D Command Center
+        realtimeHub.broadcast('swarm.agent_handoff', {
+          fromAgentId: callerId,
+          toAgentId: targetAgentRow.id,
+          fromAgentName: callerName,
+          toAgentName: targetAgentRow.name,
+          subtaskTitle: `Delegasi Tugas: ${instruction.slice(0, 45)}...`
+        });
+
+        // Susun prompt efektif untuk agen spesialis
+        let effectiveSubPrompt = `[DELEGASI DARI ${callerName.toUpperCase()} — SPESIALISASI: ${targetAgentRow.role}]\n${instruction}`;
+        if (contextData) {
+          effectiveSubPrompt += `\n\n[KONTEKS / ARTEFAK PENDUKUNG]:\n${contextData}`;
+        }
+
+        // Eksekusi agen spesialis
+        const runResult = await executeAgentTask(targetAgentRow.id, effectiveSubPrompt, context?.taskId);
+
+        // Record history jika ada taskId
+        if (context?.taskId) {
+          const { v4: uuidv4 } = await import('uuid');
+          await pool.query(`
+            INSERT INTO task_history (id, task_id, actor_type, actor_id, event_type, old_value, new_value)
+            VALUES ($1, $2, 'AGENT', $3, 'subtask_delegated', $4, $5);
+          `, [
+            `hist-${uuidv4().slice(0, 8)}`,
+            context.taskId,
+            callerId || null,
+            targetAgentRow.name,
+            `Delegasi subtugas ke ${targetAgentRow.name} (${targetAgentRow.role}): "${instruction.slice(0, 80)}..."`
+          ]);
+        }
+
+        return {
+          success: runResult.status !== 'FAILED',
+          output: `[LAPORAN DELIVERABLE DARI ${targetAgentRow.name} (${targetAgentRow.role})]:\n${runResult.outputResult || '(Subtugas selesai tanpa teks)'}`,
+          durationMs: Date.now() - startTime
+        };
+      }
+
+      case 'dispatch_swarm': {
+        const objective = String(input.objective || '').trim();
+        if (!objective) throw new Error('Parameter "objective" wajib diisi.');
+        const title = input.title ? String(input.title).trim() : objective.slice(0, 60);
+
+        const { SwarmService } = await import('./swarmService.js');
+        const workspaceId = (context as any)?.workspaceId || 'ws-default-command-center';
+
+        const plan = await SwarmService.planMission(objective, workspaceId);
+        const mission = await SwarmService.dispatchMission({
+          title,
+          objective,
+          workspaceId,
+          coordinatorAgentId: context?.agentId,
+          subtasks: plan.subtasks
+        });
+
+        if (context?.taskId) {
+          const { pool } = await import('../db/index.js');
+          await pool.query(`
+            UPDATE tasks SET description = COALESCE(description, '') || $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2
+          `, [`\n\n[DIDEKOMPOSISI MENJADI SWARM MISSION]: ID ${mission.id} (${mission.subtasks.length} Subtugas Tim)`, context.taskId]);
+        }
+
+        return {
+          success: true,
+          output: `[SWARM MISSION DILUNCURKAN SECARA OTONOM]\nID Misi: ${mission.id}\nJudul: "${mission.title}"\nJumlah Subtugas: ${mission.subtasks.length}\nTim yang Ditugaskan:\n${mission.subtasks.map((st, i) => `${i + 1}. [${st.role}] ${st.assignedAgentName || 'Spesialis'} — "${st.title}"`).join('\n')}\nStatus: EXECUTING`,
           durationMs: Date.now() - startTime
         };
       }
