@@ -320,7 +320,7 @@ export class CustomApiAdapter implements BaseConnectionAdapter {
               if (trimmed.startsWith('data: ')) {
                 try {
                   const json = JSON.parse(trimmed.slice(6));
-                  const delta = json.choices?.[0]?.delta?.content;
+                  const delta = json.choices?.[0]?.delta?.content || json.choices?.[0]?.delta?.reasoning_content;
                   if (delta) {
                     textOutput += delta;
                     onChunk(delta);
@@ -347,7 +347,7 @@ export class CustomApiAdapter implements BaseConnectionAdapter {
         }
 
         const data = await response.json() as any;
-        const textOutput = data.choices?.[0]?.message?.content || '';
+        const textOutput = data.choices?.[0]?.message?.content || data.choices?.[0]?.message?.reasoning_content || '';
         if (onChunk && textOutput) {
           onChunk(textOutput);
         }
