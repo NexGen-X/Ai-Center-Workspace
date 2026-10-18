@@ -35,6 +35,7 @@ const SreModal = React.lazy(() => import('./features/sre/SreModal.js').then(m =>
 const DataAnalystModal = React.lazy(() => import('./features/data-analyst/DataAnalystModal.js').then(m => ({ default: m.DataAnalystModal })));
 const SkillStudioModal = React.lazy(() => import('./features/skills/SkillStudioModal.js').then(m => ({ default: m.SkillStudioModal })));
 const MemoryGraphModal = React.lazy(() => import('./features/memory/MemoryGraphModal.js').then(m => ({ default: m.MemoryGraphModal })));
+const WorkspaceModal = React.lazy(() => import('./features/workspace/WorkspaceModal.js').then(m => ({ default: m.WorkspaceModal })));
 import { useFeedback } from './components/common/FeedbackContext.js';
 import { ErrorBoundary } from './components/common/ErrorBoundary.js';
 import { api } from './services/api.js';
@@ -85,7 +86,25 @@ export const App: React.FC = () => {
   const [isActionHistoryOpen, setIsActionHistoryOpen] = useState(false);
   const [pendingActionCount, setPendingActionCount] = useState(0);
 
+  // Multi-Tenant Workspace State
+  const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState(false);
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string>(() => {
+    return localStorage.getItem('ai_center_workspace_id') || 'ws-default-command-center';
+  });
+  const [activeWorkspaceName, setActiveWorkspaceName] = useState<string>(() => {
+    return localStorage.getItem('ai_center_workspace_name') || 'Default Workspace';
+  });
+
   const { toast } = useFeedback();
+
+  const handleWorkspaceSwitched = (newWsId: string, newWsName: string) => {
+    localStorage.setItem('ai_center_workspace_id', newWsId);
+    localStorage.setItem('ai_center_workspace_name', newWsName);
+    setActiveWorkspaceId(newWsId);
+    setActiveWorkspaceName(newWsName);
+    toast.success(`Beralih ke workspace "${newWsName}". Memuat ulang data organisasi...`);
+    refreshAllData();
+  };
 
   const refreshAllData = useCallback(async () => {
     try {
@@ -167,8 +186,23 @@ export const App: React.FC = () => {
   useEffect(() => {
     if (currentUser) {
       refreshAllData();
+
+      // Sync active workspace name & ensure valid workspace
+      api.getWorkspaces().then(list => {
+        if (!list || list.length === 0) return;
+        const current = list.find(w => w.id === activeWorkspaceId);
+        if (current) {
+          setActiveWorkspaceName(current.name);
+          localStorage.setItem('ai_center_workspace_name', current.name);
+        } else {
+          setActiveWorkspaceId(list[0].id);
+          setActiveWorkspaceName(list[0].name);
+          localStorage.setItem('ai_center_workspace_id', list[0].id);
+          localStorage.setItem('ai_center_workspace_name', list[0].name);
+        }
+      }).catch(() => {});
     }
-  }, [currentUser, refreshAllData]);
+  }, [currentUser, activeWorkspaceId, refreshAllData]);
 
   // Server-Sent Events (SSE) setup
   useEffect(() => {
@@ -407,6 +441,8 @@ export const App: React.FC = () => {
         onToggleOrchestrator={handleToggleOrchestrator}
         onToggleConsole={() => setIsConsoleOpen(!isConsoleOpen)}
         isConsoleOpen={isConsoleOpen}
+        activeWorkspaceName={activeWorkspaceName}
+        onOpenWorkspaces={() => setIsWorkspaceModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -731,6 +767,15 @@ export const App: React.FC = () => {
             isOpen={isMemoryGraphOpen}
             onClose={() => setIsMemoryGraphOpen(false)}
             agents={agents}
+          />
+        )}
+
+        {isWorkspaceModalOpen && (
+          <WorkspaceModal
+            isOpen={isWorkspaceModalOpen}
+            onClose={() => setIsWorkspaceModalOpen(false)}
+            activeWorkspaceId={activeWorkspaceId}
+            onWorkspaceSwitched={handleWorkspaceSwitched}
           />
         )}
       </Suspense>

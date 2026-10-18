@@ -42,6 +42,8 @@ import { dataAnalystRouter } from './routes/dataAnalyst.js';
 import { skillsRouter } from './routes/skills.js';
 import memoryGraphRouter from './routes/memoryGraph.js';
 import domainRouter from './routes/domain.js';
+import workspacesRouter from './routes/workspaces.js';
+import { requireAuth } from './middleware/auth.js';
 import { systemLogger } from './services/logger.js';
 
 export const app = express();
@@ -136,6 +138,7 @@ app.use('/api/data-analyst', dataAnalystRouter);
 app.use('/api/skills', skillsRouter);
 app.use('/api/memory-graph', memoryGraphRouter);
 app.use('/api/system/domain', domainRouter);
+app.use('/api/workspaces', requireAuth, workspacesRouter);
 
 // Comprehensive Root Healthcheck with Database Connectivity Validation
 app.get('/healthz', async (_req: Request, res: Response) => {

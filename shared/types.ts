@@ -371,6 +371,28 @@ export interface SystemLogEntry {
   message: string;
   meta?: any;
 }
+export type WorkspaceRole = 'OWNER' | 'ADMIN' | 'OPERATOR' | 'VIEWER';
+
+export interface Workspace {
+  id: string;
+  name: string;
+  role?: WorkspaceRole;
+  memberCount?: number;
+  agentCount?: number;
+  taskCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkspaceMember {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  displayName: string;
+  email: string;
+  role: WorkspaceRole;
+  createdAt: string;
+}
 
 export interface WorkspaceBackup {
   version: string;

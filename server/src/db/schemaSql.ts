@@ -525,5 +525,17 @@ CREATE INDEX IF NOT EXISTS idx_tasks_ws_status_prio ON tasks(workspace_id, statu
 CREATE INDEX IF NOT EXISTS idx_agent_runs_task_created ON agent_runs(task_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_swarm_messages_mission ON swarm_messages(mission_id, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_activities_ws_created ON activities(workspace_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS workspace_members (
+    id VARCHAR(64) PRIMARY KEY,
+    workspace_id VARCHAR(64) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    user_id VARCHAR(64) NOT NULL REFERENCES human_users(id) ON DELETE CASCADE,
+    role VARCHAR(32) NOT NULL DEFAULT 'OPERATOR',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(workspace_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_workspace_members_user ON workspace_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_workspace_members_ws ON workspace_members(workspace_id);
 `;
 

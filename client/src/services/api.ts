@@ -88,14 +88,24 @@ import {
   ConsolidateMemoriesRequest,
   CheckDomainDnsResponse,
   ProvisionDomainResponse,
-  DomainManagerInfoResponse
+  DomainManagerInfoResponse,
+  Workspace,
+  WorkspaceMember,
+  WorkspaceRole
 } from '../../../shared/types.js';
 
 const BASE_URL = '/api';
 
 function getAuthHeader(): Record<string, string> {
   const token = localStorage.getItem('ai_center_token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  const wsId = localStorage.getItem('ai_center_workspace_id') || 'ws-default-command-center';
+  const headers: Record<string, string> = {
+    'X-Workspace-Id': wsId
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
 }
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -824,6 +834,25 @@ export const api = {
     return request<{ success: boolean; message: string }>(`/system/domain/${id}${qs}`, {
       method: 'DELETE'
     });
-  }
+  },
+
+  // Multi-Tenant Workspaces & RBAC
+  getWorkspaces: () => request<Workspace[]>('/workspaces'),
+  createWorkspace: (name: string) => request<{ success: boolean; workspace: Workspace }>('/workspaces', {
+    method: 'POST',
+    body: JSON.stringify({ name })
+  }),
+  getWorkspace: (id: string) => request<{ workspace: Workspace; members: WorkspaceMember[] }>(`/workspaces/${id}`),
+  addWorkspaceMember: (workspaceId: string, email: string, role: string) => request<{ success: boolean; message: string }>(`/workspaces/${workspaceId}/members`, {
+    method: 'POST',
+    body: JSON.stringify({ email, role })
+  }),
+  removeWorkspaceMember: (workspaceId: string, userId: string) => request<{ success: boolean; message: string }>(`/workspaces/${workspaceId}/members/${userId}`, {
+    method: 'DELETE'
+  }),
+  renameWorkspace: (workspaceId: string, name: string) => request<{ success: boolean; message: string }>(`/workspaces/${workspaceId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ name })
+  })
 };
 

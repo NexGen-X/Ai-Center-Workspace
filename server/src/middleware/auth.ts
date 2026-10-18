@@ -14,6 +14,8 @@ export interface AuthenticatedUser {
 
 export interface AuthenticatedRequest extends Request {
   user?: AuthenticatedUser;
+  workspaceId?: string;
+  workspaceRole?: string;
 }
 
 /**
@@ -70,6 +72,80 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
         code: 'AUTH_ERROR',
         message: 'Gagal memverifikasi otorisasi pengguna.'
       }
+    });
+  }
+}
+
+/**
+ * Enforce minimum system role requirement (e.g. ADMIN)
+ */
+export function requireRole(allowedRoles: string[]) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const user = (req as AuthenticatedRequest).user;
+    if (!user) {
+      return res.status(401).json({
+        error: { code: 'UNAUTHORIZED', message: 'Autentikasi operator diperlukan.' }
+      });
+    }
+
+    if (!allowedRoles.includes(user.role)) {
+      return res.status(403).json({
+        error: {
+          code: 'FORBIDDEN',
+          message: `Akses ditolak: Peran "${user.role}" tidak memiliki izin untuk aksi ini. Diperlukan salah satu dari: ${allowedRoles.join(', ')}.`
+        }
+      });
+    }
+
+    next();
+  };
+}
+
+/**
+ * Enforce workspace membership and extract active tenant workspaceId
+ */
+export async function requireWorkspaceAccess(req: Request, res: Response, next: NextFunction) {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    if (!authReq.user) {
+      return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Autentikasi pengguna diperlukan.' } });
+    }
+
+    const requestedWsId = (
+      req.headers['x-workspace-id'] ||
+      req.query.workspaceId ||
+      req.body?.workspaceId ||
+      'ws-default-command-center'
+    ).toString().trim();
+
+    // System ADMIN has universal access
+    if (authReq.user.role === 'ADMIN') {
+      authReq.workspaceId = requestedWsId;
+      authReq.workspaceRole = 'OWNER';
+      return next();
+    }
+
+    // Check membership in workspace_members
+    const memRes = await pool.query(
+      `SELECT role FROM workspace_members WHERE workspace_id = $1 AND user_id = $2`,
+      [requestedWsId, authReq.user.id]
+    );
+
+    if (memRes.rows.length === 0) {
+      return res.status(403).json({
+        error: {
+          code: 'WORKSPACE_ACCESS_DENIED',
+          message: `Akses ditolak: Anda bukan anggota dari workspace "${requestedWsId}".`
+        }
+      });
+    }
+
+    authReq.workspaceId = requestedWsId;
+    authReq.workspaceRole = memRes.rows[0].role;
+    next();
+  } catch (err: any) {
+    return res.status(500).json({
+      error: { code: 'AUTH_ERROR', message: `Gagal memverifikasi akses workspace: ${err.message}` }
     });
   }
 }
