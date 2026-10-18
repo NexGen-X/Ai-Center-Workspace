@@ -853,6 +853,28 @@ export const api = {
   renameWorkspace: (workspaceId: string, name: string) => request<{ success: boolean; message: string }>(`/workspaces/${workspaceId}`, {
     method: 'PATCH',
     body: JSON.stringify({ name })
-  })
+  }),
+
+  // Compliance Audit Trail Exporter
+  exportAuditTrail: async (format: 'csv' | 'json' = 'csv') => {
+    const token = localStorage.getItem('ai_center_token');
+    const wsId = localStorage.getItem('ai_center_workspace_id') || 'ws-default-command-center';
+    const res = await fetch(`${BASE_URL}/activities/export?format=${format}`, {
+      headers: {
+        'X-Workspace-Id': wsId,
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    });
+    if (!res.ok) throw new Error('Gagal mengunduh compliance audit log.');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `compliance-audit-trail-${Date.now()}.${format}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
 };
 
