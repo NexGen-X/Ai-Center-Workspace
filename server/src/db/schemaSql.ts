@@ -520,5 +520,6 @@ CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
 CREATE INDEX IF NOT EXISTS idx_agent_runs_task ON agent_runs(task_id);
 CREATE INDEX IF NOT EXISTS idx_projects_workspace ON projects(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_war_room_part_agent ON war_room_participants(agent_id);
+CREATE INDEX IF NOT EXISTS idx_human_users_session_token ON human_users(session_token);
 `;
 

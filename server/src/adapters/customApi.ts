@@ -272,30 +272,59 @@ export class CustomApiAdapter implements BaseConnectionAdapter {
         };
         if (config.apiKey) headers['Authorization'] = `Bearer ${config.apiKey}`;
 
-        const response = await fetch(targetUrl, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            model: modelId,
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userPrompt }
-            ],
-            temperature: params?.temperature ?? 0.7,
-            max_tokens: params?.maxTokens || 2048,
-            stream: Boolean(onChunk)
-          }),
-          signal: controller.signal
-        });
+        let response: Response | null = null;
+        let lastErrText = '';
+        const maxAttempts = 3;
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          try {
+            response = await fetch(targetUrl, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({
+                model: modelId,
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  { role: 'user', content: userPrompt }
+                ],
+                temperature: params?.temperature ?? 0.7,
+                max_tokens: params?.maxTokens || 2048,
+                stream: Boolean(onChunk)
+              }),
+              signal: controller.signal
+            });
+
+            if (response.ok) {
+              break;
+            }
+
+            // Retry on rate limit (429) or transient server errors (500, 502, 503, 504)
+            const isTransient = [429, 500, 502, 503, 504].includes(response.status);
+            if (isTransient && attempt < maxAttempts && !controller.signal.aborted) {
+              const backoffMs = attempt * 1000;
+              await new Promise(r => setTimeout(r, backoffMs));
+              continue;
+            }
+
+            lastErrText = await response.text();
+            break;
+          } catch (fetchErr: any) {
+            if (attempt < maxAttempts && !controller.signal.aborted) {
+              await new Promise(r => setTimeout(r, attempt * 1000));
+              continue;
+            }
+            throw fetchErr;
+          }
+        }
 
         const durationMs = Date.now() - startTime;
-        if (!response.ok) {
-          const errText = await response.text();
+        if (!response || !response.ok) {
+          const statusText = response ? `HTTP_${response.status}` : 'NETWORK_ERROR';
           return {
             success: false,
             status: 'FAILED',
-            errorCode: `HTTP_${response.status}`,
-            errorMessage: errText.slice(0, 300),
+            errorCode: statusText,
+            errorMessage: (lastErrText || 'Gagal menghubungi penyedia LLM setelah percobaan ulang.').slice(0, 300),
             durationMs
           };
         }
