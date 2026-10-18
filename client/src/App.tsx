@@ -157,6 +157,17 @@ export const App: React.FC = () => {
 
   // Check auth session on mount
   useEffect(() => {
+    // Check if auth_token is provided via URL query parameter (e.g. from landing page handoff)
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const queryToken = urlParams.get('auth_token');
+      if (queryToken) {
+        localStorage.setItem('ai_center_token', queryToken);
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    }
+
     const token = localStorage.getItem('ai_center_token');
     if (!token) {
       setIsAuthChecking(false);
