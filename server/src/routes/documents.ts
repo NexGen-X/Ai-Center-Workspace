@@ -11,6 +11,7 @@ const router = Router();
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { category, projectId } = req.query;
+    const wsId = (req.headers['x-workspace-id'] || req.query.workspaceId || '').toString().trim();
     let query = `
       SELECT d.id, d.workspace_id, d.project_id, d.title, d.content, d.category, d.tags, d.file_metadata, d.created_at, d.updated_at,
              COUNT(dc.id)::int as chunk_count
@@ -19,6 +20,11 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       WHERE 1=1
     `;
     const params: any[] = [];
+
+    if (wsId) {
+      params.push(wsId);
+      query += ` AND d.workspace_id = $${params.length}`;
+    }
 
     if (category) {
       params.push(category);
@@ -102,7 +108,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     }
 
     const id = `doc-${uuidv4().slice(0, 8)}`;
-    const workspaceId = 'ws-default-command-center';
+    const workspaceId = (req.headers['x-workspace-id'] || req.body?.workspaceId || 'ws-default-command-center').toString().trim();
 
     const insertRes = await pool.query(
       `INSERT INTO documents (id, workspace_id, project_id, title, content, category, tags)

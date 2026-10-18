@@ -11,8 +11,9 @@ import { realtimeHub } from '../services/realtime.js';
 const router = Router();
 
 // GET /api/projects — List all projects with live task progress computation
-router.get('/', async (_req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response) => {
   try {
+    const wsId = (req.headers['x-workspace-id'] || req.query.workspaceId || '').toString().trim();
     const result = await pool.query(`
       SELECT 
         p.id, p.workspace_id, p.name, p.description, p.status, p.due_date, p.created_at, p.updated_at,
@@ -20,9 +21,10 @@ router.get('/', async (_req: Request, res: Response) => {
         COUNT(CASE WHEN t.status = 'DONE' THEN 1 END)::int as completed_tasks
       FROM projects p
       LEFT JOIN tasks t ON p.id = t.project_id
+      WHERE ($1 = '' OR p.workspace_id = $1)
       GROUP BY p.id
       ORDER BY p.created_at DESC;
-    `);
+    `, [wsId]);
 
     const projects: (Project & { totalTasks: number; completedTasks: number })[] = result.rows.map(row => {
       const total = row.total_tasks || 0;
@@ -107,6 +109,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.post('/', async (req: Request, res: Response) => {
   try {
     const { name, description, dueDate, status = 'ACTIVE' } = req.body;
+    const wsId = (req.headers['x-workspace-id'] || req.body?.workspaceId || 'ws-default-command-center').toString().trim();
     if (!name) {
       return res.status(400).json({ error: { message: 'Nama proyek wajib diisi.' } });
     }
@@ -114,14 +117,14 @@ router.post('/', async (req: Request, res: Response) => {
     const projId = `proj-${uuidv4().slice(0, 8)}`;
     await pool.query(`
       INSERT INTO projects (id, workspace_id, name, description, status, progress_percentage, due_date)
-      VALUES ($1, 'ws-default-command-center', $2, $3, $4, 0, $5);
-    `, [projId, name, description || null, status, dueDate || null]);
+      VALUES ($1, $2, $3, $4, $5, 0, $6);
+    `, [projId, wsId, name, description || null, status, dueDate || null]);
 
     // Record activity
     await pool.query(`
       INSERT INTO activities (id, workspace_id, actor_type, actor_id, actor_name, event_type, summary, target_type, target_id)
-      VALUES ($1, 'ws-default-command-center', 'USER', 'user-admin', 'Lead Operator', 'project.created', $2, 'PROJECT', $3);
-    `, [`act-${uuidv4().slice(0, 8)}`, `Proyek baru dibuat: ${name}`, projId]);
+      VALUES ($1, $2, 'USER', 'user-admin', 'Lead Operator', 'project.created', $3, 'PROJECT', $4);
+    `, [`act-${uuidv4().slice(0, 8)}`, wsId, `Proyek baru dibuat: ${name}`, projId]);
 
     realtimeHub.broadcast('project.created', { id: projId, name });
     realtimeHub.broadcast('activity.created', { actorName: 'Lead Operator', summary: `Proyek baru dibuat: ${name}` });

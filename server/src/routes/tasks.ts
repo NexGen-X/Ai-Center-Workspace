@@ -25,6 +25,7 @@ const VALID_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
 router.get('/', async (req: Request, res: Response) => {
   try {
     const { status, priority, projectId, search } = req.query;
+    const wsId = (req.headers['x-workspace-id'] || req.query.workspaceId || '').toString().trim();
     let query = `
       SELECT 
         t.id, t.workspace_id, t.project_id, t.title, t.description,
@@ -39,6 +40,11 @@ router.get('/', async (req: Request, res: Response) => {
     `;
     const params: any[] = [];
     let idx = 1;
+
+    if (wsId) {
+      query += ` AND t.workspace_id = $${idx++}`;
+      params.push(wsId);
+    }
 
     if (status && status !== 'ALL') {
       query += ` AND t.status = $${idx++}`;
@@ -180,6 +186,7 @@ router.get('/:id/history', async (req: Request, res: Response) => {
 router.post('/', async (req: Request, res: Response) => {
   try {
     const { title, description, priority, projectId, assignedAgentId, dueDate } = req.body;
+    const wsId = (req.headers['x-workspace-id'] || req.body?.workspaceId || 'ws-default-command-center').toString().trim();
     if (!title) {
       return res.status(400).json({ error: { message: 'Judul tugas (title) wajib diisi.' } });
     }
@@ -188,14 +195,14 @@ router.post('/', async (req: Request, res: Response) => {
     await pool.query(`
       INSERT INTO tasks (
         id, workspace_id, project_id, title, description, status, priority, assigned_agent_id, due_date
-      ) VALUES ($1, 'ws-default-command-center', $2, $3, $4, 'TODO', $5, $6, $7);
-    `, [taskId, projectId || null, title, description || null, priority || 'MEDIUM', assignedAgentId || null, dueDate || null]);
+      ) VALUES ($1, $2, $3, $4, $5, 'TODO', $6, $7, $8);
+    `, [taskId, wsId, projectId || null, title, description || null, priority || 'MEDIUM', assignedAgentId || null, dueDate || null]);
 
     // Record activity
     await pool.query(`
       INSERT INTO activities (id, workspace_id, actor_type, actor_id, actor_name, event_type, summary, target_type, target_id)
-      VALUES ($1, 'ws-default-command-center', 'USER', 'user-admin', 'Lead Operator', 'task.created', $2, 'TASK', $3);
-    `, [`act-${uuidv4().slice(0, 8)}`, `Tugas baru dibuat: ${title}`, taskId]);
+      VALUES ($1, $2, 'USER', 'user-admin', 'Lead Operator', 'task.created', $3, 'TASK', $4);
+    `, [`act-${uuidv4().slice(0, 8)}`, wsId, `Tugas baru dibuat: ${title}`, taskId]);
 
     realtimeHub.broadcast('task.created', { id: taskId, title, status: 'TODO' });
     realtimeHub.broadcast('activity.created', { actorName: 'Lead Operator', summary: `Tugas baru dibuat: ${title}` });

@@ -9,14 +9,16 @@ import { DashboardSummary } from '../../../shared/types.js';
 
 const router = Router();
 
-router.get('/summary', async (_req: Request, res: Response) => {
+router.get('/summary', async (req: Request, res: Response) => {
   try {
+    const wsId = (req.headers['x-workspace-id'] || req.query.workspaceId || '').toString().trim();
     const tasksRes = await pool.query(`
       SELECT 
         COUNT(*) FILTER (WHERE status = 'IN_PROGRESS') as running_tasks,
         COUNT(*) FILTER (WHERE status = 'DONE') as completed_tasks
-      FROM tasks;
-    `);
+      FROM tasks
+      WHERE ($1 = '' OR workspace_id = $1);
+    `, [wsId]);
 
     const agentsRes = await pool.query(`
       SELECT 
@@ -26,8 +28,10 @@ router.get('/summary', async (_req: Request, res: Response) => {
     `);
 
     const projectsRes = await pool.query(`
-      SELECT COUNT(*) as active_projects FROM projects WHERE status = 'ACTIVE';
-    `);
+      SELECT COUNT(*) as active_projects 
+      FROM projects 
+      WHERE status = 'ACTIVE' AND ($1 = '' OR workspace_id = $1);
+    `, [wsId]);
 
     const metrics = collectServerMetrics();
 

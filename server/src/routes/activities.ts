@@ -12,12 +12,14 @@ const router = Router();
 router.get('/', async (req: Request, res: Response) => {
   try {
     const limit = parseInt((req.query.limit as string) || '30', 10);
+    const wsId = (req.headers['x-workspace-id'] || req.query.workspaceId || '').toString().trim();
     const result = await pool.query(`
       SELECT id, workspace_id, actor_type, actor_id, actor_name, event_type, summary, target_type, target_id, created_at
       FROM activities
+      WHERE ($2 = '' OR workspace_id = $2)
       ORDER BY created_at DESC
       LIMIT $1;
-    `, [limit]);
+    `, [limit, wsId]);
 
     const activities: Activity[] = result.rows.map(row => ({
       id: row.id,
