@@ -59,7 +59,11 @@ router.post('/login', async (req: Request, res: Response) => {
 // POST /api/auth/register — Self-service customer registration & workspace provisioning
 router.post('/register', async (req: Request, res: Response) => {
   try {
-    const { displayName, email, password, companyName } = req.body;
+    const displayName = req.body.displayName || req.body.name;
+    const email = req.body.email;
+    const password = req.body.password;
+    const companyName = req.body.companyName || req.body.workspaceName;
+
     if (!displayName || !email || !password) {
       return res.status(400).json({ error: { message: 'Nama lengkap, email, dan kata sandi wajib diisi.' } });
     }
