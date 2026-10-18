@@ -36,6 +36,7 @@ const DataAnalystModal = React.lazy(() => import('./features/data-analyst/DataAn
 const SkillStudioModal = React.lazy(() => import('./features/skills/SkillStudioModal.js').then(m => ({ default: m.SkillStudioModal })));
 const MemoryGraphModal = React.lazy(() => import('./features/memory/MemoryGraphModal.js').then(m => ({ default: m.MemoryGraphModal })));
 const WorkspaceModal = React.lazy(() => import('./features/workspace/WorkspaceModal.js').then(m => ({ default: m.WorkspaceModal })));
+const PricingModal = React.lazy(() => import('./features/billing/PricingModal.js').then(m => ({ default: m.PricingModal })));
 import { useFeedback } from './components/common/FeedbackContext.js';
 import { ErrorBoundary } from './components/common/ErrorBoundary.js';
 import { api } from './services/api.js';
@@ -95,6 +96,10 @@ export const App: React.FC = () => {
     return localStorage.getItem('ai_center_workspace_name') || 'Default Workspace';
   });
 
+  // SaaS Billing & Quota State
+  const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
+  const [currentPlan, setCurrentPlan] = useState<string>('FREE');
+
   const { toast } = useFeedback();
 
   const handleWorkspaceSwitched = (newWsId: string, newWsName: string) => {
@@ -126,6 +131,9 @@ export const App: React.FC = () => {
 
       api.getOrchestratorStatus().then(st => setOrchestratorStatus(st)).catch(() => {});
       api.getPendingActionsCount().then(res => setPendingActionCount(res.pendingCount)).catch(() => {});
+      api.getBillingUsage().then(usage => {
+        if (usage && usage.plan) setCurrentPlan(usage.plan);
+      }).catch(() => {});
     } catch (err) {
       console.error('Failed to load initial data:', err);
     } finally {
@@ -443,6 +451,8 @@ export const App: React.FC = () => {
         isConsoleOpen={isConsoleOpen}
         activeWorkspaceName={activeWorkspaceName}
         onOpenWorkspaces={() => setIsWorkspaceModalOpen(true)}
+        currentPlan={currentPlan}
+        onOpenPricing={() => setIsPricingModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -776,6 +786,19 @@ export const App: React.FC = () => {
             onClose={() => setIsWorkspaceModalOpen(false)}
             activeWorkspaceId={activeWorkspaceId}
             onWorkspaceSwitched={handleWorkspaceSwitched}
+          />
+        )}
+
+        {isPricingModalOpen && (
+          <PricingModal
+            isOpen={isPricingModalOpen}
+            onClose={() => setIsPricingModalOpen(false)}
+            onPlanUpgraded={() => {
+              api.getBillingUsage().then(usage => {
+                if (usage && usage.plan) setCurrentPlan(usage.plan);
+              }).catch(() => {});
+              refreshAllData();
+            }}
           />
         )}
       </Suspense>

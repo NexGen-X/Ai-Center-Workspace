@@ -537,5 +537,30 @@ CREATE TABLE IF NOT EXISTS workspace_members (
 
 CREATE INDEX IF NOT EXISTS idx_workspace_members_user ON workspace_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_workspace_members_ws ON workspace_members(workspace_id);
+
+ALTER TABLE workspaces 
+ADD COLUMN IF NOT EXISTS plan VARCHAR(32) NOT NULL DEFAULT 'FREE',
+ADD COLUMN IF NOT EXISTS plan_status VARCHAR(32) NOT NULL DEFAULT 'TRIALING',
+ADD COLUMN IF NOT EXISTS task_quota_limit INT NOT NULL DEFAULT 50,
+ADD COLUMN IF NOT EXISTS tasks_used_this_month INT NOT NULL DEFAULT 0,
+ADD COLUMN IF NOT EXISTS billing_cycle_start TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN IF NOT EXISTS billing_cycle_end TIMESTAMP WITH TIME ZONE DEFAULT (CURRENT_TIMESTAMP + INTERVAL '14 days'),
+ADD COLUMN IF NOT EXISTS billing_email VARCHAR(255);
+
+CREATE TABLE IF NOT EXISTS workspace_invoices (
+    id VARCHAR(64) PRIMARY KEY,
+    workspace_id VARCHAR(64) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    invoice_number VARCHAR(64) UNIQUE NOT NULL,
+    amount_idr BIGINT NOT NULL,
+    plan VARCHAR(32) NOT NULL,
+    interval VARCHAR(16) NOT NULL DEFAULT 'MONTHLY',
+    status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+    payment_method VARCHAR(64),
+    payment_gateway_ref VARCHAR(128),
+    paid_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_invoices_workspace ON workspace_invoices(workspace_id, created_at DESC);
 `;
 

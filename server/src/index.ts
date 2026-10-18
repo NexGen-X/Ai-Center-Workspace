@@ -43,6 +43,7 @@ import { skillsRouter } from './routes/skills.js';
 import memoryGraphRouter from './routes/memoryGraph.js';
 import domainRouter from './routes/domain.js';
 import workspacesRouter from './routes/workspaces.js';
+import { billingRouter } from './routes/billing.js';
 import { requireAuth } from './middleware/auth.js';
 import { systemLogger } from './services/logger.js';
 
@@ -139,6 +140,7 @@ app.use('/api/skills', skillsRouter);
 app.use('/api/memory-graph', memoryGraphRouter);
 app.use('/api/system/domain', domainRouter);
 app.use('/api/workspaces', requireAuth, workspacesRouter);
+app.use('/api/billing', requireAuth, billingRouter);
 
 // Comprehensive Root Healthcheck with Database Connectivity Validation
 app.get('/healthz', async (_req: Request, res: Response) => {

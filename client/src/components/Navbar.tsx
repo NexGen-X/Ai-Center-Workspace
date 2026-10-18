@@ -28,7 +28,8 @@ import {
   Wrench,
   Brain,
   Building2,
-  ChevronDown
+  ChevronDown,
+  Sparkles
 } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown.js';
 import { OrchestratorStatus } from '../../../shared/types.js';
@@ -66,6 +67,8 @@ interface NavbarProps {
   isConsoleOpen?: boolean;
   activeWorkspaceName?: string;
   onOpenWorkspaces?: () => void;
+  currentPlan?: string;
+  onOpenPricing?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -100,7 +103,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onToggleConsole,
   isConsoleOpen,
   activeWorkspaceName = 'Default Workspace',
-  onOpenWorkspaces
+  onOpenWorkspaces,
+  currentPlan = 'FREE',
+  onOpenPricing
 }) => {
   const [dateStr, setDateStr] = useState<string>('');
 
@@ -161,10 +166,37 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <ChevronDown className="w-3 h-3 text-slate-500 group-hover:text-cyan-400 transition-colors shrink-0" />
               </button>
             )}
+
+            {/* SaaS Plan Badge & Upgrade Button */}
+            {onOpenPricing && (
+              <button
+                type="button"
+                onClick={onOpenPricing}
+                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 hover:from-amber-500/20 hover:to-orange-500/20 border border-amber-500/30 text-xs text-amber-300 font-semibold transition shadow-sm group shrink-0"
+                title="Kelola Paket Langganan & Kuota AI"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform shrink-0" />
+                <span className="uppercase font-mono text-[11px] font-bold">
+                  {currentPlan || 'FREE'}
+                </span>
+                <span className="text-[10px] text-amber-400/80 font-normal">Upgrade</span>
+              </button>
+            )}
           </div>
 
           {/* Mobile Right Quick Action Icons (Visible only on < lg) */}
           <div className="flex lg:hidden items-center gap-1.5 shrink-0">
+            {/* Mobile Pricing / Upgrade */}
+            {onOpenPricing && (
+              <button
+                onClick={onOpenPricing}
+                className="p-1.5 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 text-amber-400 hover:text-amber-300 transition"
+                title="Paket Langganan & Kuota AI"
+                aria-label="Pricing"
+              >
+                <Sparkles className="w-4 h-4" />
+              </button>
+            )}
             {/* Mobile Auto Orchestrator Toggle */}
             {onToggleOrchestrator && (
               <button

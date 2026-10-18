@@ -372,11 +372,61 @@ export interface SystemLogEntry {
   meta?: any;
 }
 export type WorkspaceRole = 'OWNER' | 'ADMIN' | 'OPERATOR' | 'VIEWER';
+export type WorkspacePlan = 'FREE' | 'STARTER' | 'BUSINESS' | 'ENTERPRISE';
+export type WorkspacePlanStatus = 'ACTIVE' | 'TRIALING' | 'PAST_DUE' | 'CANCELLED';
+
+export interface WorkspacePlanDetails {
+  id: WorkspacePlan;
+  name: string;
+  tagline: string;
+  priceIdr: number;
+  priceUsd: number;
+  taskQuotaLimit: number;
+  agentLimit: number;
+  memberLimit: number;
+  workspaceLimit: number;
+  features: string[];
+  isPopular?: boolean;
+}
+
+export interface WorkspaceUsageStats {
+  workspaceId: string;
+  workspaceName: string;
+  plan: WorkspacePlan;
+  planStatus: WorkspacePlanStatus;
+  taskQuotaLimit: number;
+  tasksUsedThisMonth: number;
+  quotaPercentUsed: number;
+  remainingTasks: number;
+  agentCount: number;
+  memberCount: number;
+  billingCycleEnd: string;
+  daysRemainingInCycle: number;
+}
+
+export interface WorkspaceInvoice {
+  id: string;
+  workspaceId: string;
+  invoiceNumber: string;
+  amountIdr: number;
+  plan: WorkspacePlan;
+  interval: 'MONTHLY' | 'ANNUALLY';
+  status: 'PAID' | 'PENDING' | 'FAILED';
+  paymentMethod?: string;
+  paymentGatewayRef?: string;
+  paidAt?: string;
+  createdAt: string;
+}
 
 export interface Workspace {
   id: string;
   name: string;
   role?: WorkspaceRole;
+  plan?: WorkspacePlan;
+  planStatus?: WorkspacePlanStatus;
+  taskQuotaLimit?: number;
+  tasksUsedThisMonth?: number;
+  billingCycleEnd?: string;
   memberCount?: number;
   agentCount?: number;
   taskCount?: number;

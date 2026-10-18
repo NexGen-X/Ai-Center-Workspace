@@ -5,6 +5,7 @@
 import { Router, Request, Response } from 'express';
 import { pool } from '../db/index.js';
 import { verifyPassword, hashPassword, generateSessionToken } from '../utils/auth.js';
+import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
 
@@ -55,6 +56,85 @@ router.post('/login', async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/auth/register — Self-service customer registration & workspace provisioning
+router.post('/register', async (req: Request, res: Response) => {
+  try {
+    const { displayName, email, password, companyName } = req.body;
+    if (!displayName || !email || !password) {
+      return res.status(400).json({ error: { message: 'Nama lengkap, email, dan kata sandi wajib diisi.' } });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: { message: 'Kata sandi minimal harus 6 karakter.' } });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const existing = await pool.query('SELECT id FROM human_users WHERE email = $1', [cleanEmail]);
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ error: { message: 'Email sudah terdaftar. Silakan masuk menggunakan akun Anda.' } });
+    }
+
+    const userId = `usr-${uuidv4().slice(0, 8)}`;
+    const workspaceId = `ws-${uuidv4().slice(0, 8)}`;
+    const orgName = (companyName || `${displayName.trim()}'s Team`).trim();
+    const token = generateSessionToken();
+    const pwdHash = hashPassword(password);
+
+    // 1. Create Human User
+    await pool.query(`
+      INSERT INTO human_users (id, email, display_name, password_hash, role, session_token, must_change_password)
+      VALUES ($1, $2, $3, $4, 'OPERATOR', $5, FALSE);
+    `, [userId, cleanEmail, displayName.trim(), pwdHash, token]);
+
+    // 2. Create Tenant Workspace with Free Trial
+    await pool.query(`
+      INSERT INTO workspaces (
+        id, name, plan, plan_status, task_quota_limit, tasks_used_this_month, billing_cycle_end, billing_email
+      ) VALUES ($1, $2, 'FREE', 'TRIALING', 50, 0, CURRENT_TIMESTAMP + INTERVAL '14 days', $3);
+    `, [workspaceId, orgName, cleanEmail]);
+
+    // 3. Assign as OWNER of the workspace
+    await pool.query(`
+      INSERT INTO workspace_members (id, workspace_id, user_id, role)
+      VALUES ($1, $2, $3, 'OWNER');
+    `, [`mem-${uuidv4().slice(0, 8)}`, workspaceId, userId]);
+
+    // 4. Record Activity
+    await pool.query(`
+      INSERT INTO activities (id, workspace_id, actor_type, actor_id, actor_name, event_type, summary, target_type, target_id)
+      VALUES ($1, $2, 'USER', $3, $4, 'workspace.created', $5, 'WORKSPACE', $6);
+    `, [
+      `act-${uuidv4().slice(0, 8)}`,
+      workspaceId,
+      userId,
+      displayName.trim(),
+      `Akun baru terdaftar & Workspace "${orgName}" aktif dengan Free Trial 14 hari (50 tugas).`,
+      workspaceId
+    ]);
+
+    res.status(201).json({
+      success: true,
+      token,
+      user: {
+        id: userId,
+        email: cleanEmail,
+        displayName: displayName.trim(),
+        role: 'OPERATOR',
+        mustChangePassword: false
+      },
+      workspace: {
+        id: workspaceId,
+        name: orgName,
+        plan: 'FREE',
+        planStatus: 'TRIALING',
+        taskQuotaLimit: 50
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: { message: err.message } });
+  }
+});
+
 // GET /api/auth/me — Validate session token
 router.get('/me', async (req: Request, res: Response) => {
   try {
@@ -75,6 +155,17 @@ router.get('/me', async (req: Request, res: Response) => {
     }
 
     const user = result.rows[0];
+
+    // Fetch primary workspace for tenant auto-selection
+    const wsRes = await pool.query(`
+      SELECT w.id, w.name, w.plan, w.plan_status, wm.role
+      FROM workspace_members wm
+      JOIN workspaces w ON wm.workspace_id = w.id
+      WHERE wm.user_id = $1
+      ORDER BY wm.created_at ASC
+      LIMIT 1;
+    `, [user.id]);
+
     res.json({
       authenticated: true,
       user: {
@@ -84,7 +175,8 @@ router.get('/me', async (req: Request, res: Response) => {
         role: user.role,
         mustChangePassword: Boolean(user.must_change_password),
         lastLoginAt: user.last_login_at
-      }
+      },
+      primaryWorkspace: wsRes.rows[0] || null
     });
   } catch (err: any) {
     res.status(500).json({ error: { message: err.message } });

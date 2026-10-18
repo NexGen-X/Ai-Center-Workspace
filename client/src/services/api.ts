@@ -91,7 +91,11 @@ import {
   DomainManagerInfoResponse,
   Workspace,
   WorkspaceMember,
-  WorkspaceRole
+  WorkspaceRole,
+  WorkspacePlan,
+  WorkspacePlanDetails,
+  WorkspaceUsageStats,
+  WorkspaceInvoice
 } from '../../../shared/types.js';
 
 const BASE_URL = '/api';
@@ -145,7 +149,11 @@ export const api = {
     method: 'POST',
     body: JSON.stringify({ email, password })
   }),
-  getMe: () => request<{ authenticated: boolean; user?: any }>('/auth/me'),
+  register: (data: { displayName: string; email: string; password: string; companyName?: string }) => request<{ success: boolean; token: string; user: any; workspace: any }>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+  getMe: () => request<{ authenticated: boolean; user?: any; primaryWorkspace?: any }>('/auth/me'),
   logout: () => request<{ success: boolean }>('/auth/logout', { method: 'POST' }),
   getSetupHint: () => request<{ available?: boolean; defaultEmail?: string; hint?: string; message?: string }>('/auth/setup-hint'),
   updateCredentials: (data: { newEmail: string; newDisplayName?: string; newPassword: string }) => request<{ success: boolean; user: any }>('/auth/update-credentials', {
@@ -875,6 +883,16 @@ export const api = {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }
+  },
+
+  // SaaS Billing & Subscription Management
+  getBillingPlans: () => request<WorkspacePlanDetails[]>('/billing/plans'),
+  getBillingUsage: () => request<WorkspaceUsageStats>('/billing/usage'),
+  upgradePlan: (targetPlan: WorkspacePlan, interval: 'MONTHLY' | 'ANNUALLY' = 'MONTHLY') =>
+    request<{ success: boolean; message: string; invoice: any; usage: WorkspaceUsageStats }>('/billing/upgrade', {
+      method: 'POST',
+      body: JSON.stringify({ targetPlan, interval })
+    }),
+  getInvoices: () => request<WorkspaceInvoice[]>('/billing/invoices')
 };
 

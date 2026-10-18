@@ -9,6 +9,7 @@ import { Task, TaskStatus } from '../../../shared/types.js';
 import { executeAgentTask } from '../services/orchestrator.js';
 import { realtimeHub } from '../services/realtime.js';
 import { SwarmService } from '../services/swarmService.js';
+import { QuotaService } from '../services/quotaService.js';
 
 const router = Router();
 
@@ -189,6 +190,20 @@ router.post('/', async (req: Request, res: Response) => {
     const wsId = (req.headers['x-workspace-id'] || req.body?.workspaceId || 'ws-default-command-center').toString().trim();
     if (!title) {
       return res.status(400).json({ error: { message: 'Judul tugas (title) wajib diisi.' } });
+    }
+
+    // Check SaaS plan quota limit
+    const quotaCheck = await QuotaService.checkTaskQuota(wsId);
+    if (!quotaCheck.allowed) {
+      return res.status(402).json({
+        error: {
+          code: 'QUOTA_EXCEEDED',
+          message: `Batas kuota tugas bulanan workspace Anda (${quotaCheck.limit} tugas) telah tercapai. Tingkatkan paket langganan Anda ke Starter atau Business untuk melanjutkan pekerjaan tim AI.`,
+          plan: quotaCheck.plan,
+          tasksUsed: quotaCheck.tasksUsed,
+          limit: quotaCheck.limit
+        }
+      });
     }
 
     const taskId = `task-${uuidv4().slice(0, 8)}`;
@@ -379,12 +394,28 @@ Tuliskan HANYA hasil format Markdown di atas tanpa kata pengantar tambahan.`;
 // POST /api/tasks/:id/execute — Trigger execution of task by assigned agent
 router.post('/:id/execute', async (req: Request, res: Response) => {
   try {
-    const taskRes = await pool.query('SELECT id, title, description, status, assigned_agent_id FROM tasks WHERE id = $1', [req.params.id]);
+    const taskRes = await pool.query('SELECT id, workspace_id, title, description, status, assigned_agent_id FROM tasks WHERE id = $1', [req.params.id]);
     if (taskRes.rows.length === 0) {
       return res.status(404).json({ error: { message: 'Tugas tidak ditemukan.' } });
     }
 
     const task = taskRes.rows[0];
+    const wsId = task.workspace_id || 'ws-default-command-center';
+
+    // Check quota before running
+    const quotaCheck = await QuotaService.checkTaskQuota(wsId);
+    if (!quotaCheck.allowed) {
+      return res.status(402).json({
+        error: {
+          code: 'QUOTA_EXCEEDED',
+          message: `Batas kuota tugas bulanan workspace Anda (${quotaCheck.limit} tugas) telah tercapai. Tingkatkan paket langganan Anda untuk terus menjalankan eksekusi tugas.`,
+          plan: quotaCheck.plan,
+          tasksUsed: quotaCheck.tasksUsed,
+          limit: quotaCheck.limit
+        }
+      });
+    }
+
     if (task.status === 'IN_PROGRESS') {
       return res.status(409).json({ error: { message: 'Tugas ini sedang berjalan (IN_PROGRESS). Harap tunggu hingga selesai atau batalkan sebelum menjalankan ulang.' } });
     }
@@ -396,6 +427,9 @@ router.post('/:id/execute', async (req: Request, res: Response) => {
 
     const prompt = req.body.prompt || `Selesaikan tugas: ${task.title}\n\nDeskripsi: ${task.description || 'Tidak ada deskripsi spesifik.'}`;
     const runResult = await executeAgentTask(agentId, prompt, task.id);
+
+    // Increment task usage counter
+    await QuotaService.incrementTaskUsage(wsId, 1);
 
     res.json(runResult);
   } catch (err: any) {
