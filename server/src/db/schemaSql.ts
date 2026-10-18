@@ -521,5 +521,9 @@ CREATE INDEX IF NOT EXISTS idx_agent_runs_task ON agent_runs(task_id);
 CREATE INDEX IF NOT EXISTS idx_projects_workspace ON projects(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_war_room_part_agent ON war_room_participants(agent_id);
 CREATE INDEX IF NOT EXISTS idx_human_users_session_token ON human_users(session_token);
+CREATE INDEX IF NOT EXISTS idx_tasks_ws_status_prio ON tasks(workspace_id, status, priority);
+CREATE INDEX IF NOT EXISTS idx_agent_runs_task_created ON agent_runs(task_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_swarm_messages_mission ON swarm_messages(mission_id, created_at ASC);
+CREATE INDEX IF NOT EXISTS idx_activities_ws_created ON activities(workspace_id, created_at DESC);
 `;
 

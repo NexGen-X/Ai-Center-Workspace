@@ -371,10 +371,14 @@ export class SwarmService {
               });
             }
 
-            // Prepare effective prompt
+            // Prepare effective prompt with Context Sliding Window & Token Pruning
             let subtaskPrompt = subtask.promptTemplate;
             if (handoffSummary) {
-              subtaskPrompt += `\n\n[KONTEKS SERAH TERIMA DARI TAHAP SEBELUMNYA]:\n${handoffSummary}`;
+              const maxHandoffChars = 6000; // ~1500 tokens budget
+              const prunedSummary = handoffSummary.length > maxHandoffChars
+                ? handoffSummary.slice(0, maxHandoffChars) + '\n\n...[Konteks dependensi sebelumnya diringkas untuk efisiensi token]...'
+                : handoffSummary;
+              subtaskPrompt += `\n\n[KONTEKS SERAH TERIMA DARI TAHAP SEBELUMNYA]:\n${prunedSummary}`;
             }
 
             // Execute subtask using Orchestrator

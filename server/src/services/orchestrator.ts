@@ -178,6 +178,7 @@ Sistem akan mengevaluasi risiko keamanan dan meminta approval operator jika aksi
     // Non-blocking retrieval fallback
   }
 
+  // Attempt execution on Primary Provider
   try {
     const adapter = ConnectionRouter.getAdapter(row.provider_type);
     result = await adapter.execute(
@@ -193,40 +194,7 @@ Sistem akan mengevaluasi risiko keamanan dan meminta approval operator jika aksi
       row.parameters_json,
       onTokenChunk
     );
-    finishedAt = new Date().toISOString();
-
-    // Check for Action / Tool Calling in output
-    const actionMatch = result.outputResult?.match(/```action\s*\n([\s\S]*?)\n```/);
-    if (actionMatch && result.success) {
-      try {
-        const actionPayload = JSON.parse(actionMatch[1].trim());
-        if (actionPayload.tool && actionPayload.input) {
-          systemLogger.info('INFERENCE', `Agen [${row.name}] mengajukan pemanggilan tool: ${actionPayload.tool}`, {
-            agentId,
-            taskId,
-            tool: actionPayload.tool
-          });
-
-          const actionRecord = await ActionManager.requestAction({
-            agentId,
-            toolName: actionPayload.tool,
-            toolInput: actionPayload.input,
-            taskId,
-            runId
-          });
-
-          if (actionRecord.status === 'EXECUTED') {
-            result.outputResult += `\n\n[HASIL EKSEKUSI TOOL (${actionPayload.tool})]\n${actionRecord.outputResult}`;
-          } else if (actionRecord.status === 'PENDING') {
-            result.outputResult += `\n\n⏳ [AKSI MENUNGGU PERSETUJUAN OPERATOR]\nTool: ${actionPayload.tool} (${actionRecord.riskLevel} Risk)\nStatus: Menunggu otorisasi operator di panel Command Center.`;
-          }
-        }
-      } catch (err: any) {
-        systemLogger.warn('INFERENCE', `Gagal mem-parse blok aksi dari agen [${row.name}]: ${err.message}`);
-      }
-    }
   } catch (adapterErr: any) {
-    finishedAt = new Date().toISOString();
     result = {
       success: false,
       status: 'FAILED',
@@ -234,11 +202,121 @@ Sistem akan mengevaluasi risiko keamanan dan meminta approval operator jika aksi
       errorMessage: adapterErr.message || 'Gagal mengeksekusi adapter model.',
       durationMs: Date.now() - new Date(startedAt).getTime()
     };
-    systemLogger.error('INFERENCE', `Exception pada eksekusi adapter agen [${row.name}]: ${adapterErr.message}`, {
+    systemLogger.warn('INFERENCE', `Exception pada eksekusi adapter agen [${row.name}]: ${adapterErr.message}`, {
       runId,
       agentId,
       taskId
     });
+  }
+
+  // Multi-Provider Failover Matrix: If primary provider failed, try candidate fallback providers
+  if (!result || !result.success) {
+    const primaryError = result?.errorMessage || 'Primary provider gagal mengeksekusi tugas.';
+    systemLogger.warn('INFERENCE', `[FAILOVER] Primary provider [${row.provider_name}] gagal (${primaryError}). Mencari fallback provider aktif...`, {
+      runId,
+      agentId,
+      taskId,
+      primaryProviderId: row.provider_id
+    });
+
+    try {
+      const fallbackRes = await pool.query(`
+        SELECT 
+          id, name, provider_type, base_url, protocol, api_key_encrypted, connection_status
+        FROM model_providers
+        WHERE workspace_id = $1 
+          AND enabled = TRUE 
+          AND id != $2 
+          AND connection_status != 'CONNECTION_FAILED'
+        ORDER BY CASE WHEN connection_status = 'CONNECTION_OK' THEN 0 ELSE 1 END, created_at ASC;
+      `, [row.workspace_id || 'ws-default-command-center', row.provider_id]);
+
+      for (const fallback of fallbackRes.rows) {
+        try {
+          systemLogger.info('INFERENCE', `[FAILOVER] Mengalihkan eksekusi agen [${row.name}] ke fallback provider [${fallback.name}] (${fallback.provider_type})...`, {
+            runId,
+            agentId,
+            taskId,
+            fallbackProviderId: fallback.id
+          });
+
+          realtimeHub.broadcast('task.failover_triggered', {
+            taskId,
+            runId,
+            agentId,
+            agentName: row.name,
+            primaryProvider: row.provider_name,
+            fallbackProvider: fallback.name,
+            reason: primaryError
+          });
+
+          const fallbackApiKey = fallback.api_key_encrypted ? decryptSecret(fallback.api_key_encrypted) : undefined;
+          const fallbackAdapter = ConnectionRouter.getAdapter(fallback.provider_type);
+
+          const fallbackResult = await fallbackAdapter.execute(
+            {
+              baseUrl: fallback.base_url,
+              apiKey: fallbackApiKey,
+              protocol: fallback.protocol || 'openai',
+              timeoutMs: 45000
+            },
+            row.model_id,
+            effectiveSystemPrompt,
+            userPrompt,
+            row.parameters_json,
+            onTokenChunk
+          );
+
+          if (fallbackResult && fallbackResult.success) {
+            result = fallbackResult;
+            result.outputResult = (result.outputResult || '') + `\n\n*(⚡ Catatan: Eksekusi dialihkan otomatis ke failover provider [${fallback.name}] untuk menjaga kehandalan sistem)*`;
+            systemLogger.info('INFERENCE', `[FAILOVER] Eksekusi failover ke [${fallback.name}] BERHASIL!`, {
+              runId,
+              agentId,
+              taskId
+            });
+            break;
+          }
+        } catch (fallbackErr: any) {
+          systemLogger.warn('INFERENCE', `[FAILOVER] Fallback provider [${fallback.name}] juga gagal: ${fallbackErr.message}`);
+        }
+      }
+    } catch (fbQueryErr: any) {
+      systemLogger.warn('INFERENCE', `Gagal mengambil daftar fallback provider: ${fbQueryErr.message}`);
+    }
+  }
+
+  finishedAt = new Date().toISOString();
+
+  // Check for Action / Tool Calling in output (from primary or successful failover)
+  const actionMatch = result?.outputResult?.match(/```action\s*\n([\s\S]*?)\n```/);
+  if (actionMatch && result?.success) {
+    try {
+      const actionPayload = JSON.parse(actionMatch[1].trim());
+      if (actionPayload.tool && actionPayload.input) {
+        systemLogger.info('INFERENCE', `Agen [${row.name}] mengajukan pemanggilan tool: ${actionPayload.tool}`, {
+          agentId,
+          taskId,
+          tool: actionPayload.tool
+        });
+
+        const actionRecord = await ActionManager.requestAction({
+          agentId,
+          toolName: actionPayload.tool,
+          toolInput: actionPayload.input,
+          taskId,
+          runId
+        });
+
+        if (actionRecord.status === 'EXECUTED') {
+          result.outputResult += `\n\n[HASIL EKSEKUSI TOOL (${actionPayload.tool})]\n${actionRecord.outputResult}`;
+        } else if (actionRecord.status === 'PENDING') {
+          result.outputResult += `\n\n⏳ [AKSI MENUNGGU PERSETUJUAN OPERATOR]\nTool: ${actionPayload.tool} (${actionRecord.riskLevel} Risk)\nStatus: Menunggu otorisasi operator di panel Command Center.`;
+        }
+      }
+    } catch (err: any) {
+      systemLogger.warn('INFERENCE', `Gagal mem-parse blok aksi dari agen [${row.name}]: ${err.message}`);
+    }
   }
 
   try {
