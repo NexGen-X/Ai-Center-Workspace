@@ -141,7 +141,19 @@ router.get('/:id', async (req: Request, res: Response) => {
         createdAt: row.created_at,
         updatedAt: row.updated_at
       },
-      runs: runsRes.rows,
+      runs: runsRes.rows.map(r => ({
+        id: r.id,
+        agentId: r.agent_id,
+        modelId: r.model_id,
+        status: r.status,
+        inputPrompt: r.input_prompt,
+        outputResult: r.output_result,
+        durationMs: r.duration_ms,
+        tokensUsed: { totalTokens: r.tokens_total || 0 },
+        tokens_total: r.tokens_total,
+        output_result: r.output_result,
+        createdAt: r.created_at
+      })),
       history: histRes.rows
     });
   } catch (err: any) {
