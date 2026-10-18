@@ -209,6 +209,10 @@ export const api = {
   autoSwarmTask: (taskId: string) => request<{ success: boolean; message: string; mission: any }>(`/tasks/${taskId}/auto-swarm`, {
     method: 'POST'
   }),
+  polishTaskPrompt: (data: { title?: string; description?: string }) => request<{ success: boolean; polishedDescription: string }>('/tasks/polish-prompt', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
 
   // Projects
   getProjects: () => request<(Project & { totalTasks: number; completedTasks: number })[]>('/projects'),

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Check, AlertCircle } from 'lucide-react';
+import { X, Check, AlertCircle, Sparkles } from 'lucide-react';
 import { AIAgent, TaskPriority, Project } from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
 import { CustomSelect } from '../../components/common/CustomSelect.js';
@@ -29,6 +29,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   const [projectId, setProjectId] = useState<string>(initialProjectId || '');
   const [dueDate, setDueDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPolishing, setIsPolishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -81,6 +82,22 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
     }
   };
 
+  const handlePolishPrompt = async () => {
+    if (!title.trim() && !description.trim()) return;
+    try {
+      setIsPolishing(true);
+      setError(null);
+      const res = await api.polishTaskPrompt({ title: title.trim(), description: description.trim() });
+      if (res.polishedDescription) {
+        setDescription(res.polishedDescription);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Gagal menyempurnakan prompt dengan AI.');
+    } finally {
+      setIsPolishing(false);
+    }
+  };
+
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
@@ -127,9 +144,21 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">Deskripsi Lengkap</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-slate-300">Deskripsi Lengkap</label>
+              <button
+                type="button"
+                onClick={handlePolishPrompt}
+                disabled={isPolishing || (!title.trim() && !description.trim())}
+                className="flex items-center gap-1 px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-500/30 text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 hover:bg-cyan-900/50 disabled:opacity-40 transition"
+                title="Sempurnakan instruksi tugas secara otomatis dengan AI Planner"
+              >
+                <Sparkles className={`w-3 h-3 ${isPolishing ? 'animate-spin' : ''}`} />
+                <span>{isPolishing ? 'Menyempurnakan...' : '✨ AI Polish'}</span>
+              </button>
+            </div>
             <textarea
-              rows={3}
+              rows={4}
               placeholder="Jelaskan kebutuhan, batasan, atau acceptance criteria..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}

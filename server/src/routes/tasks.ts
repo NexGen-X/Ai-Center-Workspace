@@ -309,15 +309,67 @@ router.post('/:id/transitions', async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/tasks/polish-prompt — AI Prompt Polish & Structured Requirement Formulation
+router.post('/polish-prompt', async (req: Request, res: Response) => {
+  try {
+    const { title, description } = req.body;
+    if (!title && !description) {
+      return res.status(400).json({ error: { message: 'Judul atau deskripsi tugas wajib diisi untuk disempurnakan.' } });
+    }
+
+    const agentRes = await pool.query(
+      `SELECT id, name FROM ai_agents WHERE enabled = TRUE ORDER BY CASE WHEN role IN ('Planner', 'Orchestrator') THEN 0 ELSE 1 END, created_at ASC LIMIT 1`
+    );
+
+    if (agentRes.rows.length === 0) {
+      return res.status(400).json({ error: { message: 'Tidak ada AI Agent aktif yang tersedia.' } });
+    }
+
+    const agent = agentRes.rows[0];
+    const polishPrompt = `Anda bertindak sebagai Enterprise Requirement Engineer dan Technical Lead.
+Tugas Anda adalah memformulasikan instruksi awal dari klien/pengguna berikut menjadi spesifikasi kebutuhan yang profesional, jelas, terstruktur, dan siap dieksekusi oleh tim AI spesialis.
+
+[INSTRUKSI AWAL PENGGUNA]
+Judul: ${title || '(Belum ditentukan)'}
+Deskripsi Singkat: ${description || '(Belum ada detail tambahan)'}
+
+Harap hasilkan deskripsi Markdown terstruktur dengan format berikut:
+### 🎯 Objektif & Ruang Lingkup
+[Uraian singkat tujuan utama dan batasan ruang lingkup]
+
+### 📋 Spesifikasi & Kriteria Penerimaan
+1. [Kriteria teknis atau fungsional 1]
+2. [Kriteria teknis atau fungsional 2]
+3. [Kriteria teknis atau fungsional 3]
+
+### 📤 Deliverable yang Diharapkan
+- [Format hasil keluaran yang harus diserahkan agen]
+
+Tuliskan HANYA hasil format Markdown di atas tanpa kata pengantar tambahan.`;
+
+    const runResult = await executeAgentTask(agent.id, polishPrompt);
+    res.json({
+      success: true,
+      polishedDescription: runResult.outputResult || description
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: { message: err.message } });
+  }
+});
+
 // POST /api/tasks/:id/execute — Trigger execution of task by assigned agent
 router.post('/:id/execute', async (req: Request, res: Response) => {
   try {
-    const taskRes = await pool.query('SELECT id, title, description, assigned_agent_id FROM tasks WHERE id = $1', [req.params.id]);
+    const taskRes = await pool.query('SELECT id, title, description, status, assigned_agent_id FROM tasks WHERE id = $1', [req.params.id]);
     if (taskRes.rows.length === 0) {
       return res.status(404).json({ error: { message: 'Tugas tidak ditemukan.' } });
     }
 
     const task = taskRes.rows[0];
+    if (task.status === 'IN_PROGRESS') {
+      return res.status(409).json({ error: { message: 'Tugas ini sedang berjalan (IN_PROGRESS). Harap tunggu hingga selesai atau batalkan sebelum menjalankan ulang.' } });
+    }
+
     const agentId = req.body.agentId || task.assigned_agent_id;
     if (!agentId) {
       return res.status(400).json({ error: { message: 'Tugas belum memiliki agent yang ditugaskan.' } });
