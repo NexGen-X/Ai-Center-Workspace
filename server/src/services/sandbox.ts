@@ -36,13 +36,22 @@ const DANGEROUS_PATTERNS = [
   />\s*\/dev\/sd/,
   /dd\s+if=/,
   /:{\s*:\|:&\s*};:/,
+  /:\(\)\s*\{\s*:\|:&\s*\};:/,
   /chmod\s+(-R\s+)?777\s+\//,
   /shutdown/,
   /reboot/,
   /init\s+0/,
   /killall\s+-9/,
+  /pkill\s+(-9\s+)?node/i,
+  /kill\s+(-9\s+)?1(?!\d)/,
+  /kill\s+(-9\s+)?-1/,
   /passwd/,
-  /sudoers/
+  /sudoers/,
+  /\/dev\/tcp\//,
+  /nc\s+.*-e/i,
+  /ncat\s+.*-e/i,
+  /curl.*\|\s*(bash|sh)/i,
+  /wget.*\|\s*(bash|sh)/i
 ];
 
 // Commands considered safe for read-only auto-approval
@@ -432,19 +441,50 @@ export async function executeToolInSandbox(
           SANDBOX: '1'
         };
 
-        const { stdout, stderr } = await execAsync(cmd, {
-          timeout,
-          cwd,
-          maxBuffer: 1024 * 1024 * 2, // 2MB output buffer
-          env: cleanEnv
-        });
+        try {
+          const { stdout, stderr } = await execAsync(cmd, {
+            timeout,
+            cwd,
+            maxBuffer: 1024 * 1024 * 2, // 2MB output buffer
+            env: cleanEnv
+          });
 
-        const output = (stdout || '') + (stderr ? `\n[STDERR]\n${stderr}` : '');
-        return {
-          success: true,
-          output: output.trim() || '(Perintah selesai tanpa output teks)',
-          durationMs: Date.now() - startTime
-        };
+          const output = (stdout || '') + (stderr ? `\n[STDERR]\n${stderr}` : '');
+          return {
+            success: true,
+            output: output.trim() || '(Perintah selesai tanpa output teks)',
+            durationMs: Date.now() - startTime
+          };
+        } catch (execErr: any) {
+          const isTimeout = execErr.killed || execErr.signal === 'SIGTERM' || execErr.code === 'ETIMEDOUT';
+          const isBufferOverflow = execErr.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER';
+          const combinedOutput = ((execErr.stdout || '') + (execErr.stderr ? `\n[STDERR]\n${execErr.stderr}` : '')).trim();
+
+          if (isTimeout) {
+            return {
+              success: false,
+              output: combinedOutput ? `${combinedOutput}\n\n[TIMEOUT]: Eksekusi dihentikan setelah ${timeout / 1000}s untuk menjaga stabilitas server.` : `[TIMEOUT]: Eksekusi melebihi batas waktu ${timeout / 1000} detik.`,
+              error: 'EXECUTION_TIMEOUT',
+              durationMs: Date.now() - startTime
+            };
+          }
+
+          if (isBufferOverflow) {
+            return {
+              success: false,
+              output: '[BUFFER_OVERFLOW]: Output perintah melebihi batas kuota memori 2MB.',
+              error: 'MAX_BUFFER_EXCEEDED',
+              durationMs: Date.now() - startTime
+            };
+          }
+
+          return {
+            success: false,
+            output: combinedOutput || execErr.message,
+            error: execErr.message,
+            durationMs: Date.now() - startTime
+          };
+        }
       }
 
       case 'file_read': {
@@ -503,6 +543,9 @@ export async function executeToolInSandbox(
         const append = Boolean(input.append);
 
         if (!rawPath) throw new Error('Parameter "filePath" wajib diisi.');
+        if (content.length > 5 * 1024 * 1024) {
+          throw new Error('Ukuran konten file melebihi batas kuota 5MB.');
+        }
 
         // Simpan selalu di dalam SANDBOX_DIR untuk keamanan isolasi
         const targetPath = path.resolve(SANDBOX_DIR, path.basename(rawPath));

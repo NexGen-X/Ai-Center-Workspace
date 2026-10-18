@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { Navbar } from './components/Navbar.js';
 import { StatCards } from './components/StatCards.js';
 import { AgentCard } from './features/team/AgentCard.js';
@@ -8,12 +8,6 @@ import { ManageTeamModal } from './features/team/ManageTeamModal.js';
 import { LoginModal } from './components/LoginModal.js';
 import { LoginPage } from './features/auth/LoginPage.js';
 import { ForcePasswordChangeModal } from './features/auth/ForcePasswordChangeModal.js';
-import { CalendarModal } from './features/calendar/CalendarModal.js';
-import { ReportsModal } from './features/reports/ReportsModal.js';
-import { DocumentsModal } from './features/documents/DocumentsModal.js';
-import { ProjectsModal } from './features/projects/ProjectsModal.js';
-import { SettingsModal } from './features/settings/SettingsModal.js';
-import { ManageProvidersModal } from './features/providers/ManageProvidersModal.js';
 import { TaskList } from './features/tasks/TaskList.js';
 import { CreateTaskModal } from './features/tasks/CreateTaskModal.js';
 import { TaskDetailModal } from './features/tasks/TaskDetailModal.js';
@@ -23,16 +17,24 @@ import { Workspace2DView } from './features/workspace3d/Workspace2DView.js';
 import { ActivityFeed } from './components/ActivityFeed.js';
 import { ServerMonitoringWidget } from './components/ServerMonitoringWidget.js';
 import { ConsoleDrawer } from './components/terminal/ConsoleDrawer.js';
-import { PlaygroundModal } from './features/playground/PlaygroundModal.js';
-import { PipelineModal } from './features/pipeline/PipelineModal.js';
-import { SwarmMissionModal } from './features/swarm/SwarmMissionModal.js';
 import { ActionApprovalModal } from './features/actions/ActionApprovalModal.js';
 import { ActionHistoryModal } from './features/actions/ActionHistoryModal.js';
-import { WarRoomModal } from './features/warroom/WarRoomModal.js';
-import { SreModal } from './features/sre/SreModal.js';
-import { DataAnalystModal } from './features/data-analyst/DataAnalystModal.js';
-import { SkillStudioModal } from './features/skills/SkillStudioModal.js';
-import { MemoryGraphModal } from './features/memory/MemoryGraphModal.js';
+
+// Code-split heavy modals with React.lazy to minimize initial client payload
+const CalendarModal = React.lazy(() => import('./features/calendar/CalendarModal.js').then(m => ({ default: m.CalendarModal })));
+const ReportsModal = React.lazy(() => import('./features/reports/ReportsModal.js').then(m => ({ default: m.ReportsModal })));
+const DocumentsModal = React.lazy(() => import('./features/documents/DocumentsModal.js').then(m => ({ default: m.DocumentsModal })));
+const ProjectsModal = React.lazy(() => import('./features/projects/ProjectsModal.js').then(m => ({ default: m.ProjectsModal })));
+const SettingsModal = React.lazy(() => import('./features/settings/SettingsModal.js').then(m => ({ default: m.SettingsModal })));
+const ManageProvidersModal = React.lazy(() => import('./features/providers/ManageProvidersModal.js').then(m => ({ default: m.ManageProvidersModal })));
+const PlaygroundModal = React.lazy(() => import('./features/playground/PlaygroundModal.js').then(m => ({ default: m.PlaygroundModal })));
+const PipelineModal = React.lazy(() => import('./features/pipeline/PipelineModal.js').then(m => ({ default: m.PipelineModal })));
+const SwarmMissionModal = React.lazy(() => import('./features/swarm/SwarmMissionModal.js').then(m => ({ default: m.SwarmMissionModal })));
+const WarRoomModal = React.lazy(() => import('./features/warroom/WarRoomModal.js').then(m => ({ default: m.WarRoomModal })));
+const SreModal = React.lazy(() => import('./features/sre/SreModal.js').then(m => ({ default: m.SreModal })));
+const DataAnalystModal = React.lazy(() => import('./features/data-analyst/DataAnalystModal.js').then(m => ({ default: m.DataAnalystModal })));
+const SkillStudioModal = React.lazy(() => import('./features/skills/SkillStudioModal.js').then(m => ({ default: m.SkillStudioModal })));
+const MemoryGraphModal = React.lazy(() => import('./features/memory/MemoryGraphModal.js').then(m => ({ default: m.MemoryGraphModal })));
 import { useFeedback } from './components/common/FeedbackContext.js';
 import { ErrorBoundary } from './components/common/ErrorBoundary.js';
 import { api } from './services/api.js';
@@ -609,99 +611,129 @@ export const App: React.FC = () => {
         }}
       />
 
-      <CalendarModal
-        isOpen={isCalendarOpen}
-        onClose={() => setIsCalendarOpen(false)}
-        tasks={tasks}
-        projects={projects}
-        onSelectTask={handleSelectTask}
-      />
+      <Suspense fallback={null}>
+        {isCalendarOpen && (
+          <CalendarModal
+            isOpen={isCalendarOpen}
+            onClose={() => setIsCalendarOpen(false)}
+            tasks={tasks}
+            projects={projects}
+            onSelectTask={handleSelectTask}
+          />
+        )}
 
-      <ReportsModal
-        isOpen={isReportsOpen}
-        onClose={() => setIsReportsOpen(false)}
-      />
+        {isReportsOpen && (
+          <ReportsModal
+            isOpen={isReportsOpen}
+            onClose={() => setIsReportsOpen(false)}
+          />
+        )}
 
-      <DocumentsModal
-        isOpen={isDocumentsOpen}
-        onClose={() => setIsDocumentsOpen(false)}
-        projects={projects}
-      />
+        {isDocumentsOpen && (
+          <DocumentsModal
+            isOpen={isDocumentsOpen}
+            onClose={() => setIsDocumentsOpen(false)}
+            projects={projects}
+          />
+        )}
 
-      <ProjectsModal
-        isOpen={isProjectsOpen}
-        onClose={() => setIsProjectsOpen(false)}
-        onProjectsUpdated={refreshAllData}
-        onOpenCreateTaskForProject={handleOpenCreateTaskForProject}
-        onSelectTask={handleSelectTask}
-      />
+        {isProjectsOpen && (
+          <ProjectsModal
+            isOpen={isProjectsOpen}
+            onClose={() => setIsProjectsOpen(false)}
+            onProjectsUpdated={refreshAllData}
+            onOpenCreateTaskForProject={handleOpenCreateTaskForProject}
+            onSelectTask={handleSelectTask}
+          />
+        )}
 
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        currentUser={currentUser}
-        onLogout={handleLogout}
-        onOpenManageProviders={() => setIsProvidersModalOpen(true)}
-        onWorkspaceRestored={refreshAllData}
-      />
+        {isSettingsOpen && (
+          <SettingsModal
+            isOpen={isSettingsOpen}
+            onClose={() => setIsSettingsOpen(false)}
+            currentUser={currentUser}
+            onLogout={handleLogout}
+            onOpenManageProviders={() => setIsProvidersModalOpen(true)}
+            onWorkspaceRestored={refreshAllData}
+          />
+        )}
 
-      <ManageProvidersModal
-        isOpen={isProvidersModalOpen}
-        onClose={() => setIsProvidersModalOpen(false)}
-        onProvidersUpdated={refreshAllData}
-      />
+        {isProvidersModalOpen && (
+          <ManageProvidersModal
+            isOpen={isProvidersModalOpen}
+            onClose={() => setIsProvidersModalOpen(false)}
+            onProvidersUpdated={refreshAllData}
+          />
+        )}
 
-      <PlaygroundModal
-        isOpen={isPlaygroundOpen}
-        onClose={() => setIsPlaygroundOpen(false)}
-        providers={providers}
-        agents={agents}
-      />
+        {isPlaygroundOpen && (
+          <PlaygroundModal
+            isOpen={isPlaygroundOpen}
+            onClose={() => setIsPlaygroundOpen(false)}
+            providers={providers}
+            agents={agents}
+          />
+        )}
 
-      <PipelineModal
-        isOpen={isPipelineOpen}
-        onClose={() => setIsPipelineOpen(false)}
-        agents={agents}
-        projects={projects}
-        onPipelineCompleted={refreshAllData}
-      />
+        {isPipelineOpen && (
+          <PipelineModal
+            isOpen={isPipelineOpen}
+            onClose={() => setIsPipelineOpen(false)}
+            agents={agents}
+            projects={projects}
+            onPipelineCompleted={refreshAllData}
+          />
+        )}
 
-      <SwarmMissionModal
-        isOpen={isSwarmModalOpen}
-        onClose={() => setIsSwarmModalOpen(false)}
-        agents={agents}
-        onMissionLaunched={refreshAllData}
-      />
+        {isSwarmModalOpen && (
+          <SwarmMissionModal
+            isOpen={isSwarmModalOpen}
+            onClose={() => setIsSwarmModalOpen(false)}
+            agents={agents}
+            onMissionLaunched={refreshAllData}
+          />
+        )}
 
-      <WarRoomModal
-        isOpen={isWarRoomOpen}
-        onClose={() => setIsWarRoomOpen(false)}
-        agents={agents}
-        projects={projects}
-        onTaskCreated={refreshAllData}
-      />
+        {isWarRoomOpen && (
+          <WarRoomModal
+            isOpen={isWarRoomOpen}
+            onClose={() => setIsWarRoomOpen(false)}
+            agents={agents}
+            projects={projects}
+            onTaskCreated={refreshAllData}
+          />
+        )}
 
-      <SreModal
-        isOpen={isSreOpen}
-        onClose={() => setIsSreOpen(false)}
-      />
+        {isSreOpen && (
+          <SreModal
+            isOpen={isSreOpen}
+            onClose={() => setIsSreOpen(false)}
+          />
+        )}
 
-      <DataAnalystModal
-        isOpen={isDataAnalystOpen}
-        onClose={() => setIsDataAnalystOpen(false)}
-      />
+        {isDataAnalystOpen && (
+          <DataAnalystModal
+            isOpen={isDataAnalystOpen}
+            onClose={() => setIsDataAnalystOpen(false)}
+          />
+        )}
 
-      <SkillStudioModal
-        isOpen={isSkillsOpen}
-        onClose={() => setIsSkillsOpen(false)}
-        agents={agents}
-      />
+        {isSkillsOpen && (
+          <SkillStudioModal
+            isOpen={isSkillsOpen}
+            onClose={() => setIsSkillsOpen(false)}
+            agents={agents}
+          />
+        )}
 
-      <MemoryGraphModal
-        isOpen={isMemoryGraphOpen}
-        onClose={() => setIsMemoryGraphOpen(false)}
-        agents={agents}
-      />
+        {isMemoryGraphOpen && (
+          <MemoryGraphModal
+            isOpen={isMemoryGraphOpen}
+            onClose={() => setIsMemoryGraphOpen(false)}
+            agents={agents}
+          />
+        )}
+      </Suspense>
 
       <ConsoleDrawer
         isOpen={isConsoleOpen}
