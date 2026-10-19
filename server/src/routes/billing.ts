@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { QuotaService } from '../services/quotaService.js';
 import { realtimeHub } from '../services/realtime.js';
 import { MidtransService } from '../services/midtransService.js';
+import { requireAuth } from '../middleware/auth.js';
 import { WorkspacePlanDetails, WorkspacePlan } from '../../../shared/types.js';
 
 export const billingRouter = Router();
@@ -96,10 +97,24 @@ export const SAAS_PLANS: Record<WorkspacePlan, WorkspacePlanDetails> = {
   }
 };
 
-// GET /api/billing/plans — Get all available subscription plans
+// GET /api/billing/plans — Get all available subscription plans (Public for pricing modal & comparison)
 billingRouter.get('/plans', (_req: Request, res: Response) => {
   res.json(Object.values(SAAS_PLANS));
 });
+
+// POST /api/billing/webhook — Handle asynchronous payment notifications from Midtrans
+// Secured via Midtrans SHA-512 cryptographic signature verification
+billingRouter.post('/webhook', async (req: Request, res: Response) => {
+  try {
+    const result = await MidtransService.handleWebhookNotification(req.body);
+    res.json({ success: true, ...result });
+  } catch (err: any) {
+    res.status(400).json({ error: { message: err.message } });
+  }
+});
+
+// All endpoints below require authenticated operator session
+billingRouter.use(requireAuth);
 
 // GET /api/billing/usage — Get current workspace's usage & quota
 billingRouter.get('/usage', async (req: Request, res: Response) => {
@@ -164,16 +179,6 @@ billingRouter.post('/checkout', async (req: Request, res: Response) => {
     });
   } catch (err: any) {
     res.status(500).json({ error: { message: err.message } });
-  }
-});
-
-// POST /api/billing/webhook — Handle asynchronous payment notifications from Midtrans
-billingRouter.post('/webhook', async (req: Request, res: Response) => {
-  try {
-    const result = await MidtransService.handleWebhookNotification(req.body);
-    res.json({ success: true, ...result });
-  } catch (err: any) {
-    res.status(400).json({ error: { message: err.message } });
   }
 });
 

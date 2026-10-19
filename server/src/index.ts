@@ -140,7 +140,7 @@ app.use('/api/skills', skillsRouter);
 app.use('/api/memory-graph', memoryGraphRouter);
 app.use('/api/system/domain', domainRouter);
 app.use('/api/workspaces', requireAuth, workspacesRouter);
-app.use('/api/billing', requireAuth, billingRouter);
+app.use('/api/billing', billingRouter);
 
 // Comprehensive Root Healthcheck with Database Connectivity Validation
 app.get('/healthz', async (_req: Request, res: Response) => {
