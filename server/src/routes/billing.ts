@@ -7,6 +7,7 @@ import { pool } from '../db/index.js';
 import { v4 as uuidv4 } from 'uuid';
 import { QuotaService } from '../services/quotaService.js';
 import { realtimeHub } from '../services/realtime.js';
+import { MidtransService } from '../services/midtransService.js';
 import { WorkspacePlanDetails, WorkspacePlan } from '../../../shared/types.js';
 
 export const billingRouter = Router();
@@ -108,6 +109,71 @@ billingRouter.get('/usage', async (req: Request, res: Response) => {
     res.json(stats);
   } catch (err: any) {
     res.status(500).json({ error: { message: err.message } });
+  }
+});
+
+// POST /api/billing/checkout — Generate Midtrans Snap payment token
+billingRouter.post('/checkout', async (req: Request, res: Response) => {
+  try {
+    const { targetPlan, interval = 'MONTHLY' } = req.body;
+    const wsId = (req.headers['x-workspace-id'] || req.body?.workspaceId || 'ws-default-command-center').toString().trim();
+
+    if (!targetPlan || !SAAS_PLANS[targetPlan as WorkspacePlan]) {
+      return res.status(400).json({
+        error: { message: `Paket "${targetPlan}" tidak valid. Pilihan: STARTER, BUSINESS, ENTERPRISE.` }
+      });
+    }
+
+    const selectedPlan = SAAS_PLANS[targetPlan as WorkspacePlan];
+    const isAnnual = interval === 'ANNUALLY';
+    const amountIdr = isAnnual ? Math.round(selectedPlan.priceIdr * 12 * 0.8) : selectedPlan.priceIdr;
+
+    // Fetch workspace and operator details
+    const wsRes = await pool.query('SELECT name, billing_email FROM workspaces WHERE id = $1', [wsId]);
+    const wsName = wsRes.rows[0]?.name || 'Workspace Customer';
+    const billingEmail = wsRes.rows[0]?.billing_email || 'billing@id-tech.cloud';
+
+    const invoiceNumber = `INV-${Date.now().toString().slice(-6)}-${targetPlan}`;
+    const invoiceId = `inv-${uuidv4().slice(0, 8)}`;
+
+    // 1. Create Midtrans Snap Token
+    const snapResult = await MidtransService.createSnapTransaction({
+      invoiceNumber,
+      amountIdr,
+      planId: targetPlan as WorkspacePlan,
+      interval,
+      workspaceId: wsId,
+      customerName: wsName,
+      customerEmail: billingEmail
+    });
+
+    // 2. Insert PENDING invoice into database
+    await pool.query(`
+      INSERT INTO workspace_invoices (
+        id, workspace_id, invoice_number, amount_idr, plan, interval, status, payment_gateway_ref
+      ) VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', $7)
+    `, [invoiceId, wsId, invoiceNumber, amountIdr, targetPlan, interval, snapResult.snapToken]);
+
+    res.json({
+      success: true,
+      snapToken: snapResult.snapToken,
+      redirectUrl: snapResult.redirectUrl,
+      invoiceNumber,
+      clientKey: MidtransService.clientKey,
+      isProduction: MidtransService.isProduction
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: { message: err.message } });
+  }
+});
+
+// POST /api/billing/webhook — Handle asynchronous payment notifications from Midtrans
+billingRouter.post('/webhook', async (req: Request, res: Response) => {
+  try {
+    const result = await MidtransService.handleWebhookNotification(req.body);
+    res.json({ success: true, ...result });
+  } catch (err: any) {
+    res.status(400).json({ error: { message: err.message } });
   }
 });
 

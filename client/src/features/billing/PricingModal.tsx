@@ -31,6 +31,29 @@ interface PricingModalProps {
   onPlanUpgraded?: () => void;
 }
 
+function loadMidtransSnap(clientKey: string, isProduction: boolean): Promise<void> {
+  return new Promise((resolve) => {
+    if ((window as any).snap && typeof (window as any).snap.pay === 'function') {
+      resolve();
+      return;
+    }
+    const scriptId = 'midtrans-snap-script';
+    const existing = document.getElementById(scriptId);
+    if (existing) {
+      existing.remove();
+    }
+    const script = document.createElement('script');
+    script.id = scriptId;
+    script.src = isProduction
+      ? 'https://app.midtrans.com/snap/snap.js'
+      : 'https://app.sandbox.midtrans.com/snap/snap.js';
+    script.setAttribute('data-client-key', clientKey);
+    script.onload = () => resolve();
+    script.onerror = () => resolve();
+    document.head.appendChild(script);
+  });
+}
+
 export const PricingModal: React.FC<PricingModalProps> = ({
   isOpen,
   onClose,
@@ -74,13 +97,35 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   const handleUpgrade = async (targetPlan: WorkspacePlan) => {
     try {
       setUpgradingPlan(targetPlan);
-      const res = await api.upgradePlan(targetPlan, billingInterval);
-      toast.success(res.message);
-      setUsage(res.usage);
-      if (onPlanUpgraded) onPlanUpgraded();
-      await loadBillingData();
+      toast.info('Menyiapkan pembayaran Midtrans...');
+
+      const checkout = await api.createBillingCheckout(targetPlan, billingInterval);
+
+      await loadMidtransSnap(checkout.clientKey, checkout.isProduction);
+
+      if ((window as any).snap && typeof (window as any).snap.pay === 'function') {
+        (window as any).snap.pay(checkout.snapToken, {
+          onSuccess: async () => {
+            toast.success('Pembayaran berhasil dikonfirmasi! Mengaktifkan kuota paket baru...');
+            await loadBillingData();
+            if (onPlanUpgraded) onPlanUpgraded();
+          },
+          onPending: async () => {
+            toast.info('Kode pembayaran (QRIS / Virtual Account) aktif. Silakan selesaikan pembayaran.');
+            await loadBillingData();
+          },
+          onError: () => {
+            toast.error('Pembayaran gagal atau dibatalkan.');
+          },
+          onClose: async () => {
+            await loadBillingData();
+          }
+        });
+      } else if (checkout.redirectUrl) {
+        window.open(checkout.redirectUrl, '_blank');
+      }
     } catch (err: any) {
-      toast.error(err.message || 'Gagal meng-upgrade paket.');
+      toast.error(err.message || 'Gagal memulai checkout Midtrans.');
     } finally {
       setUpgradingPlan(null);
     }

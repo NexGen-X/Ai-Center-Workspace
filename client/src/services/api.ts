@@ -888,6 +888,18 @@ export const api = {
   // SaaS Billing & Subscription Management
   getBillingPlans: () => request<WorkspacePlanDetails[]>('/billing/plans'),
   getBillingUsage: () => request<WorkspaceUsageStats>('/billing/usage'),
+  createBillingCheckout: (targetPlan: WorkspacePlan, interval: 'MONTHLY' | 'ANNUALLY' = 'MONTHLY') =>
+    request<{
+      success: boolean;
+      snapToken: string;
+      redirectUrl: string;
+      invoiceNumber: string;
+      clientKey: string;
+      isProduction: boolean;
+    }>('/billing/checkout', {
+      method: 'POST',
+      body: JSON.stringify({ targetPlan, interval })
+    }),
   upgradePlan: (targetPlan: WorkspacePlan, interval: 'MONTHLY' | 'ANNUALLY' = 'MONTHLY') =>
     request<{ success: boolean; message: string; invoice: any; usage: WorkspaceUsageStats }>('/billing/upgrade', {
       method: 'POST',
