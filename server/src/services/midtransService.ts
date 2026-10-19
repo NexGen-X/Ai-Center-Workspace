@@ -125,10 +125,14 @@ export class MidtransService {
     const raw = `${notification.order_id}${notification.status_code}${notification.gross_amount}${this.serverKey}`;
     const expectedHash = crypto.createHash('sha512').update(raw).digest('hex');
 
-    return crypto.timingSafeEqual(
-      Buffer.from(expectedHash.toLowerCase()),
-      Buffer.from(notification.signature_key.toLowerCase())
-    );
+    const expectedBuf = Buffer.from(expectedHash.toLowerCase());
+    const receivedBuf = Buffer.from(notification.signature_key.toLowerCase());
+
+    if (expectedBuf.length !== receivedBuf.length) {
+      return false;
+    }
+
+    return crypto.timingSafeEqual(expectedBuf, receivedBuf);
   }
 
   /**
