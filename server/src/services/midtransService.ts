@@ -79,7 +79,9 @@ export class MidtransService {
       custom_field2: params.planId,
       custom_field3: params.interval,
       callbacks: {
-        finish: 'https://app.id-tech.cloud/?payment_status=success'
+        finish: 'https://app.id-tech.cloud/?payment_status=success',
+        unfinish: 'https://app.id-tech.cloud/?payment_status=unfinish',
+        error: 'https://app.id-tech.cloud/?payment_status=error'
       }
     };
 
