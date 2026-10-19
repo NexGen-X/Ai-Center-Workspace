@@ -75,6 +75,21 @@ export class MidtransService {
         first_name: params.customerName || 'Pelanggan ID-Tech Cloud',
         email: params.customerEmail || 'billing@id-tech.cloud'
       },
+      enabled_payments: [
+        'qris',
+        'gopay',
+        'shopeepay',
+        'bca_va',
+        'mandiri_va',
+        'bni_va',
+        'bri_va',
+        'permata_va',
+        'other_va',
+        'credit_card'
+      ],
+      credit_card: {
+        secure: true
+      },
       custom_field1: params.workspaceId,
       custom_field2: params.planId,
       custom_field3: params.interval,

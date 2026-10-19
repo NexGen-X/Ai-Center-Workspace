@@ -93,3 +93,22 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ==========================================================================
+   Midtrans Snap Payment Popup — Cybernetic Dark Polish
+   ========================================================================== */
+#snap-midtrans,
+iframe[id^="snap-"],
+iframe[name^="popup_"] {
+  border-radius: 20px !important;
+  overflow: hidden !important;
+  box-shadow: 0 25px 75px -10px rgba(0, 0, 0, 0.9), 0 0 50px rgba(6, 182, 212, 0.35) !important;
+  border: 1px solid rgba(6, 182, 212, 0.4) !important;
+  transition: transform 0.25s ease-out, opacity 0.25s ease-out !important;
+}
+
+/* Ensure Snap overlay is properly centered and layered */
+#snap-container {
+  z-index: 999999 !important;
+}
+
