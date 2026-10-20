@@ -29,7 +29,10 @@ import {
   Brain,
   Building2,
   ChevronDown,
-  Sparkles
+  Sparkles,
+  GitPullRequest,
+  DollarSign,
+  Compass
 } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown.js';
 import { OrchestratorStatus } from '../../../shared/types.js';
@@ -69,6 +72,10 @@ interface NavbarProps {
   onOpenWorkspaces?: () => void;
   currentPlan?: string;
   onOpenPricing?: () => void;
+  onOpenGuidedTour?: () => void;
+  onOpenFinOps?: () => void;
+  onOpenGitHub?: () => void;
+  onOpenDaemons?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -105,7 +112,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeWorkspaceName = 'Default Workspace',
   onOpenWorkspaces,
   currentPlan = 'FREE',
-  onOpenPricing
+  onOpenPricing,
+  onOpenGuidedTour,
+  onOpenFinOps,
+  onOpenGitHub,
+  onOpenDaemons
 }) => {
   const [dateStr, setDateStr] = useState<string>('');
 
@@ -182,10 +193,33 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span className="text-[10px] text-amber-400/80 font-normal">Upgrade</span>
               </button>
             )}
+
+            {/* 1-Click Guided Demo Tour Button */}
+            {onOpenGuidedTour && (
+              <button
+                type="button"
+                onClick={onOpenGuidedTour}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold text-xs shadow-md shadow-blue-500/25 hover:shadow-blue-500/40 transition hover:scale-[1.02] active:scale-[0.98] shrink-0"
+                title="Jalankan Simulasi Demo Swarm & Panduan Interaktif"
+              >
+                <Zap className="w-3.5 h-3.5 fill-white text-white" />
+                <span>Demo Swarm</span>
+              </button>
+            )}
           </div>
 
           {/* Mobile Right Quick Action Icons (Visible only on < lg) */}
           <div className="flex lg:hidden items-center gap-1.5 shrink-0">
+            {/* Mobile Demo Swarm */}
+            {onOpenGuidedTour && (
+              <button
+                onClick={onOpenGuidedTour}
+                className="p-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-sm transition"
+                title="Demo Swarm"
+              >
+                <Zap className="w-4 h-4 fill-white" />
+              </button>
+            )}
             {/* Mobile Pricing / Upgrade */}
             {onOpenPricing && (
               <button
@@ -474,6 +508,45 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {pendingActionCount}
                 </span>
               )}
+            </button>
+          )}
+
+          {/* AI FinOps & Token Cost Analytics */}
+          {onOpenFinOps && (
+            <button
+              type="button"
+              onClick={onOpenFinOps}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold shadow-sm transition shrink-0 whitespace-nowrap"
+              title="AI FinOps & Token Cost Analytics"
+            >
+              <DollarSign className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>FinOps AI</span>
+            </button>
+          )}
+
+          {/* GitHub & GitLab PR Bot Connector */}
+          {onOpenGitHub && (
+            <button
+              type="button"
+              onClick={onOpenGitHub}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-semibold shadow-sm transition shrink-0 whitespace-nowrap"
+              title="GitHub & GitLab PR Bot Connector"
+            >
+              <GitPullRequest className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+              <span>GitHub PR</span>
+            </button>
+          )}
+
+          {/* Scheduled Autonomous Daemons */}
+          {onOpenDaemons && (
+            <button
+              type="button"
+              onClick={onOpenDaemons}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 border border-pink-500/30 text-xs font-semibold shadow-sm transition shrink-0 whitespace-nowrap"
+              title="Scheduled Autonomous Daemons (24/7 Cron Engine)"
+            >
+              <Clock className="w-3.5 h-3.5 text-pink-400 shrink-0" />
+              <span>Daemons 24/7</span>
             </button>
           )}
         </nav>

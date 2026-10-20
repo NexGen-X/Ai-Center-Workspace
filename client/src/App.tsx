@@ -37,6 +37,10 @@ const SkillStudioModal = React.lazy(() => import('./features/skills/SkillStudioM
 const MemoryGraphModal = React.lazy(() => import('./features/memory/MemoryGraphModal.js').then(m => ({ default: m.MemoryGraphModal })));
 const WorkspaceModal = React.lazy(() => import('./features/workspace/WorkspaceModal.js').then(m => ({ default: m.WorkspaceModal })));
 const PricingModal = React.lazy(() => import('./features/billing/PricingModal.js').then(m => ({ default: m.PricingModal })));
+const GuidedTourModal = React.lazy(() => import('./features/demo-tour/GuidedTourModal.js').then(m => ({ default: m.GuidedTourModal })));
+const FinOpsModal = React.lazy(() => import('./features/finops/FinOpsModal.js').then(m => ({ default: m.FinOpsModal })));
+const GitHubConnectorModal = React.lazy(() => import('./features/integrations/GitHubConnectorModal.js').then(m => ({ default: m.GitHubConnectorModal })));
+const CronDaemonsModal = React.lazy(() => import('./features/daemons/CronDaemonsModal.js').then(m => ({ default: m.CronDaemonsModal })));
 import { useFeedback } from './components/common/FeedbackContext.js';
 import { ErrorBoundary } from './components/common/ErrorBoundary.js';
 import { api } from './services/api.js';
@@ -99,6 +103,12 @@ export const App: React.FC = () => {
   // SaaS Billing & Quota State
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<string>('FREE');
+
+  // Commercial SaaS Excellence Modals (Guided Tour, FinOps, GitHub Webhook, Cron Daemons)
+  const [isGuidedTourOpen, setIsGuidedTourOpen] = useState(false);
+  const [isFinOpsOpen, setIsFinOpsOpen] = useState(false);
+  const [isGitHubOpen, setIsGitHubOpen] = useState(false);
+  const [isDaemonsOpen, setIsDaemonsOpen] = useState(false);
 
   const { toast } = useFeedback();
 
@@ -464,6 +474,10 @@ export const App: React.FC = () => {
         onOpenWorkspaces={() => setIsWorkspaceModalOpen(true)}
         currentPlan={currentPlan}
         onOpenPricing={() => setIsPricingModalOpen(true)}
+        onOpenGuidedTour={() => setIsGuidedTourOpen(true)}
+        onOpenFinOps={() => setIsFinOpsOpen(true)}
+        onOpenGitHub={() => setIsGitHubOpen(true)}
+        onOpenDaemons={() => setIsDaemonsOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -810,6 +824,42 @@ export const App: React.FC = () => {
               }).catch(() => {});
               refreshAllData();
             }}
+          />
+        )}
+
+        {isGuidedTourOpen && (
+          <GuidedTourModal
+            isOpen={isGuidedTourOpen}
+            onClose={() => setIsGuidedTourOpen(false)}
+            onNavigateToFeature={(feat) => {
+              if (feat === 'swarm') setIsSwarmModalOpen(true);
+              if (feat === 'warroom') setIsWarRoomOpen(true);
+              if (feat === 'memory') setIsMemoryGraphOpen(true);
+            }}
+          />
+        )}
+
+        {isFinOpsOpen && (
+          <FinOpsModal
+            isOpen={isFinOpsOpen}
+            onClose={() => setIsFinOpsOpen(false)}
+            activeWorkspaceName={activeWorkspaceName}
+          />
+        )}
+
+        {isGitHubOpen && (
+          <GitHubConnectorModal
+            isOpen={isGitHubOpen}
+            onClose={() => setIsGitHubOpen(false)}
+            onTestTriggered={refreshAllData}
+          />
+        )}
+
+        {isDaemonsOpen && (
+          <CronDaemonsModal
+            isOpen={isDaemonsOpen}
+            onClose={() => setIsDaemonsOpen(false)}
+            onTriggerTask={refreshAllData}
           />
         )}
       </Suspense>
