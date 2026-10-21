@@ -78,6 +78,7 @@ interface NavbarProps {
   onOpenGitHub?: () => void;
   onOpenDaemons?: () => void;
   onOpenUserManagement?: () => void;
+  onOpenFounderSuite?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -119,7 +120,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenFinOps,
   onOpenGitHub,
   onOpenDaemons,
-  onOpenUserManagement
+  onOpenUserManagement,
+  onOpenFounderSuite
 }) => {
   const [dateStr, setDateStr] = useState<string>('');
 
@@ -246,6 +248,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <Zap className="w-4 h-4 fill-white" />
               </button>
             )}
+            {/* Mobile Founder Suite */}
+            {onOpenFounderSuite && (
+              <button
+                onClick={onOpenFounderSuite}
+                className="p-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/40 text-amber-300 hover:text-amber-200 transition"
+                title="Founder & CEO Executive Suite"
+                aria-label="Founder Suite"
+              >
+                <Crown className="w-4 h-4 text-amber-400" />
+              </button>
+            )}
+
             {/* Mobile Pricing / Upgrade */}
             {onOpenPricing && (
               <button
@@ -576,16 +590,16 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {/* Founder SuperAdmin User Management */}
-          {onOpenUserManagement && (
+          {/* Founder & CEO Executive Suite */}
+          {(onOpenFounderSuite || onOpenUserManagement) && (
             <button
               type="button"
-              onClick={onOpenUserManagement}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/15 to-orange-500/15 hover:from-amber-500/25 hover:to-orange-500/25 text-amber-300 border border-amber-500/40 text-xs font-bold shadow-sm transition shrink-0 whitespace-nowrap"
-              title="Founder SuperAdmin User Management & Analytics"
+              onClick={onOpenFounderSuite || onOpenUserManagement}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-orange-500/20 hover:from-amber-500/35 hover:to-orange-500/35 text-amber-300 border border-amber-500/50 text-xs font-bold shadow-[0_0_15px_rgba(245,158,11,0.2)] transition shrink-0 whitespace-nowrap group"
+              title="Founder & CEO Executive Suite (MRR, User Directory, FinOps, Governance)"
             >
-              <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span>Manajemen User</span>
+              <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0 group-hover:rotate-12 transition-transform" />
+              <span className="tracking-wide">👑 Founder Suite</span>
             </button>
           )}
         </nav>
@@ -623,6 +637,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Terminal className="w-3.5 h-3.5 text-cyan-400" />
               <span className="text-[11px] font-mono">Console</span>
+            </button>
+          )}
+
+          {/* Founder Executive Cockpit quick switch */}
+          {onOpenFounderSuite && (
+            <button
+              onClick={onOpenFounderSuite}
+              className="hidden 2xl:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-gradient-to-r from-amber-500/15 to-orange-500/15 hover:from-amber-500/25 hover:to-orange-500/25 text-amber-300 border border-amber-500/30 text-xs font-bold transition shadow-sm"
+              title="Masuk ke Panel Khusus Pemilik Startup (Founder Suite)"
+            >
+              <Crown className="w-3 h-3 text-amber-400" />
+              <span>Founder Suite</span>
             </button>
           )}
 

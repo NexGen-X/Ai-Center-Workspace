@@ -963,6 +963,97 @@ export const api = {
     request<{ success: boolean; message: string; tempPassword: string }>(`/admin/users/${userId}/reset-password`, {
       method: 'POST',
       body: JSON.stringify({ newPassword })
+    }),
+
+  getAdminFinancials: () =>
+    request<{
+      success: boolean;
+      financials: {
+        mrrIdr: number;
+        arrIdr: number;
+        totalPaidCount: number;
+        totalPaidAmountIdr: number;
+        totalPendingCount: number;
+        totalPendingAmountIdr: number;
+        invoices: Array<{
+          id: string;
+          invoiceNumber: string;
+          amountIdr: number;
+          plan: string;
+          interval: string;
+          status: string;
+          paymentMethod: string | null;
+          paymentGatewayRef: string | null;
+          paidAt: string | null;
+          createdAt: string;
+          workspaceName: string;
+          billingEmail: string;
+        }>;
+      };
+    }>('/admin/financials'),
+
+  getAdminAuditLogs: (limit = 50) =>
+    request<{
+      success: boolean;
+      logs: Array<{
+        id: string;
+        actorType: string;
+        actorName: string;
+        eventType: string;
+        summary: string;
+        targetType: string;
+        targetId: string;
+        createdAt: string;
+        workspaceName: string;
+      }>;
+    }>(`/admin/audit-logs?limit=${limit}`),
+
+  getAdminSystemHealth: () =>
+    request<{
+      success: boolean;
+      health: {
+        uptimeSeconds: number;
+        database: {
+          status: string;
+          latencyMs: number;
+          poolTotal: number;
+          poolIdle: number;
+          poolWaiting: number;
+        };
+        memory: {
+          heapUsedMb: number;
+          heapTotalMb: number;
+          rssMb: number;
+        };
+        aiProviders: Array<{
+          name: string;
+          model: string;
+          status: string;
+          latencyMs: number;
+          sla: string;
+        }>;
+      };
+    }>('/admin/system-health'),
+
+  getAdminBroadcast: () =>
+    request<{
+      success: boolean;
+      broadcast: {
+        message: string;
+        type: 'info' | 'warning' | 'critical';
+        enabled: boolean;
+        timestamp: string;
+      };
+    }>('/admin/broadcast'),
+
+  setAdminBroadcast: (data: { message: string; type?: 'info' | 'warning' | 'critical'; enabled?: boolean }) =>
+    request<{
+      success: boolean;
+      message: string;
+      broadcast: any;
+    }>('/admin/broadcast', {
+      method: 'POST',
+      body: JSON.stringify(data)
     })
 };
 

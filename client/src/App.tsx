@@ -42,6 +42,7 @@ const FinOpsModal = React.lazy(() => import('./features/finops/FinOpsModal.js').
 const GitHubConnectorModal = React.lazy(() => import('./features/integrations/GitHubConnectorModal.js').then(m => ({ default: m.GitHubConnectorModal })));
 const CronDaemonsModal = React.lazy(() => import('./features/daemons/CronDaemonsModal.js').then(m => ({ default: m.CronDaemonsModal })));
 const UserManagementModal = React.lazy(() => import('./features/admin/UserManagementModal.js').then(m => ({ default: m.UserManagementModal })));
+const FounderSuite = React.lazy(() => import('./features/founder/FounderSuite.js').then(m => ({ default: m.FounderSuite })));
 import { useFeedback } from './components/common/FeedbackContext.js';
 import { ErrorBoundary } from './components/common/ErrorBoundary.js';
 import { api } from './services/api.js';
@@ -111,6 +112,45 @@ export const App: React.FC = () => {
   const [isGitHubOpen, setIsGitHubOpen] = useState(false);
   const [isDaemonsOpen, setIsDaemonsOpen] = useState(false);
   const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
+
+  // View Switcher: Standard Operator Cockpit vs Founder Executive Suite
+  const [currentView, setCurrentView] = useState<'OPERATOR' | 'FOUNDER'>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('mode') === 'founder' || params.get('view') === 'founder') {
+        return 'FOUNDER';
+      }
+    }
+    return 'OPERATOR';
+  });
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('mode') === 'founder' || params.get('view') === 'founder') {
+        setCurrentView('FOUNDER');
+      } else {
+        setCurrentView('OPERATOR');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const handleOpenFounderSuite = () => {
+    setCurrentView('FOUNDER');
+    const url = new URL(window.location.href);
+    url.searchParams.set('mode', 'founder');
+    window.history.pushState({}, document.title, url.toString());
+  };
+
+  const handleExitFounderSuite = () => {
+    setCurrentView('OPERATOR');
+    const url = new URL(window.location.href);
+    url.searchParams.delete('mode');
+    url.searchParams.delete('view');
+    window.history.pushState({}, document.title, url.toString());
+  };
 
   const { toast } = useFeedback();
 
@@ -435,6 +475,28 @@ export const App: React.FC = () => {
     );
   }
 
+  if (currentView === 'FOUNDER') {
+    return (
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-[#07090E] flex flex-col items-center justify-center text-amber-400 font-sans">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shadow-lg shadow-amber-500/20 mb-4 animate-pulse">
+              <div className="w-6 h-6 border-2 border-amber-500/30 border-t-amber-400 rounded-full animate-spin" />
+            </div>
+            <p className="text-xs font-mono text-amber-400 tracking-widest uppercase animate-pulse">
+              Memuat Founder Executive Suite...
+            </p>
+          </div>
+        }
+      >
+        <FounderSuite
+          currentUser={currentUser}
+          onExit={handleExitFounderSuite}
+        />
+      </Suspense>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#0B0F17] text-slate-100 flex flex-col">
       {/* Top Navigation */}
@@ -481,6 +543,7 @@ export const App: React.FC = () => {
         onOpenGitHub={() => setIsGitHubOpen(true)}
         onOpenDaemons={() => setIsDaemonsOpen(true)}
         onOpenUserManagement={() => setIsUserManagementOpen(true)}
+        onOpenFounderSuite={handleOpenFounderSuite}
       />
 
       {/* Main Content Area */}
