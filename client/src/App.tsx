@@ -41,8 +41,6 @@ const GuidedTourModal = React.lazy(() => import('./features/demo-tour/GuidedTour
 const FinOpsModal = React.lazy(() => import('./features/finops/FinOpsModal.js').then(m => ({ default: m.FinOpsModal })));
 const GitHubConnectorModal = React.lazy(() => import('./features/integrations/GitHubConnectorModal.js').then(m => ({ default: m.GitHubConnectorModal })));
 const CronDaemonsModal = React.lazy(() => import('./features/daemons/CronDaemonsModal.js').then(m => ({ default: m.CronDaemonsModal })));
-const UserManagementModal = React.lazy(() => import('./features/admin/UserManagementModal.js').then(m => ({ default: m.UserManagementModal })));
-const FounderSuite = React.lazy(() => import('./features/founder/FounderSuite.js').then(m => ({ default: m.FounderSuite })));
 import { useFeedback } from './components/common/FeedbackContext.js';
 import { ErrorBoundary } from './components/common/ErrorBoundary.js';
 import { api } from './services/api.js';
@@ -111,94 +109,6 @@ export const App: React.FC = () => {
   const [isFinOpsOpen, setIsFinOpsOpen] = useState(false);
   const [isGitHubOpen, setIsGitHubOpen] = useState(false);
   const [isDaemonsOpen, setIsDaemonsOpen] = useState(false);
-  const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
-
-  // Determine domain context: Customer Platform (app.id-tech.cloud) vs Dedicated Founder Platform (founder.id-tech.cloud)
-  const isCustomerPlatform = typeof window !== 'undefined' && (
-    window.location.hostname.toLowerCase().includes('app.id-tech.cloud') ||
-    window.location.hostname.toLowerCase() === 'id-tech.cloud' ||
-    window.location.hostname.toLowerCase() === 'www.id-tech.cloud'
-  );
-
-  const isDedicatedFounderPlatform = typeof window !== 'undefined' && (
-    window.location.hostname.toLowerCase().startsWith('founder.') ||
-    window.location.hostname.toLowerCase().startsWith('admin.') ||
-    window.location.hostname.toLowerCase().startsWith('ceo.')
-  );
-
-  // View Switcher: Standard Operator Cockpit vs Founder Executive Suite (Subdomain Aware)
-  const [currentView, setCurrentView] = useState<'OPERATOR' | 'FOUNDER'>(() => {
-    if (typeof window !== 'undefined') {
-      const hostname = window.location.hostname.toLowerCase();
-      // On customer-facing domains, STRICTLY lock to OPERATOR mode (Founder Suite is forbidden here)
-      if (hostname.includes('app.id-tech.cloud') || hostname === 'id-tech.cloud' || hostname === 'www.id-tech.cloud') {
-        return 'OPERATOR';
-      }
-      if (hostname.startsWith('founder.') || hostname.startsWith('admin.') || hostname.startsWith('ceo.')) {
-        return 'FOUNDER';
-      }
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('mode') === 'founder' || params.get('view') === 'founder') {
-        return 'FOUNDER';
-      }
-    }
-    return 'OPERATOR';
-  });
-
-  useEffect(() => {
-    const handlePopState = () => {
-      const hostname = window.location.hostname.toLowerCase();
-      if (hostname.includes('app.id-tech.cloud') || hostname === 'id-tech.cloud' || hostname === 'www.id-tech.cloud') {
-        setCurrentView('OPERATOR');
-        return;
-      }
-      if (hostname.startsWith('founder.') || hostname.startsWith('admin.') || hostname.startsWith('ceo.')) {
-        setCurrentView('FOUNDER');
-        return;
-      }
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('mode') === 'founder' || params.get('view') === 'founder') {
-        setCurrentView('FOUNDER');
-      } else {
-        setCurrentView('OPERATOR');
-      }
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-
-  const handleOpenFounderSuite = () => {
-    // If on app.id-tech.cloud or id-tech.cloud, redirect directly to the dedicated founder subdomain
-    if (typeof window !== 'undefined' && window.location.hostname.includes('id-tech.cloud') && !window.location.hostname.startsWith('founder.')) {
-      const token = localStorage.getItem('ai_center_token');
-      const targetUrl = token
-        ? `https://founder.id-tech.cloud/?auth_token=${encodeURIComponent(token)}`
-        : `https://founder.id-tech.cloud/`;
-      window.location.href = targetUrl;
-      return;
-    }
-    setCurrentView('FOUNDER');
-    const url = new URL(window.location.href);
-    url.searchParams.set('mode', 'founder');
-    window.history.pushState({}, document.title, url.toString());
-  };
-
-  const handleExitFounderSuite = () => {
-    // If on dedicated founder subdomain, navigate seamlessly to standard operator app (app.id-tech.cloud)
-    if (typeof window !== 'undefined' && window.location.hostname.startsWith('founder.')) {
-      const token = localStorage.getItem('ai_center_token');
-      const targetUrl = token
-        ? `https://app.id-tech.cloud/?auth_token=${encodeURIComponent(token)}`
-        : `https://app.id-tech.cloud/`;
-      window.location.href = targetUrl;
-      return;
-    }
-    setCurrentView('OPERATOR');
-    const url = new URL(window.location.href);
-    url.searchParams.delete('mode');
-    url.searchParams.delete('view');
-    window.history.pushState({}, document.title, url.toString());
-  };
 
   const { toast } = useFeedback();
 
@@ -523,28 +433,6 @@ export const App: React.FC = () => {
     );
   }
 
-  if (currentView === 'FOUNDER') {
-    return (
-      <Suspense
-        fallback={
-          <div className="min-h-screen bg-[#07090E] flex flex-col items-center justify-center text-amber-400 font-sans">
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shadow-lg shadow-amber-500/20 mb-4 animate-pulse">
-              <div className="w-6 h-6 border-2 border-amber-500/30 border-t-amber-400 rounded-full animate-spin" />
-            </div>
-            <p className="text-xs font-mono text-amber-400 tracking-widest uppercase animate-pulse">
-              Memuat Founder Executive Suite...
-            </p>
-          </div>
-        }
-      >
-        <FounderSuite
-          currentUser={currentUser}
-          onExit={handleExitFounderSuite}
-        />
-      </Suspense>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-[#0B0F17] text-slate-100 flex flex-col">
       {/* Top Navigation */}
@@ -590,8 +478,6 @@ export const App: React.FC = () => {
         onOpenFinOps={() => setIsFinOpsOpen(true)}
         onOpenGitHub={() => setIsGitHubOpen(true)}
         onOpenDaemons={() => setIsDaemonsOpen(true)}
-        onOpenUserManagement={isCustomerPlatform ? undefined : (currentUser?.role === 'ADMIN' ? () => setIsUserManagementOpen(true) : undefined)}
-        onOpenFounderSuite={isCustomerPlatform ? undefined : (isDedicatedFounderPlatform || currentUser?.role === 'ADMIN' ? handleOpenFounderSuite : undefined)}
       />
 
       {/* Main Content Area */}
@@ -974,13 +860,6 @@ export const App: React.FC = () => {
             isOpen={isDaemonsOpen}
             onClose={() => setIsDaemonsOpen(false)}
             onTriggerTask={refreshAllData}
-          />
-        )}
-
-        {isUserManagementOpen && (
-          <UserManagementModal
-            isOpen={isUserManagementOpen}
-            onClose={() => setIsUserManagementOpen(false)}
           />
         )}
       </Suspense>
