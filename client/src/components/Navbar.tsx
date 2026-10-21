@@ -32,7 +32,8 @@ import {
   Sparkles,
   GitPullRequest,
   DollarSign,
-  Compass
+  Compass,
+  Crown
 } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown.js';
 import { OrchestratorStatus } from '../../../shared/types.js';
@@ -76,6 +77,7 @@ interface NavbarProps {
   onOpenFinOps?: () => void;
   onOpenGitHub?: () => void;
   onOpenDaemons?: () => void;
+  onOpenUserManagement?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -116,7 +118,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenGuidedTour,
   onOpenFinOps,
   onOpenGitHub,
-  onOpenDaemons
+  onOpenDaemons,
+  onOpenUserManagement
 }) => {
   const [dateStr, setDateStr] = useState<string>('');
 
@@ -206,10 +209,33 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>Demo Swarm</span>
               </button>
             )}
+
+            {/* Founder SuperAdmin User Management Button */}
+            {onOpenUserManagement && (
+              <button
+                type="button"
+                onClick={onOpenUserManagement}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 border border-amber-500/40 text-amber-300 font-bold text-xs shadow-md shadow-amber-500/10 transition hover:scale-[1.02] active:scale-[0.98] shrink-0"
+                title="Founder SuperAdmin: Manajemen Pengguna & Analisis Startup"
+              >
+                <Crown className="w-3.5 h-3.5 text-amber-400" />
+                <span>Manajemen User</span>
+              </button>
+            )}
           </div>
 
           {/* Mobile Right Quick Action Icons (Visible only on < lg) */}
           <div className="flex lg:hidden items-center gap-1.5 shrink-0">
+            {/* Mobile User Management */}
+            {onOpenUserManagement && (
+              <button
+                onClick={onOpenUserManagement}
+                className="p-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/40 text-amber-400 transition"
+                title="Manajemen Pengguna"
+              >
+                <Crown className="w-4 h-4 text-amber-400" />
+              </button>
+            )}
             {/* Mobile Demo Swarm */}
             {onOpenGuidedTour && (
               <button
@@ -547,6 +573,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Clock className="w-3.5 h-3.5 text-pink-400 shrink-0" />
               <span>Daemons 24/7</span>
+            </button>
+          )}
+
+          {/* Founder SuperAdmin User Management */}
+          {onOpenUserManagement && (
+            <button
+              type="button"
+              onClick={onOpenUserManagement}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/15 to-orange-500/15 hover:from-amber-500/25 hover:to-orange-500/25 text-amber-300 border border-amber-500/40 text-xs font-bold shadow-sm transition shrink-0 whitespace-nowrap"
+              title="Founder SuperAdmin User Management & Analytics"
+            >
+              <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span>Manajemen User</span>
             </button>
           )}
         </nav>

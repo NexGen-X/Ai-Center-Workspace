@@ -905,6 +905,64 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ targetPlan, interval })
     }),
-  getInvoices: () => request<WorkspaceInvoice[]>('/billing/invoices')
+  getInvoices: () => request<WorkspaceInvoice[]>('/billing/invoices'),
+
+  // Platform Owner / Super Admin User Management
+  getAdminMetrics: () => request<{
+    success: boolean;
+    metrics: {
+      totalUsers: number;
+      totalWorkspaces: number;
+      activeUsers24h: number;
+      planCounts: Record<string, number>;
+      totalRevenueIdr: number;
+      totalTasksDone: number;
+      paidSubscribers: number;
+      freeTrialUsers: number;
+    };
+  }>('/admin/metrics'),
+
+  getAdminUsers: (params?: { search?: string; plan?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.search) q.set('search', params.search);
+    if (params?.plan) q.set('plan', params.plan);
+    return request<{
+      success: boolean;
+      users: Array<{
+        id: string;
+        email: string;
+        displayName: string;
+        role: string;
+        createdAt: string;
+        lastLoginAt: string | null;
+        mustChangePassword: boolean;
+        workspaceId: string;
+        workspaceName: string;
+        plan: string;
+        planStatus: string;
+        taskQuotaLimit: number;
+        tasksUsedThisMonth: number;
+        workspaceRole: string;
+      }>;
+    }>(`/admin/users?${q.toString()}`);
+  },
+
+  updateUserPlan: (userId: string, plan: string, taskQuotaLimit?: number) =>
+    request<{ success: boolean; message: string; plan: string; taskQuotaLimit: number }>(`/admin/users/${userId}/plan`, {
+      method: 'PATCH',
+      body: JSON.stringify({ plan, taskQuotaLimit })
+    }),
+
+  updateUserRole: (userId: string, role: string) =>
+    request<{ success: boolean; message: string }>(`/admin/users/${userId}/role`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role })
+    }),
+
+  resetUserPassword: (userId: string, newPassword?: string) =>
+    request<{ success: boolean; message: string; tempPassword: string }>(`/admin/users/${userId}/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify({ newPassword })
+    })
 };
 

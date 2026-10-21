@@ -41,6 +41,7 @@ const GuidedTourModal = React.lazy(() => import('./features/demo-tour/GuidedTour
 const FinOpsModal = React.lazy(() => import('./features/finops/FinOpsModal.js').then(m => ({ default: m.FinOpsModal })));
 const GitHubConnectorModal = React.lazy(() => import('./features/integrations/GitHubConnectorModal.js').then(m => ({ default: m.GitHubConnectorModal })));
 const CronDaemonsModal = React.lazy(() => import('./features/daemons/CronDaemonsModal.js').then(m => ({ default: m.CronDaemonsModal })));
+const UserManagementModal = React.lazy(() => import('./features/admin/UserManagementModal.js').then(m => ({ default: m.UserManagementModal })));
 import { useFeedback } from './components/common/FeedbackContext.js';
 import { ErrorBoundary } from './components/common/ErrorBoundary.js';
 import { api } from './services/api.js';
@@ -109,6 +110,7 @@ export const App: React.FC = () => {
   const [isFinOpsOpen, setIsFinOpsOpen] = useState(false);
   const [isGitHubOpen, setIsGitHubOpen] = useState(false);
   const [isDaemonsOpen, setIsDaemonsOpen] = useState(false);
+  const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
 
   const { toast } = useFeedback();
 
@@ -478,6 +480,7 @@ export const App: React.FC = () => {
         onOpenFinOps={() => setIsFinOpsOpen(true)}
         onOpenGitHub={() => setIsGitHubOpen(true)}
         onOpenDaemons={() => setIsDaemonsOpen(true)}
+        onOpenUserManagement={() => setIsUserManagementOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -860,6 +863,13 @@ export const App: React.FC = () => {
             isOpen={isDaemonsOpen}
             onClose={() => setIsDaemonsOpen(false)}
             onTriggerTask={refreshAllData}
+          />
+        )}
+
+        {isUserManagementOpen && (
+          <UserManagementModal
+            isOpen={isUserManagementOpen}
+            onClose={() => setIsUserManagementOpen(false)}
           />
         )}
       </Suspense>
