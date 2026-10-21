@@ -113,10 +113,27 @@ export const App: React.FC = () => {
   const [isDaemonsOpen, setIsDaemonsOpen] = useState(false);
   const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
 
+  // Determine domain context: Customer Platform (app.id-tech.cloud) vs Dedicated Founder Platform (founder.id-tech.cloud)
+  const isCustomerPlatform = typeof window !== 'undefined' && (
+    window.location.hostname.toLowerCase().includes('app.id-tech.cloud') ||
+    window.location.hostname.toLowerCase() === 'id-tech.cloud' ||
+    window.location.hostname.toLowerCase() === 'www.id-tech.cloud'
+  );
+
+  const isDedicatedFounderPlatform = typeof window !== 'undefined' && (
+    window.location.hostname.toLowerCase().startsWith('founder.') ||
+    window.location.hostname.toLowerCase().startsWith('admin.') ||
+    window.location.hostname.toLowerCase().startsWith('ceo.')
+  );
+
   // View Switcher: Standard Operator Cockpit vs Founder Executive Suite (Subdomain Aware)
   const [currentView, setCurrentView] = useState<'OPERATOR' | 'FOUNDER'>(() => {
     if (typeof window !== 'undefined') {
       const hostname = window.location.hostname.toLowerCase();
+      // On customer-facing domains, STRICTLY lock to OPERATOR mode (Founder Suite is forbidden here)
+      if (hostname.includes('app.id-tech.cloud') || hostname === 'id-tech.cloud' || hostname === 'www.id-tech.cloud') {
+        return 'OPERATOR';
+      }
       if (hostname.startsWith('founder.') || hostname.startsWith('admin.') || hostname.startsWith('ceo.')) {
         return 'FOUNDER';
       }
@@ -131,6 +148,10 @@ export const App: React.FC = () => {
   useEffect(() => {
     const handlePopState = () => {
       const hostname = window.location.hostname.toLowerCase();
+      if (hostname.includes('app.id-tech.cloud') || hostname === 'id-tech.cloud' || hostname === 'www.id-tech.cloud') {
+        setCurrentView('OPERATOR');
+        return;
+      }
       if (hostname.startsWith('founder.') || hostname.startsWith('admin.') || hostname.startsWith('ceo.')) {
         setCurrentView('FOUNDER');
         return;
@@ -569,8 +590,8 @@ export const App: React.FC = () => {
         onOpenFinOps={() => setIsFinOpsOpen(true)}
         onOpenGitHub={() => setIsGitHubOpen(true)}
         onOpenDaemons={() => setIsDaemonsOpen(true)}
-        onOpenUserManagement={() => setIsUserManagementOpen(true)}
-        onOpenFounderSuite={handleOpenFounderSuite}
+        onOpenUserManagement={isCustomerPlatform ? undefined : (currentUser?.role === 'ADMIN' ? () => setIsUserManagementOpen(true) : undefined)}
+        onOpenFounderSuite={isCustomerPlatform ? undefined : (isDedicatedFounderPlatform || currentUser?.role === 'ADMIN' ? handleOpenFounderSuite : undefined)}
       />
 
       {/* Main Content Area */}

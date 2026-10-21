@@ -590,11 +590,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {/* Founder & CEO Executive Suite */}
-          {(onOpenFounderSuite || onOpenUserManagement) && (
+          {/* Founder & CEO Executive Suite (Only rendered on dedicated founder portal, hidden on tenant platforms) */}
+          {onOpenFounderSuite && (
             <button
               type="button"
-              onClick={onOpenFounderSuite || onOpenUserManagement}
+              onClick={onOpenFounderSuite}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-orange-500/20 hover:from-amber-500/35 hover:to-orange-500/35 text-amber-300 border border-amber-500/50 text-xs font-bold shadow-[0_0_15px_rgba(245,158,11,0.2)] transition shrink-0 whitespace-nowrap group"
               title="Founder & CEO Executive Suite (MRR, User Directory, FinOps, Governance)"
             >
