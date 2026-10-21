@@ -12,7 +12,8 @@ import {
   ArrowRight,
   Terminal,
   CheckCircle2,
-  Info
+  Info,
+  Crown
 } from 'lucide-react';
 import { api } from '../../services/api.js';
 
@@ -69,47 +70,80 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     setError(null);
   };
 
+  const isFounderPortal = typeof window !== 'undefined' && (
+    window.location.hostname.toLowerCase().startsWith('founder.') ||
+    window.location.hostname.toLowerCase().startsWith('admin.') ||
+    new URLSearchParams(window.location.search).get('mode') === 'founder'
+  );
+
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center p-4 bg-[#070A0F] text-slate-100 overflow-hidden font-sans select-none">
       {/* Background Cyber Grid & Ambient Glowing Orbs */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b15_1px,transparent_1px),linear-gradient(to_bottom,#1e293b15_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none" />
-      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-cyan-500/10 rounded-full blur-[128px] pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-purple-500/10 rounded-full blur-[128px] pointer-events-none" />
+      <div className={`absolute top-1/4 -left-32 w-96 h-96 ${isFounderPortal ? 'bg-amber-500/15' : 'bg-cyan-500/10'} rounded-full blur-[128px] pointer-events-none`} />
+      <div className={`absolute bottom-1/4 -right-32 w-96 h-96 ${isFounderPortal ? 'bg-orange-500/15' : 'bg-purple-500/10'} rounded-full blur-[128px] pointer-events-none`} />
 
       {/* Main Login Card */}
       <div className="relative z-10 w-full max-w-md">
         {/* Holographic Header Badge */}
         <div className="flex flex-col items-center mb-8 text-center space-y-3">
-          <div className="relative flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyan-500/20 via-blue-500/10 to-purple-500/20 border border-cyan-500/30 shadow-[0_0_30px_rgba(6,182,212,0.3)] backdrop-blur-md">
-            <ShieldCheck className="w-8 h-8 text-cyan-400 drop-shadow-[0_0_10px_rgba(6,182,212,0.8)]" />
-            <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-400 ring-4 ring-[#070A0F] animate-pulse" />
+          <div className={`relative flex items-center justify-center w-16 h-16 rounded-2xl ${
+            isFounderPortal
+              ? 'bg-gradient-to-tr from-amber-500/25 via-yellow-500/20 to-orange-500/25 border border-amber-500/40 shadow-[0_0_30px_rgba(245,158,11,0.3)]'
+              : 'bg-gradient-to-tr from-cyan-500/20 via-blue-500/10 to-purple-500/20 border border-cyan-500/30 shadow-[0_0_30px_rgba(6,182,212,0.3)]'
+          } backdrop-blur-md`}>
+            {isFounderPortal ? (
+              <Crown className="w-8 h-8 text-amber-400 drop-shadow-[0_0_10px_rgba(245,158,11,0.8)]" />
+            ) : (
+              <ShieldCheck className="w-8 h-8 text-cyan-400 drop-shadow-[0_0_10px_rgba(6,182,212,0.8)]" />
+            )}
+            <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full ${isFounderPortal ? 'bg-amber-400' : 'bg-emerald-400'} ring-4 ring-[#070A0F] animate-pulse`} />
           </div>
 
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/40 border border-cyan-500/30 text-[10px] font-mono tracking-widest uppercase text-cyan-300 mb-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
-              Security Clearance Level 4 Required
+            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${
+              isFounderPortal
+                ? 'bg-amber-950/50 border border-amber-500/40 text-[10px] font-mono tracking-widest uppercase text-amber-300'
+                : 'bg-cyan-950/40 border border-cyan-500/30 text-[10px] font-mono tracking-widest uppercase text-cyan-300'
+            } mb-2`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${isFounderPortal ? 'bg-amber-400' : 'bg-cyan-400'} animate-ping`} />
+              {isFounderPortal ? 'Founder Security Clearance Level 5' : 'Security Clearance Level 4 Required'}
             </div>
             <h1 className="text-2xl font-extrabold tracking-tight text-white flex items-center justify-center gap-2">
-              <span>AI Agent Command Center</span>
+              <span>{isFounderPortal ? 'Founder & CEO Executive Suite' : 'AI Agent Command Center'}</span>
             </h1>
             <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
-              Autonomous Swarm OS & 3D Spatial Holographic Orchestration Bridge
+              {isFounderPortal
+                ? 'Portal Masuk Khusus Pemilik Startup PT NexGen Digital Nusantara'
+                : 'Autonomous Swarm OS & 3D Spatial Holographic Orchestration Bridge'}
             </p>
           </div>
         </div>
 
         {/* Form Container */}
-        <div className="relative rounded-2xl bg-[#0E1522]/90 border border-slate-800/80 shadow-[0_0_50px_-10px_rgba(6,182,212,0.15)] backdrop-blur-xl p-6 sm:p-8">
+        <div className={`relative rounded-2xl bg-[#0E1522]/90 border ${
+          isFounderPortal ? 'border-amber-500/30 shadow-[0_0_50px_-10px_rgba(245,158,11,0.2)]' : 'border-slate-800/80 shadow-[0_0_50px_-10px_rgba(6,182,212,0.15)]'
+        } backdrop-blur-xl p-6 sm:p-8`}>
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Header info inside card */}
             <div className="border-b border-slate-800/80 pb-4">
               <h2 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                <Lock className="w-4 h-4 text-cyan-400" />
-                Operator Authentication
+                {isFounderPortal ? (
+                  <>
+                    <Crown className="w-4 h-4 text-amber-400" />
+                    <span>Founder Credential Clearance</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-4 h-4 text-cyan-400" />
+                    <span>Operator Authentication</span>
+                  </>
+                )}
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Masukkan kredensial operator untuk mendekripsi antarmuka dan kontrol swarm.
+                {isFounderPortal
+                  ? 'Masukkan kredensial akun pemilik untuk membuka panel metrik finansial dan tata kelola platform.'
+                  : 'Masukkan kredensial operator untuk mendekripsi antarmuka dan kontrol swarm.'}
               </p>
             </div>
 
@@ -205,16 +239,20 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full relative group overflow-hidden rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-3 px-4 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] focus:outline-none focus:ring-2 focus:ring-cyan-400/50 transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none text-sm flex items-center justify-center gap-2"
+              className={`w-full relative group overflow-hidden rounded-xl ${
+                isFounderPortal
+                  ? 'bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-extrabold shadow-[0_0_25px_rgba(245,158,11,0.5)]'
+                  : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)]'
+              } py-3 px-4 focus:outline-none transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none text-sm flex items-center justify-center gap-2`}
             >
               {isLoading ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>Memverifikasi Otorisasi...</span>
+                  <div className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+                  <span>Memverifikasi Otorisasi Founder...</span>
                 </>
               ) : (
                 <>
-                  <span>AUTHORIZE & ENTER COMMAND BRIDGE</span>
+                  <span>{isFounderPortal ? 'AUTHORIZE & ENTER FOUNDER SUITE' : 'AUTHORIZE & ENTER COMMAND BRIDGE'}</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </>
               )}

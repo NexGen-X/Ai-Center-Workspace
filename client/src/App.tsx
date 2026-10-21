@@ -113,9 +113,13 @@ export const App: React.FC = () => {
   const [isDaemonsOpen, setIsDaemonsOpen] = useState(false);
   const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
 
-  // View Switcher: Standard Operator Cockpit vs Founder Executive Suite
+  // View Switcher: Standard Operator Cockpit vs Founder Executive Suite (Subdomain Aware)
   const [currentView, setCurrentView] = useState<'OPERATOR' | 'FOUNDER'>(() => {
     if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname.toLowerCase();
+      if (hostname.startsWith('founder.') || hostname.startsWith('admin.') || hostname.startsWith('ceo.')) {
+        return 'FOUNDER';
+      }
       const params = new URLSearchParams(window.location.search);
       if (params.get('mode') === 'founder' || params.get('view') === 'founder') {
         return 'FOUNDER';
@@ -126,6 +130,11 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     const handlePopState = () => {
+      const hostname = window.location.hostname.toLowerCase();
+      if (hostname.startsWith('founder.') || hostname.startsWith('admin.') || hostname.startsWith('ceo.')) {
+        setCurrentView('FOUNDER');
+        return;
+      }
       const params = new URLSearchParams(window.location.search);
       if (params.get('mode') === 'founder' || params.get('view') === 'founder') {
         setCurrentView('FOUNDER');
@@ -138,6 +147,15 @@ export const App: React.FC = () => {
   }, []);
 
   const handleOpenFounderSuite = () => {
+    // If on app.id-tech.cloud or id-tech.cloud, redirect directly to the dedicated founder subdomain
+    if (typeof window !== 'undefined' && window.location.hostname.includes('id-tech.cloud') && !window.location.hostname.startsWith('founder.')) {
+      const token = localStorage.getItem('ai_center_token');
+      const targetUrl = token
+        ? `https://founder.id-tech.cloud/?auth_token=${encodeURIComponent(token)}`
+        : `https://founder.id-tech.cloud/`;
+      window.location.href = targetUrl;
+      return;
+    }
     setCurrentView('FOUNDER');
     const url = new URL(window.location.href);
     url.searchParams.set('mode', 'founder');
@@ -145,6 +163,15 @@ export const App: React.FC = () => {
   };
 
   const handleExitFounderSuite = () => {
+    // If on dedicated founder subdomain, navigate seamlessly to standard operator app (app.id-tech.cloud)
+    if (typeof window !== 'undefined' && window.location.hostname.startsWith('founder.')) {
+      const token = localStorage.getItem('ai_center_token');
+      const targetUrl = token
+        ? `https://app.id-tech.cloud/?auth_token=${encodeURIComponent(token)}`
+        : `https://app.id-tech.cloud/`;
+      window.location.href = targetUrl;
+      return;
+    }
     setCurrentView('OPERATOR');
     const url = new URL(window.location.href);
     url.searchParams.delete('mode');
