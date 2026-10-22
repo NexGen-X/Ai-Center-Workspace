@@ -189,11 +189,11 @@ export const DataAnalystModal: React.FC<DataAnalystModalProps> = ({ isOpen, onCl
             </button>
             <button
               type="button"
-              onClick={() => handleQuickQuery('SERVER_RESOURCE_TRENDS')}
+              onClick={() => handleQuickQuery('TASK_PRIORITY_DISTRIBUTION')}
               disabled={analyzing}
               className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition"
             >
-              Beban Host
+              Prioritas Tugas
             </button>
             <button
               type="button"

@@ -9,7 +9,6 @@ import {
   TaskStatus,
   Project,
   Activity,
-  ServerMetrics,
   DashboardSummary,
   ModelProviderConfig,
   CreateProviderRequest,
@@ -23,8 +22,6 @@ import {
   NotificationItem,
   FinOpsReportsSummary,
   OrchestratorStatus,
-  SystemLogEntry,
-  WorkspaceBackup,
   PipelineTemplate,
   PipelineExecutionResult,
   AgentAction,
@@ -74,8 +71,6 @@ import {
   WebBrowseResponse,
   WebResearchAndIngestRequest,
   WebResearchAndIngestResponse,
-  SreIncident,
-  SreScanResult,
   DataAnalysisSession,
   AnalyzeDataRequest,
   QuickDataQueryType,
@@ -86,9 +81,6 @@ import {
   PruneMemoriesRequest,
   ShareMemoryRequest,
   ConsolidateMemoriesRequest,
-  CheckDomainDnsResponse,
-  ProvisionDomainResponse,
-  DomainManagerInfoResponse,
   Workspace,
   WorkspaceMember,
   WorkspaceRole,
@@ -250,9 +242,6 @@ export const api = {
   // Activities
   getActivities: (limit = 25) => request<Activity[]>(`/activities?limit=${limit}`),
 
-  // Monitoring
-  getMonitoringSummary: () => request<ServerMetrics>('/monitoring/summary'),
-
   // Providers & Connection Testing
   getProviders: () => request<ModelProviderConfig[]>('/providers'),
   getProvider: (id: string) => request<ModelProviderConfig>(`/providers/${id}`),
@@ -318,25 +307,6 @@ export const api = {
   configOrchestrator: (intervalSeconds: number) => request<{ success: boolean; status: OrchestratorStatus }>('/orchestrator/config', {
     method: 'POST',
     body: JSON.stringify({ intervalSeconds })
-  }),
-
-  // Live System Telemetry Logs
-  getSystemLogs: (limit = 100, category?: string, level?: string) => {
-    const params = new URLSearchParams();
-    if (limit) params.set('limit', String(limit));
-    if (category) params.set('category', category);
-    if (level) params.set('level', level);
-    return request<{ logs: SystemLogEntry[] }>(`/monitoring/logs?${params.toString()}`);
-  },
-  clearSystemLogs: () => request<{ success: boolean; message: string }>('/monitoring/logs/clear', {
-    method: 'POST'
-  }),
-
-  // Workspace Backup & Restore
-  getSystemBackup: () => request<WorkspaceBackup>('/system/backup'),
-  restoreSystemBackup: (backup: WorkspaceBackup) => request<{ success: boolean; message: string; restoredEntities: any }>('/system/restore', {
-    method: 'POST',
-    body: JSON.stringify(backup)
   }),
 
   // AI Playground & Benchmark
@@ -711,35 +681,6 @@ export const api = {
       body: JSON.stringify(data)
     }),
 
-  // Autonomous SRE & Server Self-Healing Incident Agent
-  scanSreHealth: (workspaceId?: string) =>
-    request<SreScanResult>('/sre/scan', {
-      method: 'POST',
-      body: JSON.stringify({ workspaceId })
-    }),
-  getSreIncidents: (status?: string, workspaceId?: string) => {
-    const params = new URLSearchParams();
-    if (status) params.append('status', status);
-    if (workspaceId) params.append('workspaceId', workspaceId);
-    const qs = params.toString();
-    return request<SreIncident[]>(`/sre/incidents${qs ? `?${qs}` : ''}`);
-  },
-  getSreIncident: (id: string) =>
-    request<SreIncident>(`/sre/incidents/${id}`),
-  investigateSreIncident: (id: string) =>
-    request<SreIncident>(`/sre/incidents/${id}/investigate`, {
-      method: 'POST'
-    }),
-  remediateSreIncident: (id: string, operatorApproved?: boolean) =>
-    request<SreIncident>(`/sre/incidents/${id}/remediate`, {
-      method: 'POST',
-      body: JSON.stringify({ operatorApproved })
-    }),
-  approveSreIncident: (id: string) =>
-    request<SreIncident>(`/sre/incidents/${id}/approve`, {
-      method: 'POST'
-    }),
-
   // Autonomous Data Analyst & Interactive Visualizer Studio
   getDataAnalysisSessions: (workspaceId?: string) =>
     request<DataAnalysisSession[]>(`/data-analyst/sessions${workspaceId ? `?workspaceId=${workspaceId}` : ''}`),
@@ -822,28 +763,6 @@ export const api = {
       body: JSON.stringify({ workspaceId })
     }),
 
-  // Automated Custom Domain & SSL Provisioning
-  getDomainInfo: (workspaceId?: string) => {
-    const qs = workspaceId ? `?workspaceId=${encodeURIComponent(workspaceId)}` : '';
-    return request<DomainManagerInfoResponse>(`/system/domain/info${qs}`);
-  },
-  checkDomainDns: (domainName: string) =>
-    request<CheckDomainDnsResponse>('/system/domain/check-dns', {
-      method: 'POST',
-      body: JSON.stringify({ domainName })
-    }),
-  provisionDomain: (domainName: string, workspaceId?: string) =>
-    request<ProvisionDomainResponse>('/system/domain/provision', {
-      method: 'POST',
-      body: JSON.stringify({ domainName, workspaceId })
-    }),
-  removeDomain: (id: string, workspaceId?: string) => {
-    const qs = workspaceId ? `?workspaceId=${encodeURIComponent(workspaceId)}` : '';
-    return request<{ success: boolean; message: string }>(`/system/domain/${id}${qs}`, {
-      method: 'DELETE'
-    });
-  },
-
   // Multi-Tenant Workspaces & RBAC
   getWorkspaces: () => request<Workspace[]>('/workspaces'),
   createWorkspace: (name: string) => request<{ success: boolean; workspace: Workspace }>('/workspaces', {
@@ -905,155 +824,6 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ targetPlan, interval })
     }),
-  getInvoices: () => request<WorkspaceInvoice[]>('/billing/invoices'),
-
-  // Platform Owner / Super Admin User Management
-  getAdminMetrics: () => request<{
-    success: boolean;
-    metrics: {
-      totalUsers: number;
-      totalWorkspaces: number;
-      activeUsers24h: number;
-      planCounts: Record<string, number>;
-      totalRevenueIdr: number;
-      totalTasksDone: number;
-      paidSubscribers: number;
-      freeTrialUsers: number;
-    };
-  }>('/admin/metrics'),
-
-  getAdminUsers: (params?: { search?: string; plan?: string }) => {
-    const q = new URLSearchParams();
-    if (params?.search) q.set('search', params.search);
-    if (params?.plan) q.set('plan', params.plan);
-    return request<{
-      success: boolean;
-      users: Array<{
-        id: string;
-        email: string;
-        displayName: string;
-        role: string;
-        createdAt: string;
-        lastLoginAt: string | null;
-        mustChangePassword: boolean;
-        workspaceId: string;
-        workspaceName: string;
-        plan: string;
-        planStatus: string;
-        taskQuotaLimit: number;
-        tasksUsedThisMonth: number;
-        workspaceRole: string;
-      }>;
-    }>(`/admin/users?${q.toString()}`);
-  },
-
-  updateUserPlan: (userId: string, plan: string, taskQuotaLimit?: number) =>
-    request<{ success: boolean; message: string; plan: string; taskQuotaLimit: number }>(`/admin/users/${userId}/plan`, {
-      method: 'PATCH',
-      body: JSON.stringify({ plan, taskQuotaLimit })
-    }),
-
-  updateUserRole: (userId: string, role: string) =>
-    request<{ success: boolean; message: string }>(`/admin/users/${userId}/role`, {
-      method: 'PATCH',
-      body: JSON.stringify({ role })
-    }),
-
-  resetUserPassword: (userId: string, newPassword?: string) =>
-    request<{ success: boolean; message: string; tempPassword: string }>(`/admin/users/${userId}/reset-password`, {
-      method: 'POST',
-      body: JSON.stringify({ newPassword })
-    }),
-
-  getAdminFinancials: () =>
-    request<{
-      success: boolean;
-      financials: {
-        mrrIdr: number;
-        arrIdr: number;
-        totalPaidCount: number;
-        totalPaidAmountIdr: number;
-        totalPendingCount: number;
-        totalPendingAmountIdr: number;
-        invoices: Array<{
-          id: string;
-          invoiceNumber: string;
-          amountIdr: number;
-          plan: string;
-          interval: string;
-          status: string;
-          paymentMethod: string | null;
-          paymentGatewayRef: string | null;
-          paidAt: string | null;
-          createdAt: string;
-          workspaceName: string;
-          billingEmail: string;
-        }>;
-      };
-    }>('/admin/financials'),
-
-  getAdminAuditLogs: (limit = 50) =>
-    request<{
-      success: boolean;
-      logs: Array<{
-        id: string;
-        actorType: string;
-        actorName: string;
-        eventType: string;
-        summary: string;
-        targetType: string;
-        targetId: string;
-        createdAt: string;
-        workspaceName: string;
-      }>;
-    }>(`/admin/audit-logs?limit=${limit}`),
-
-  getAdminSystemHealth: () =>
-    request<{
-      success: boolean;
-      health: {
-        uptimeSeconds: number;
-        database: {
-          status: string;
-          latencyMs: number;
-          poolTotal: number;
-          poolIdle: number;
-          poolWaiting: number;
-        };
-        memory: {
-          heapUsedMb: number;
-          heapTotalMb: number;
-          rssMb: number;
-        };
-        aiProviders: Array<{
-          name: string;
-          model: string;
-          status: string;
-          latencyMs: number;
-          sla: string;
-        }>;
-      };
-    }>('/admin/system-health'),
-
-  getAdminBroadcast: () =>
-    request<{
-      success: boolean;
-      broadcast: {
-        message: string;
-        type: 'info' | 'warning' | 'critical';
-        enabled: boolean;
-        timestamp: string;
-      };
-    }>('/admin/broadcast'),
-
-  setAdminBroadcast: (data: { message: string; type?: 'info' | 'warning' | 'critical'; enabled?: boolean }) =>
-    request<{
-      success: boolean;
-      message: string;
-      broadcast: any;
-    }>('/admin/broadcast', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    })
+  getInvoices: () => request<WorkspaceInvoice[]>('/billing/invoices')
 };
 

@@ -8,6 +8,8 @@ import {
   Activity as ActivityIcon,
   Layers,
   Sparkles,
+  Bot,
+  CheckCircle2,
   Plus,
   Cpu,
   HardDrive,
@@ -26,7 +28,7 @@ import { audioService } from '../../services/audio.js';
 interface Workspace3DProps {
   agents: AIAgent[];
   summary: DashboardSummary | null;
-  serverMetrics: ServerMetrics | null;
+  serverMetrics?: ServerMetrics | null;
   activities: Activity[];
   currentUser: any;
   onSelectAgent: (agent: AIAgent) => void;
@@ -1828,8 +1830,8 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
           <div className="p-3 sm:p-4 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-slate-800 shadow-xl space-y-2.5 sm:space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
               <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                <Radio className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Server & layanan</span>
+                <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                <span>AI Workforce Status</span>
               </span>
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1.5 text-[10px] font-semibold text-emerald-400">
@@ -1851,58 +1853,50 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 flex items-center gap-1.5">
                   <Zap className="w-3.5 h-3.5 text-amber-400" />
-                  <span>CPU</span>
+                  <span>Tugas Berjalan</span>
                 </span>
-                <span className="font-bold text-emerald-400">
-                  {serverMetrics?.cpuUsagePercent ?? 8.2}% ({serverMetrics?.cpuCores ?? 2} core)
+                <span className="font-bold text-amber-400">
+                  {summary?.runningTasksCount ?? 0} aktif
                 </span>
               </div>
 
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 flex items-center gap-1.5">
-                  <Cpu className="w-3.5 h-3.5 text-purple-400" />
-                  <span>RAM</span>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Tugas Selesai</span>
+                </span>
+                <span className="font-bold text-emerald-400">
+                  {summary?.completedTasksCount ?? 0} tugas
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 flex items-center gap-1.5">
+                  <Bot className="w-3.5 h-3.5 text-purple-400" />
+                  <span>Agen Aktif</span>
                 </span>
                 <span className="font-bold text-cyan-400">
-                  {serverMetrics
-                    ? `${(serverMetrics.memoryUsedBytes / (1024 * 1024)).toFixed(0)} / ${(
-                        serverMetrics.memoryTotalBytes / (1024 * 1024)
-                      ).toFixed(0)} MB (${serverMetrics.memoryUsagePercent}%)`
-                    : '1434 / 1936 MB (74.1%)'}
+                  {agents.filter((a) => a.enabled !== false).length} / {agents.length} siap
                 </span>
               </div>
 
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 flex items-center gap-1.5">
-                  <HardDrive className="w-3.5 h-3.5 text-pink-400" />
-                  <span>Disk</span>
+                  <Layers className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Proyek</span>
                 </span>
-                <span className="font-bold text-slate-300">
-                  {serverMetrics
-                    ? `${(serverMetrics.diskUsedBytes / (1024 * 1024 * 1024)).toFixed(1)} / ${(
-                        serverMetrics.diskTotalBytes / (1024 * 1024 * 1024)
-                      ).toFixed(1)} GB (${serverMetrics.diskUsagePercent}%)`
-                    : '19.6 / 42.2 GB (46.5%)'}
+                <span className="font-bold text-slate-200">
+                  {summary?.activeProjectsCount ?? 0} pipeline
                 </span>
               </div>
 
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 flex items-center gap-1.5">
-                  <ActivityIcon className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Load</span>
+                  <ActivityIcon className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Status AI</span>
                 </span>
                 <span className="font-bold text-emerald-400">
-                  {serverMetrics?.loadAvg ? serverMetrics.loadAvg.map((v) => v.toFixed(2)).join(' / ') : '0.02 / 0.08 / 0.08'}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400 flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Uptime</span>
-                </span>
-                <span className="font-bold text-slate-300">
-                  {serverMetrics ? `${Math.floor(serverMetrics.uptimeSeconds / 3600)}h` : '7h 4j'}
+                  Optimal (SLA 99.9%)
                 </span>
               </div>
             </div>

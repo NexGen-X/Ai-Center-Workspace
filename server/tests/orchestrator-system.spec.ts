@@ -27,27 +27,13 @@ describe('Autonomous Orchestrator & System Telemetry API', () => {
     expect(resDisable.body.enabled).toBe(false);
   });
 
-  it('GET /api/monitoring/logs should return recent system logs', async () => {
+  it('GET /api/monitoring/logs should be 404 for tenant security', async () => {
     const res = await request(app).get('/api/monitoring/logs?limit=50');
-    expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty('logs');
-    expect(Array.isArray(res.body.logs)).toBe(true);
-    expect(res.body.logs.length).toBeGreaterThan(0);
+    expect(res.status).toBe(404);
   });
 
-  it('GET /api/system/backup and POST /api/system/restore should export and validate restore snapshot', async () => {
+  it('GET /api/system/backup should be 404 for tenant security', async () => {
     const backupRes = await request(app).get('/api/system/backup');
-    expect(backupRes.status).toBe(200);
-    expect(backupRes.body).toHaveProperty('version');
-    expect(backupRes.body).toHaveProperty('data');
-    expect(backupRes.body.data).toHaveProperty('tasks');
-    expect(backupRes.body.data).toHaveProperty('projects');
-
-    // Test restoring from this snapshot
-    const restoreRes = await request(app)
-      .post('/api/system/restore')
-      .send(backupRes.body);
-    expect(restoreRes.status).toBe(200);
-    expect(restoreRes.body.success).toBe(true);
+    expect(backupRes.status).toBe(404);
   });
 });

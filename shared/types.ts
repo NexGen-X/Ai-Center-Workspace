@@ -184,7 +184,7 @@ export interface DashboardSummary {
   totalAgentsCount: number;
   activeProjectsCount: number;
   systemStatus: 'OPERATIONAL' | 'DEGRADED' | 'MAINTENANCE';
-  serverMetrics: ServerMetrics;
+  serverMetrics?: ServerMetrics;
 }
 
 // Request & Response DTOs
@@ -1218,7 +1218,7 @@ export interface DataAnalysisSession {
   workspaceId: string;
   title: string;
   datasetName: string;
-  sourceType: 'CSV' | 'JSON' | 'SYSTEM_METRICS' | 'TASK_ANALYTICS';
+  sourceType: 'CSV' | 'JSON' | 'TASK_ANALYTICS';
   queryPrompt: string;
   summary: string;
   insights: string[];
@@ -1230,7 +1230,7 @@ export interface DataAnalysisSession {
 
 export interface AnalyzeDataRequest {
   datasetName?: string;
-  sourceType: 'CSV' | 'JSON' | 'SYSTEM_METRICS' | 'TASK_ANALYTICS';
+  sourceType: 'CSV' | 'JSON' | 'TASK_ANALYTICS';
   rawData?: string;
   queryPrompt: string;
   workspaceId?: string;
@@ -1239,7 +1239,7 @@ export interface AnalyzeDataRequest {
 export type QuickDataQueryType =
   | 'TASK_SUCCESS_RATES'
   | 'AGENT_COST_DISTRIBUTION'
-  | 'SERVER_RESOURCE_TRENDS'
+  | 'TASK_PRIORITY_DISTRIBUTION'
   | 'HOURLY_ACTIVITY_PEAKS';
 
 // No-Code Agent Skill Builder & Dynamic Tool Studio Types

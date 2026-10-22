@@ -21,17 +21,12 @@ describe('AI Agent Command Center API Endpoints', () => {
     expect(res.body).toHaveProperty('completedTasksCount');
     expect(res.body).toHaveProperty('onlineAgentsCount');
     expect(res.body).toHaveProperty('totalAgentsCount');
-    expect(res.body).toHaveProperty('serverMetrics');
-    expect(res.body.serverMetrics).toHaveProperty('cpuUsagePercent');
+    expect(res.body).toHaveProperty('systemStatus', 'OPERATIONAL');
   });
 
-  it('GET /api/monitoring/summary should return live host metrics', async () => {
+  it('GET /api/monitoring/summary should be inaccessible (404) for tenant customer security', async () => {
     const res = await request(app).get('/api/monitoring/summary');
-    expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty('cpuUsagePercent');
-    expect(res.body).toHaveProperty('memoryTotalBytes');
-    expect(res.body).toHaveProperty('memoryUsagePercent');
-    expect(res.body).toHaveProperty('uptimeSeconds');
+    expect(res.status).toBe(404);
   });
 
   it('GET /api/agents should list agents without leaking plain secrets', async () => {

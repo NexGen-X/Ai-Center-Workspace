@@ -23,7 +23,6 @@ import {
   Workflow,
   Network,
   Swords,
-  ShieldAlert,
   LineChart,
   Wrench,
   Brain,
@@ -36,7 +35,6 @@ import {
 } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown.js';
 import { ThemeSelector } from './ThemeSelector.js';
-import { OrchestratorStatus } from '../../../shared/types.js';
 
 interface NavbarProps {
   onOpenAddAgent: () => void;
@@ -53,7 +51,6 @@ interface NavbarProps {
   onOpenPipeline?: () => void;
   onOpenSwarm?: () => void;
   onOpenWarRoom?: () => void;
-  onOpenSre?: () => void;
   onOpenDataAnalyst?: () => void;
   onOpenSkills?: () => void;
   onOpenMemoryGraph?: () => void;
@@ -65,10 +62,6 @@ interface NavbarProps {
   isRealtimeConnected: boolean;
   systemStatus: 'OPERATIONAL' | 'DEGRADED' | 'MAINTENANCE';
   unreadActivityCount?: number;
-  orchestratorStatus?: OrchestratorStatus;
-  onToggleOrchestrator?: () => void;
-  onToggleConsole?: () => void;
-  isConsoleOpen?: boolean;
   activeWorkspaceName?: string;
   onOpenWorkspaces?: () => void;
   currentPlan?: string;
@@ -76,7 +69,6 @@ interface NavbarProps {
   onOpenGuidedTour?: () => void;
   onOpenFinOps?: () => void;
   onOpenGitHub?: () => void;
-  onOpenDaemons?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -94,7 +86,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenPipeline,
   onOpenSwarm,
   onOpenWarRoom,
-  onOpenSre,
   onOpenDataAnalyst,
   onOpenSkills,
   onOpenMemoryGraph,
@@ -106,18 +97,13 @@ export const Navbar: React.FC<NavbarProps> = ({
   isRealtimeConnected,
   systemStatus,
   unreadActivityCount = 0,
-  orchestratorStatus,
-  onToggleOrchestrator,
-  onToggleConsole,
-  isConsoleOpen,
   activeWorkspaceName = 'Default Workspace',
   onOpenWorkspaces,
   currentPlan = 'FREE',
   onOpenPricing,
   onOpenGuidedTour,
   onOpenFinOps,
-  onOpenGitHub,
-  onOpenDaemons
+  onOpenGitHub
 }) => {
   const [dateStr, setDateStr] = useState<string>('');
 
@@ -231,37 +217,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 aria-label="Pricing"
               >
                 <Sparkles className="w-4 h-4" />
-              </button>
-            )}
-            {/* Mobile Auto Orchestrator Toggle */}
-            {onToggleOrchestrator && (
-              <button
-                onClick={onToggleOrchestrator}
-                className={`p-1.5 rounded-xl border transition ${
-                  orchestratorStatus?.enabled
-                    ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400'
-                    : 'bg-slate-900 border-slate-800 text-slate-400'
-                }`}
-                title={orchestratorStatus?.enabled ? 'Auto-Orchestrator Aktif' : 'Auto-Orchestrator Standby'}
-                aria-label="Auto Orchestrator"
-              >
-                <Zap className={`w-4 h-4 ${orchestratorStatus?.enabled ? 'fill-emerald-400 text-emerald-400 animate-pulse' : ''}`} />
-              </button>
-            )}
-
-            {/* Mobile Terminal Console */}
-            {onToggleConsole && (
-              <button
-                onClick={onToggleConsole}
-                className={`p-1.5 rounded-xl border transition ${
-                  isConsoleOpen
-                    ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-400'
-                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
-                }`}
-                title="Buka Konsol Telemetri"
-                aria-label="Terminal Console"
-              >
-                <Terminal className="w-4 h-4" />
               </button>
             )}
 
@@ -442,19 +397,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {/* Autonomous SRE Self-Healing */}
-          {onOpenSre && (
-            <button
-              type="button"
-              onClick={onOpenSre}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30 text-xs font-semibold shadow-sm transition shrink-0 whitespace-nowrap"
-              title="Autonomous SRE & Server Self-Healing Agent"
-            >
-              <ShieldAlert className="w-3.5 h-3.5 text-red-400 shrink-0" />
-              <span>SRE Agent</span>
-            </button>
-          )}
-
           {/* Autonomous Data Analyst */}
           {onOpenDataAnalyst && (
             <button
@@ -541,57 +483,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>GitHub PR</span>
             </button>
           )}
-
-          {/* Scheduled Autonomous Daemons */}
-          {onOpenDaemons && (
-            <button
-              type="button"
-              onClick={onOpenDaemons}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 border border-pink-500/30 text-xs font-semibold shadow-sm transition shrink-0 whitespace-nowrap"
-              title="Scheduled Autonomous Daemons (24/7 Cron Engine)"
-            >
-              <Clock className="w-3.5 h-3.5 text-pink-400 shrink-0" />
-              <span>Daemons 24/7</span>
-            </button>
-          )}
         </nav>
 
         {/* Right Section: Time, Notifications, Settings & Operator Profile (Desktop lg:flex) */}
         <div className="hidden lg:flex items-center gap-2 shrink-0">
-          {/* Auto-Orchestrator Toggle Badge */}
-          {onToggleOrchestrator && (
-            <button
-              onClick={onToggleOrchestrator}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-xs font-mono font-bold transition ${
-                orchestratorStatus?.enabled
-                  ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 shadow-sm shadow-emerald-500/20'
-                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
-              }`}
-              title={orchestratorStatus?.enabled ? 'Auto-Orchestrator Aktif. Klik untuk beralih ke Standby.' : 'Auto-Orchestrator Standby. Klik untuk aktifkan pemrosesan otomatis.'}
-            >
-              <Zap className={`w-3.5 h-3.5 ${orchestratorStatus?.enabled ? 'text-emerald-400 fill-emerald-400 animate-pulse' : 'text-slate-500'}`} />
-              <span className="text-[11px]">
-                AUTO: {orchestratorStatus?.enabled ? 'AKTIF' : 'STANDBY'}
-              </span>
-            </button>
-          )}
-
-          {/* Console Drawer Button */}
-          {onToggleConsole && (
-            <button
-              onClick={onToggleConsole}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-xs transition ${
-                isConsoleOpen
-                  ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300 font-bold'
-                  : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'
-              }`}
-              title="Buka / Tutup Konsol Telemetri Sistem"
-            >
-              <Terminal className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="text-[11px] font-mono">Console</span>
-            </button>
-          )}
-
           {/* Theme Selector */}
           <ThemeSelector compact />
 

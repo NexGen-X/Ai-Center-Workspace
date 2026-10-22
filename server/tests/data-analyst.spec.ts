@@ -100,13 +100,13 @@ April,2200,1250`;
     expect(res.body.chartConfig.labels.length).toBeGreaterThan(0);
   });
 
-  it('POST /api/data-analyst/quick-query should generate analytics for server resource trends', async () => {
+  it('POST /api/data-analyst/quick-query should generate analytics for task priority distribution', async () => {
     const res = await request(app).post('/api/data-analyst/quick-query').send({
-      type: 'SERVER_RESOURCE_TRENDS'
+      type: 'TASK_PRIORITY_DISTRIBUTION'
     });
 
     expect(res.status).toBe(200);
-    expect(res.body.chartConfig.labels).toContain('CPU Utilitas');
+    expect(res.body.chartConfig.labels.length).toBeGreaterThan(0);
   });
 
   it('GET /api/data-analyst/sessions should list saved sessions', async () => {
@@ -134,8 +134,8 @@ April,2200,1250`;
 
   it('Sandbox Tool data_analyze should execute cleanly in sandbox engine', async () => {
     const toolRes = await executeToolInSandbox('data_analyze', {
-      sourceType: 'SYSTEM_METRICS',
-      queryPrompt: 'Ringkasan performa server host'
+      sourceType: 'TASK_ANALYTICS',
+      queryPrompt: 'Ringkasan produktivitas tugas dan agen'
     });
 
     expect(toolRes.success).toBe(true);

@@ -16,7 +16,6 @@ import { Workspace3D } from './features/workspace3d/Workspace3D.js';
 import { Workspace2DView } from './features/workspace3d/Workspace2DView.js';
 import { ActivityFeed } from './components/ActivityFeed.js';
 import { ServerMonitoringWidget } from './components/ServerMonitoringWidget.js';
-import { ConsoleDrawer } from './components/terminal/ConsoleDrawer.js';
 import { ActionApprovalModal } from './features/actions/ActionApprovalModal.js';
 import { ActionHistoryModal } from './features/actions/ActionHistoryModal.js';
 
@@ -31,7 +30,6 @@ const PlaygroundModal = React.lazy(() => import('./features/playground/Playgroun
 const PipelineModal = React.lazy(() => import('./features/pipeline/PipelineModal.js').then(m => ({ default: m.PipelineModal })));
 const SwarmMissionModal = React.lazy(() => import('./features/swarm/SwarmMissionModal.js').then(m => ({ default: m.SwarmMissionModal })));
 const WarRoomModal = React.lazy(() => import('./features/warroom/WarRoomModal.js').then(m => ({ default: m.WarRoomModal })));
-const SreModal = React.lazy(() => import('./features/sre/SreModal.js').then(m => ({ default: m.SreModal })));
 const DataAnalystModal = React.lazy(() => import('./features/data-analyst/DataAnalystModal.js').then(m => ({ default: m.DataAnalystModal })));
 const SkillStudioModal = React.lazy(() => import('./features/skills/SkillStudioModal.js').then(m => ({ default: m.SkillStudioModal })));
 const MemoryGraphModal = React.lazy(() => import('./features/memory/MemoryGraphModal.js').then(m => ({ default: m.MemoryGraphModal })));
@@ -40,12 +38,11 @@ const PricingModal = React.lazy(() => import('./features/billing/PricingModal.js
 const GuidedTourModal = React.lazy(() => import('./features/demo-tour/GuidedTourModal.js').then(m => ({ default: m.GuidedTourModal })));
 const FinOpsModal = React.lazy(() => import('./features/finops/FinOpsModal.js').then(m => ({ default: m.FinOpsModal })));
 const GitHubConnectorModal = React.lazy(() => import('./features/integrations/GitHubConnectorModal.js').then(m => ({ default: m.GitHubConnectorModal })));
-const CronDaemonsModal = React.lazy(() => import('./features/daemons/CronDaemonsModal.js').then(m => ({ default: m.CronDaemonsModal })));
 import { useFeedback } from './components/common/FeedbackContext.js';
 import { ErrorBoundary } from './components/common/ErrorBoundary.js';
 import { api } from './services/api.js';
-import { AIAgent, Task, Activity, DashboardSummary, ServerMetrics, Project, OrchestratorStatus, ModelProviderConfig, AgentAction } from '../../shared/types.js';
-import { Bot, Plus, RefreshCw, Zap, Layers, Users, CheckSquare, Clock } from 'lucide-react';
+import { AIAgent, Task, Activity, DashboardSummary, Project, ModelProviderConfig, AgentAction } from '../../shared/types.js';
+import { Bot, Plus, RefreshCw, Zap, Layers, Users, CheckSquare, Workflow } from 'lucide-react';
 import { ThemeProvider, useTheme } from './context/ThemeContext.js';
 import { useResponsive } from './hooks/useResponsive.js';
 
@@ -58,7 +55,6 @@ export const AppContent: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [providers, setProviders] = useState<ModelProviderConfig[]>([]);
-  const [metrics, setMetrics] = useState<ServerMetrics | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
 
@@ -74,7 +70,6 @@ export const AppContent: React.FC = () => {
   const [isPipelineOpen, setIsPipelineOpen] = useState(false);
   const [isSwarmModalOpen, setIsSwarmModalOpen] = useState(false);
   const [isWarRoomOpen, setIsWarRoomOpen] = useState(false);
-  const [isSreOpen, setIsSreOpen] = useState(false);
   const [isDataAnalystOpen, setIsDataAnalystOpen] = useState(false);
   const [isSkillsOpen, setIsSkillsOpen] = useState(false);
   const [isMemoryGraphOpen, setIsMemoryGraphOpen] = useState(false);
@@ -86,8 +81,6 @@ export const AppContent: React.FC = () => {
   const [isDocumentsOpen, setIsDocumentsOpen] = useState(false);
   const [isProjectsOpen, setIsProjectsOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isConsoleOpen, setIsConsoleOpen] = useState(false);
-  const [orchestratorStatus, setOrchestratorStatus] = useState<OrchestratorStatus | undefined>(undefined);
   const [selectedAgent, setSelectedAgent] = useState<AIAgent | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [selectedProjectIdForTask, setSelectedProjectIdForTask] = useState<string | undefined>(undefined);
@@ -108,11 +101,10 @@ export const AppContent: React.FC = () => {
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<string>('FREE');
 
-  // Commercial SaaS Excellence Modals (Guided Tour, FinOps, GitHub Webhook, Cron Daemons)
+  // Commercial SaaS Excellence Modals (Guided Tour, FinOps, GitHub Webhook)
   const [isGuidedTourOpen, setIsGuidedTourOpen] = useState(false);
   const [isFinOpsOpen, setIsFinOpsOpen] = useState(false);
   const [isGitHubOpen, setIsGitHubOpen] = useState(false);
-  const [isDaemonsOpen, setIsDaemonsOpen] = useState(false);
 
   const { toast } = useFeedback();
 
@@ -141,9 +133,7 @@ export const AppContent: React.FC = () => {
       setProjects(projsData);
       setActivities(actsData);
       setProviders(provData);
-      setMetrics(sumData.serverMetrics);
 
-      api.getOrchestratorStatus().then(st => setOrchestratorStatus(st)).catch(() => {});
       api.getPendingActionsCount().then(res => setPendingActionCount(res.pendingCount)).catch(() => {});
       api.getBillingUsage().then(usage => {
         if (usage && usage.plan) setCurrentPlan(usage.plan);
@@ -154,20 +144,6 @@ export const AppContent: React.FC = () => {
       setLoading(false);
     }
   }, []);
-
-  const handleToggleOrchestrator = async () => {
-    try {
-      const res = await api.toggleOrchestrator();
-      setOrchestratorStatus(res.status);
-      if (res.enabled) {
-        toast.success('⚡ Auto-Orchestrator diaktifkan: tugas antrean akan diproses otomatis.');
-      } else {
-        toast.info('Auto-Orchestrator beralih ke mode standby.');
-      }
-    } catch (err: any) {
-      toast.error(err.message || 'Gagal mengubah status orchestrator.');
-    }
-  };
 
   // Check auth session on mount
   useEffect(() => {
@@ -313,19 +289,6 @@ export const AppContent: React.FC = () => {
         refreshAllData();
       });
 
-      eventSource.addEventListener('orchestrator.status', (e: MessageEvent) => {
-        try {
-          const data = JSON.parse(e.data);
-          setOrchestratorStatus(data);
-        } catch {
-          // ignore
-        }
-      });
-
-      eventSource.addEventListener('system.restored', () => {
-        refreshAllData();
-      });
-
       eventSource.addEventListener('activity.created', (e: MessageEvent) => {
         const data = JSON.parse(e.data);
         setActivities((prev) => [
@@ -374,20 +337,9 @@ export const AppContent: React.FC = () => {
 
     connectSSE();
 
-    // Fallback polling for server monitoring metrics every 15 seconds
-    const metricsInterval = setInterval(async () => {
-      try {
-        const m = await api.getMonitoringSummary();
-        setMetrics(m);
-      } catch {
-        // ignore
-      }
-    }, 15000);
-
     return () => {
       eventSource?.close();
       clearTimeout(reconnectTimeout);
-      clearInterval(metricsInterval);
     };
   }, [currentUser, refreshAllData]);
 
@@ -458,7 +410,6 @@ export const AppContent: React.FC = () => {
         onOpenPipeline={() => setIsPipelineOpen(true)}
         onOpenSwarm={() => setIsSwarmModalOpen(true)}
         onOpenWarRoom={() => setIsWarRoomOpen(true)}
-        onOpenSre={() => setIsSreOpen(true)}
         onOpenDataAnalyst={() => setIsDataAnalystOpen(true)}
         onOpenSkills={() => setIsSkillsOpen(true)}
         onOpenMemoryGraph={() => setIsMemoryGraphOpen(true)}
@@ -470,10 +421,6 @@ export const AppContent: React.FC = () => {
         isRealtimeConnected={isRealtimeConnected}
         systemStatus={summary?.systemStatus || 'OPERATIONAL'}
         unreadActivityCount={activities.length}
-        orchestratorStatus={orchestratorStatus}
-        onToggleOrchestrator={handleToggleOrchestrator}
-        onToggleConsole={() => setIsConsoleOpen(!isConsoleOpen)}
-        isConsoleOpen={isConsoleOpen}
         activeWorkspaceName={activeWorkspaceName}
         onOpenWorkspaces={() => setIsWorkspaceModalOpen(true)}
         currentPlan={currentPlan}
@@ -481,7 +428,6 @@ export const AppContent: React.FC = () => {
         onOpenGuidedTour={() => setIsGuidedTourOpen(true)}
         onOpenFinOps={() => setIsFinOpsOpen(true)}
         onOpenGitHub={() => setIsGitHubOpen(true)}
-        onOpenDaemons={() => setIsDaemonsOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -503,7 +449,6 @@ export const AppContent: React.FC = () => {
               <Workspace3D
                 agents={agents}
                 summary={summary}
-                serverMetrics={metrics}
                 activities={activities}
                 currentUser={currentUser}
                 onSelectAgent={(agent) => setSelectedAgent(agent)}
@@ -610,7 +555,13 @@ export const AppContent: React.FC = () => {
           </div>
 
           <div className="space-y-6">
-            <ServerMonitoringWidget metrics={metrics} onOpenSre={() => setIsSreOpen(true)} />
+            <ServerMonitoringWidget
+              runningTasksCount={summary?.runningTasksCount || tasks.filter((t) => t.status === 'IN_PROGRESS').length}
+              completedTasksCount={summary?.completedTasksCount || tasks.filter((t) => t.status === 'DONE').length}
+              onlineAgentsCount={summary?.onlineAgentsCount || agents.filter((a) => a.enabled !== false).length}
+              activeProjectsCount={summary?.activeProjectsCount || projects.length}
+              onOpenPricing={() => setIsPricingModalOpen(true)}
+            />
             <ActivityFeed activities={activities} />
           </div>
         </div>
@@ -618,7 +569,7 @@ export const AppContent: React.FC = () => {
 
       {/* Footer */}
       <footer className="border-t border-slate-900 py-4 text-center text-xs text-slate-500">
-        AI Agent Command Center • Berjalan di atas Node.js 20 & PostgreSQL 16 • Route-X AI Gateway Ready
+        AI Agent Command Center • Enterprise AI Workforce Platform
       </footer>
 
       {/* Modals */}
@@ -779,13 +730,6 @@ export const AppContent: React.FC = () => {
           />
         )}
 
-        {isSreOpen && (
-          <SreModal
-            isOpen={isSreOpen}
-            onClose={() => setIsSreOpen(false)}
-          />
-        )}
-
         {isDataAnalystOpen && (
           <DataAnalystModal
             isOpen={isDataAnalystOpen}
@@ -858,22 +802,7 @@ export const AppContent: React.FC = () => {
             onTestTriggered={refreshAllData}
           />
         )}
-
-        {isDaemonsOpen && (
-          <CronDaemonsModal
-            isOpen={isDaemonsOpen}
-            onClose={() => setIsDaemonsOpen(false)}
-            onTriggerTask={refreshAllData}
-          />
-        )}
       </Suspense>
-
-      <ConsoleDrawer
-        isOpen={isConsoleOpen}
-        onClose={() => setIsConsoleOpen(false)}
-        orchestratorStatus={orchestratorStatus}
-        onRefreshOrchestrator={refreshAllData}
-      />
 
       <ActionApprovalModal
         action={pendingAction}
@@ -918,11 +847,11 @@ export const AppContent: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setIsDaemonsOpen(true)}
+            onClick={() => setIsPipelineOpen(true)}
             className="flex flex-col items-center justify-center py-1 px-2.5 text-[10px] font-medium text-slate-300 hover:text-white"
           >
-            <Clock className="w-4 h-4 mb-0.5 text-amber-400" />
-            <span>Daemons</span>
+            <Workflow className="w-4 h-4 mb-0.5 text-amber-400" />
+            <span>Pipeline</span>
           </button>
 
           <button

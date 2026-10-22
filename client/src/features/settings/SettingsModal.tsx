@@ -16,11 +16,7 @@ import {
   Radio,
   Zap,
   ExternalLink,
-  Database,
-  Download,
-  Upload,
   RefreshCw,
-  FileCheck,
   Copy,
   Check,
   Send,
@@ -35,7 +31,6 @@ import {
 } from 'lucide-react';
 import {
   ModelProviderConfig,
-  WorkspaceBackup,
   AlertWebhookItem,
   AlertPlatform,
   AlertEventType,
@@ -49,7 +44,6 @@ import { api } from '../../services/api.js';
 import { useFeedback } from '../../components/common/FeedbackContext.js';
 import { CustomSelect } from '../../components/common/CustomSelect.js';
 import { CustomCheckbox } from '../../components/common/CustomCheckbox.js';
-import { DomainSettingsTab } from './DomainSettingsTab.js';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -69,7 +63,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onWorkspaceRestored
 }) => {
   const { toast, confirm } = useFeedback();
-  const [activeTab, setActiveTab] = useState<'WORKSPACE' | 'DOMAIN' | 'SECURITY' | 'PROVIDERS' | 'BACKUP' | 'WEBHOOKS' | 'ALERTS' | 'MCP'>('WORKSPACE');
+  const [activeTab, setActiveTab] = useState<'WORKSPACE' | 'SECURITY' | 'PROVIDERS' | 'WEBHOOKS' | 'ALERTS' | 'MCP'>('WORKSPACE');
   const [providers, setProviders] = useState<ModelProviderConfig[]>([]);
   const [loadingProviders, setLoadingProviders] = useState(false);
 
@@ -372,13 +366,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [passwordMsg, setPasswordMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [changingPass, setChangingPass] = useState(false);
 
-  // Backup & Restore states
-  const [downloadingBackup, setDownloadingBackup] = useState(false);
-  const [restoringBackup, setRestoringBackup] = useState(false);
-  const [selectedBackupFile, setSelectedBackupFile] = useState<File | null>(null);
-  const [parsedBackupData, setParsedBackupData] = useState<WorkspaceBackup | null>(null);
-  const [backupError, setBackupError] = useState<string | null>(null);
-
   // Webhook Tester State
   const [webhookTitle, setWebhookTitle] = useState('Verifikasi Build CI/CD & Vulnerability Scan');
   const [webhookDesc, setWebhookDesc] = useState('Analisis log deployment dan verifikasi integrasi sistem dari pipeline GitHub Actions.');
@@ -419,79 +406,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setCopiedUrl(true);
     toast.info('URL Webhook disalin ke clipboard.');
     setTimeout(() => setCopiedUrl(false), 2000);
-  };
-
-  const handleDownloadBackup = async () => {
-    try {
-      setDownloadingBackup(true);
-      const backup = await api.getSystemBackup();
-      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `ai-center-backup-${new Date().toISOString().slice(0, 10)}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast.success('Snapshot database berhasil diunduh.');
-    } catch (err: any) {
-      toast.error(err.message || 'Gagal mengunduh snapshot backup.');
-    } finally {
-      setDownloadingBackup(false);
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setBackupError(null);
-    setParsedBackupData(null);
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setSelectedBackupFile(file);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const text = event.target?.result as string;
-        const json = JSON.parse(text);
-        if (!json.version || !json.data || !Array.isArray(json.data.tasks)) {
-          setBackupError('Format file JSON tidak cocok dengan skema snapshot AI Center.');
-          return;
-        }
-        setParsedBackupData(json);
-      } catch {
-        setBackupError('File yang dipilih bukan file JSON yang valid.');
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  const handleExecuteRestore = async () => {
-    if (!parsedBackupData) return;
-
-    const isConfirmed = await confirm({
-      title: 'Konfirmasi Pemulihan Database',
-      message: `Tindakan ini akan memulihkan ${parsedBackupData.data.tasks.length} tugas, ${parsedBackupData.data.projects?.length || 0} proyek, dan ${parsedBackupData.data.documents?.length || 0} dokumen dari snapshot. Data yang konflik akan diperbarui. Lanjutkan?`,
-      confirmText: 'Ya, Pulihkan Sekarang',
-      variant: 'danger'
-    });
-
-    if (!isConfirmed) return;
-
-    try {
-      setRestoringBackup(true);
-      setBackupError(null);
-      const res = await api.restoreSystemBackup(parsedBackupData);
-      toast.success(res.message || 'Database berhasil dipulihkan!');
-      if (onWorkspaceRestored) onWorkspaceRestored();
-      setSelectedBackupFile(null);
-      setParsedBackupData(null);
-    } catch (err: any) {
-      setBackupError(err.message || 'Gagal memulihkan database.');
-      toast.error(err.message || 'Gagal memulihkan database.');
-    } finally {
-      setRestoringBackup(false);
-    }
   };
 
   const fetchProviders = async () => {
@@ -605,19 +519,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           <button
             type="button"
-            onClick={() => setActiveTab('DOMAIN')}
-            className={`py-3 border-b-2 transition flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
-              activeTab === 'DOMAIN'
-                ? 'border-cyan-400 text-cyan-300'
-                : 'border-transparent text-slate-400 hover:text-white'
-            }`}
-          >
-            <Globe className="w-4 h-4 text-cyan-400" />
-            <span>Domain &amp; SSL</span>
-          </button>
-
-          <button
-            type="button"
             onClick={() => setActiveTab('SECURITY')}
             className={`py-3 border-b-2 transition flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
               activeTab === 'SECURITY'
@@ -640,19 +541,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           >
             <Globe className="w-4 h-4" />
             <span>Model Provider ({providers.length})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('BACKUP')}
-            className={`py-3 border-b-2 transition flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
-              activeTab === 'BACKUP'
-                ? 'border-cyan-400 text-cyan-300'
-                : 'border-transparent text-slate-400 hover:text-white'
-            }`}
-          >
-            <Database className="w-4 h-4" />
-            <span>Backup & Restore</span>
           </button>
 
           <button
@@ -820,10 +708,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           )}
 
-          {activeTab === 'DOMAIN' && (
-            <DomainSettingsTab />
-          )}
-
           {activeTab === 'SECURITY' && (
             <div className="space-y-4">
               <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/60 space-y-3">
@@ -938,119 +822,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </div>
                     </div>
                   ))
-                )}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'BACKUP' && (
-            <div className="space-y-6">
-              {/* Export Backup Card */}
-              <div className="p-4 sm:p-5 rounded-xl bg-slate-850/60 border border-slate-700/60 space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                  <div>
-                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                      <Download className="w-4 h-4 text-cyan-400" />
-                      Ekspor Snapshot Database
-                    </h3>
-                    <p className="text-xs text-slate-400 mt-1">
-                      Unduh arsip data lengkap (proyek, tugas, agen AI, knowledge base, konfigurasi provider) ke file snapshot JSON yang aman.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleDownloadBackup}
-                    disabled={downloadingBackup}
-                    className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs shadow-md transition disabled:opacity-50 shrink-0 self-start sm:self-auto"
-                  >
-                    <Download className={`w-4 h-4 ${downloadingBackup ? 'animate-bounce' : ''}`} />
-                    <span>{downloadingBackup ? 'Membuat Snapshot...' : 'Unduh Backup (.json)'}</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Restore Backup Card */}
-              <div className="p-4 sm:p-5 rounded-xl bg-slate-850/60 border border-slate-700/60 space-y-4">
-                <div>
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <Upload className="w-4 h-4 text-purple-400" />
-                    Pulihkan dari File Snapshot
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Unggah file snapshot JSON untuk memulihkan atau menyinkronkan data entitas workspace.
-                  </p>
-                </div>
-
-                {/* File Input */}
-                <div className="flex items-center gap-3 flex-wrap">
-                  <label className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold cursor-pointer transition">
-                    <Upload className="w-4 h-4 text-purple-400" />
-                    <span>Pilih File Backup (.json)</span>
-                    <input
-                      type="file"
-                      accept=".json"
-                      onChange={handleFileChange}
-                      className="hidden"
-                    />
-                  </label>
-                  {selectedBackupFile && (
-                    <span className="text-xs font-mono text-cyan-400 truncate max-w-xs">
-                      {selectedBackupFile.name} ({(selectedBackupFile.size / 1024).toFixed(1)} KB)
-                    </span>
-                  )}
-                </div>
-
-                {backupError && (
-                  <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-300 flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>{backupError}</span>
-                  </div>
-                )}
-
-                {/* Parsed summary preview */}
-                {parsedBackupData && (
-                  <div className="p-4 rounded-xl bg-slate-900 border border-purple-500/30 space-y-3 animate-in fade-in duration-200">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <div className="flex items-center gap-2 text-xs font-bold text-purple-300">
-                        <FileCheck className="w-4 h-4 text-purple-400" />
-                        <span>Snapshot Valid (v{parsedBackupData.version})</span>
-                      </div>
-                      <span className="text-[10px] text-slate-500 font-mono">
-                        Dibuat: {new Date(parsedBackupData.exportedAt).toLocaleString('id-ID')}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                      <div className="p-2 bg-slate-800/60 rounded-lg">
-                        <span className="text-slate-400 block text-[10px]">Tugas</span>
-                        <span className="font-bold text-white text-sm">{parsedBackupData.data.tasks.length}</span>
-                      </div>
-                      <div className="p-2 bg-slate-800/60 rounded-lg">
-                        <span className="text-slate-400 block text-[10px]">Proyek</span>
-                        <span className="font-bold text-white text-sm">{parsedBackupData.data.projects?.length || 0}</span>
-                      </div>
-                      <div className="p-2 bg-slate-800/60 rounded-lg">
-                        <span className="text-slate-400 block text-[10px]">Agen AI</span>
-                        <span className="font-bold text-white text-sm">{parsedBackupData.data.agents?.length || 0}</span>
-                      </div>
-                      <div className="p-2 bg-slate-800/60 rounded-lg">
-                        <span className="text-slate-400 block text-[10px]">Dokumen</span>
-                        <span className="font-bold text-white text-sm">{parsedBackupData.data.documents?.length || 0}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end pt-2">
-                      <button
-                        type="button"
-                        onClick={handleExecuteRestore}
-                        disabled={restoringBackup}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md shadow-rose-600/30 transition disabled:opacity-50"
-                      >
-                        <RefreshCw className={`w-4 h-4 ${restoringBackup ? 'animate-spin' : ''}`} />
-                        <span>{restoringBackup ? 'Memulihkan Data...' : 'Konfirmasi Pulihkan Snapshot'}</span>
-                      </button>
-                    </div>
-                  </div>
                 )}
               </div>
             </div>

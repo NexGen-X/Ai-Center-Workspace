@@ -4,7 +4,6 @@
 
 import { Router, Request, Response } from 'express';
 import { pool } from '../db/index.js';
-import { collectServerMetrics } from '../services/monitoring.js';
 import { DashboardSummary } from '../../../shared/types.js';
 
 const router = Router();
@@ -24,8 +23,9 @@ router.get('/summary', async (req: Request, res: Response) => {
       SELECT 
         COUNT(*) as total_agents,
         COUNT(*) FILTER (WHERE enabled = TRUE AND status != 'UNAVAILABLE') as online_agents
-      FROM ai_agents;
-    `);
+      FROM ai_agents
+      WHERE ($1 = '' OR workspace_id = $1);
+    `, [wsId]);
 
     const projectsRes = await pool.query(`
       SELECT COUNT(*) as active_projects 
@@ -33,16 +33,13 @@ router.get('/summary', async (req: Request, res: Response) => {
       WHERE status = 'ACTIVE' AND ($1 = '' OR workspace_id = $1);
     `, [wsId]);
 
-    const metrics = collectServerMetrics();
-
     const summary: DashboardSummary = {
-      runningTasksCount: parseInt(tasksRes.rows[0].running_tasks || '0', 10),
-      completedTasksCount: parseInt(tasksRes.rows[0].completed_tasks || '0', 10),
-      totalAgentsCount: parseInt(agentsRes.rows[0].total_agents || '0', 10),
-      onlineAgentsCount: parseInt(agentsRes.rows[0].online_agents || '0', 10),
-      activeProjectsCount: parseInt(projectsRes.rows[0].active_projects || '0', 10),
-      systemStatus: metrics.status === 'CRITICAL' ? 'DEGRADED' : 'OPERATIONAL',
-      serverMetrics: metrics
+      runningTasksCount: parseInt(tasksRes.rows[0]?.running_tasks || '0', 10),
+      completedTasksCount: parseInt(tasksRes.rows[0]?.completed_tasks || '0', 10),
+      totalAgentsCount: parseInt(agentsRes.rows[0]?.total_agents || '0', 10),
+      onlineAgentsCount: parseInt(agentsRes.rows[0]?.online_agents || '0', 10),
+      activeProjectsCount: parseInt(projectsRes.rows[0]?.active_projects || '0', 10),
+      systemStatus: 'OPERATIONAL'
     };
 
     res.json(summary);

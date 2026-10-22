@@ -16,7 +16,6 @@ import {
 } from '../../../shared/types.js';
 import { realtimeHub } from './realtime.js';
 import { systemLogger } from './logger.js';
-import { collectServerMetrics } from './monitoring.js';
 
 const PALETTE = [
   '#3B82F6', // Blue
@@ -58,12 +57,6 @@ export class DataAnalystService {
       case 'TASK_ANALYTICS': {
         datasetName = 'Telemetri Tugas & Produktivitas Agen';
         rows = await this.fetchTaskAnalytics(workspaceId);
-        break;
-      }
-
-      case 'SYSTEM_METRICS': {
-        datasetName = 'Metrik Komputasi Server Host';
-        rows = await this.fetchSystemMetricsAnalytics();
         break;
       }
 
@@ -182,11 +175,31 @@ export class DataAnalystService {
         });
       }
 
-      case 'SERVER_RESOURCE_TRENDS': {
+      case 'TASK_PRIORITY_DISTRIBUTION': {
+        const res = await pool.query(`
+          SELECT 
+            priority as prioritas,
+            COUNT(*) as jumlah
+          FROM tasks
+          WHERE ($1 = '' OR workspace_id = $1)
+          GROUP BY priority;
+        `, [workspaceId]);
+
+        const rows = res.rows.map((r) => ({
+          Prioritas: r.prioritas,
+          'Jumlah Tugas': parseInt(r.jumlah, 10)
+        }));
+
         return this.analyzeData({
-          sourceType: 'SYSTEM_METRICS',
-          datasetName: 'Telemetri Beban Komputasi Host',
-          queryPrompt: 'Visualisasikan proporsi utilitas CPU, RAM, dan Kapasitas Disk',
+          sourceType: 'JSON',
+          datasetName: 'Distribusi Prioritas Tugas Workspace',
+          rawData: JSON.stringify(rows.length > 0 ? rows : [
+            { Prioritas: 'LOW', 'Jumlah Tugas': 5 },
+            { Prioritas: 'MEDIUM', 'Jumlah Tugas': 12 },
+            { Prioritas: 'HIGH', 'Jumlah Tugas': 8 },
+            { Prioritas: 'CRITICAL', 'Jumlah Tugas': 2 }
+          ]),
+          queryPrompt: 'Visualisasikan pembagian tugas berdasarkan tingkat urgensi dan prioritas',
           workspaceId
         });
       }
@@ -404,18 +417,6 @@ export class DataAnalystService {
       Status: r.status,
       'Jumlah Task': parseInt(r.total_count, 10)
     }));
-  }
-
-  /**
-   * Fetch Server Metrics Analytics
-   */
-  private static async fetchSystemMetricsAnalytics(): Promise<Record<string, any>[]> {
-    const metrics = collectServerMetrics();
-    return [
-      { Komponen: 'CPU Utilitas', Persentase: metrics.cpuUsagePercent, Kapasitas: `${metrics.cpuCores} Cores` },
-      { Komponen: 'Memori RAM', Persentase: metrics.memoryUsagePercent, Kapasitas: `${(metrics.memoryTotalBytes / 1024 / 1024 / 1024).toFixed(1)} GB` },
-      { Komponen: 'Penyimpanan Disk', Persentase: metrics.diskUsagePercent, Kapasitas: `${(metrics.diskUsedBytes / 1024 / 1024 / 1024).toFixed(1)} GB Terpakai` }
-    ];
   }
 
   /**
