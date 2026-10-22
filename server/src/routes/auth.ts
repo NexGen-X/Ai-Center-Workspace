@@ -4,34 +4,74 @@
 
 import { Router, Request, Response } from 'express';
 import { pool } from '../db/index.js';
-import { verifyPassword, hashPassword, generateSessionToken } from '../utils/auth.js';
+import { verifyPassword, hashPassword, generateSessionToken, executeDummyHashVerification } from '../utils/auth.js';
 import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
 
+// In-Memory Account Lockout Store (Anti-Brute Force / Credential Stuffing)
+const failedAttemptsMap = new Map<string, { count: number; lockedUntil: number }>();
+
 // POST /api/auth/login — Authenticate operator
 router.post('/login', async (req: Request, res: Response) => {
+  const clientIp = (
+    req.headers['x-forwarded-for']?.toString().split(',')[0].trim() ||
+    req.headers['x-real-ip']?.toString().trim() ||
+    req.socket.remoteAddress ||
+    'unknown'
+  );
+
   try {
     const { email, password } = req.body;
     if (!email || !password) {
       return res.status(400).json({ error: { message: 'Email dan password wajib diisi.' } });
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Check account lockout
+    const lockRecord = failedAttemptsMap.get(normalizedEmail);
+    const now = Date.now();
+    if (lockRecord && now < lockRecord.lockedUntil) {
+      const waitSec = Math.ceil((lockRecord.lockedUntil - now) / 1000);
+      return res.status(423).json({
+        error: {
+          code: 'ACCOUNT_LOCKED',
+          message: `Akun ini terkunci sementara karena terlalu banyak kegagalan sandi. Silakan tunggu ${waitSec} detik lagi.`,
+          retryAfterSeconds: waitSec
+        }
+      });
+    }
+
     const result = await pool.query(`
       SELECT id, email, display_name, role, password_hash, must_change_password
       FROM human_users
       WHERE email = $1;
-    `, [email.toLowerCase().trim()]);
+    `, [normalizedEmail]);
 
     if (result.rows.length === 0) {
+      executeDummyHashVerification(password);
+      const cur = failedAttemptsMap.get(normalizedEmail) || { count: 0, lockedUntil: 0 };
+      cur.count += 1;
+      if (cur.count >= 5) cur.lockedUntil = now + (15 * 60 * 1000);
+      failedAttemptsMap.set(normalizedEmail, cur);
+
       return res.status(401).json({ error: { message: 'Email atau password salah.' } });
     }
 
     const user = result.rows[0];
     const isValid = user.password_hash && verifyPassword(password, user.password_hash);
     if (!isValid) {
+      const cur = failedAttemptsMap.get(normalizedEmail) || { count: 0, lockedUntil: 0 };
+      cur.count += 1;
+      if (cur.count >= 5) cur.lockedUntil = now + (15 * 60 * 1000);
+      failedAttemptsMap.set(normalizedEmail, cur);
+
       return res.status(401).json({ error: { message: 'Email atau password salah.' } });
     }
+
+    // Reset failed counter on success
+    failedAttemptsMap.delete(normalizedEmail);
 
     // Generate session token
     const token = generateSessionToken();
@@ -40,6 +80,17 @@ router.post('/login', async (req: Request, res: Response) => {
       SET session_token = $1, last_login_at = CURRENT_TIMESTAMP
       WHERE id = $2;
     `, [token, user.id]);
+
+    // Record activity audit log
+    await pool.query(`
+      INSERT INTO activities (id, workspace_id, actor_type, actor_name, event_type, summary, target_type, target_id)
+      VALUES ($1, 'ws-default-command-center', 'USER', $2, 'auth.login.success', $3, 'USER', $4);
+    `, [
+      `act-${uuidv4().slice(0, 8)}`,
+      user.display_name,
+      `Operator ${user.email} berhasil login ke Command Center dari IP ${clientIp}.`,
+      user.id
+    ]);
 
     res.json({
       token,
@@ -52,7 +103,7 @@ router.post('/login', async (req: Request, res: Response) => {
       }
     });
   } catch (err: any) {
-    res.status(500).json({ error: { message: err.message } });
+    res.status(500).json({ error: { message: 'Terjadi kendala saat memproses autentikasi.' } });
   }
 });
 

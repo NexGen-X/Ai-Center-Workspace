@@ -27,6 +27,17 @@ export function verifyPassword(password: string, storedHash: string): boolean {
   }
 }
 
+const DUMMY_HASH = 'e7828599f7ec9a35a504c769023161ee:ef92c0b98d4d738144266fbd9b6731f458eddaa37756f56e8430214c520bf8db8eec02218e90c0e2ef72a71be7f597fe22f1f385dc7c1d4b3c12429f688c7e48';
+
+/**
+ * Execute constant-time hash verification on non-existent accounts to eliminate timing attack vectors
+ */
+export function executeDummyHashVerification(dummyPassword: string = 'DummyPassword123!') {
+  try {
+    verifyPassword(dummyPassword, DUMMY_HASH);
+  } catch {}
+}
+
 /**
  * Generate a cryptographically secure session token
  */
