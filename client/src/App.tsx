@@ -390,7 +390,14 @@ export const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B0F17] text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-neutral-50 dark:bg-[#000000] text-neutral-900 dark:text-neutral-100 flex flex-col font-sans select-none antialiased transition-colors duration-200 relative">
+      {/* Vercel / Railway Minimal Dot Matrix Background */}
+      <div className="fixed inset-0 bg-[radial-gradient(#d4d4d8_1px,transparent_1px)] dark:bg-[radial-gradient(#1f1f1f_1px,transparent_1px)] bg-[size:1.75rem_1.75rem] pointer-events-none opacity-80 z-0" />
+      <div 
+        className="fixed top-0 left-1/2 -translate-x-1/2 w-[50rem] h-[15rem] rounded-full blur-3xl pointer-events-none opacity-30 z-0" 
+        style={{ background: `radial-gradient(ellipse at top, ${accent.hex}30, transparent 70%)` }}
+      />
+
       {/* Top Navigation */}
       <Navbar
         onOpenAddAgent={() => setIsAddAgentOpen(true)}

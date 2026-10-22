@@ -127,7 +127,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const operatorName = currentUser?.displayName || 'Yulian';
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-[#0B0F17]/95 backdrop-blur-md border-b border-slate-800/80 px-3 lg:px-6 py-2 sm:py-2.5">
+    <header className="sticky top-0 z-40 w-full bg-white/85 dark:bg-[#000000]/85 backdrop-blur-md border-b border-neutral-200 dark:border-[#1f1f1f] px-3 lg:px-6 py-2 sm:py-2.5 transition-colors">
       <div className="max-w-[1720px] mx-auto flex flex-col lg:flex-row lg:items-center justify-between gap-2 lg:gap-3">
         {/* Top Row for Mobile / Left Brand for Desktop */}
         <div className="flex items-center justify-between w-full lg:w-auto gap-2 shrink-0">
@@ -135,13 +135,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
             <div className="flex items-center gap-2 sm:gap-2.5">
               <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-400 p-0.5 shadow-md shadow-blue-500/20 flex items-center justify-center">
-                <div className="w-full h-full bg-[#0B0F17] rounded-[10px] flex items-center justify-center">
-                  <span className="font-black text-sm text-cyan-400">M</span>
+                <div className="w-full h-full bg-white dark:bg-[#0a0a0a] rounded-[10px] flex items-center justify-center">
+                  <span className="font-black text-sm text-cyan-500">M</span>
                 </div>
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="font-extrabold text-sm tracking-tight text-white hidden sm:inline">
+                  <span className="font-extrabold text-sm tracking-tight text-neutral-900 dark:text-white hidden sm:inline">
                     Command Center
                   </span>
                   <span className={`w-2 h-2 rounded-full ${isRealtimeConnected ? 'bg-emerald-400' : 'bg-amber-400'}`} />

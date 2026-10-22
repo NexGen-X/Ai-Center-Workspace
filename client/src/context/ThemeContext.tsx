@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 export type ThemeMode = 'dark' | 'light' | 'system';
-export type AccentColor = 'emerald' | 'monochrome' | 'amber' | 'violet' | 'cyan';
+export type AccentColor = 'emerald' | 'monochrome' | 'charcoal' | 'amber' | 'violet' | 'cyan';
 
 export interface AccentThemeConfig {
   id: AccentColor;
@@ -49,6 +49,21 @@ export const ACCENT_THEMES: Record<AccentColor, AccentThemeConfig> = {
     badgeBorder: 'border-neutral-300 dark:border-white/15',
     glowShadow: 'shadow-[0_0_20px_rgba(255,255,255,0.2)]',
     accentHex: '#FFFFFF'
+  },
+  charcoal: {
+    id: 'charcoal',
+    name: 'Obsidian Charcoal',
+    label: 'Dark Slate Gray',
+    hex: '#52525B',
+    primaryBg: 'bg-neutral-800 dark:bg-neutral-700',
+    primaryHover: 'hover:bg-neutral-700 dark:hover:bg-neutral-600',
+    primaryText: 'text-neutral-800 dark:text-neutral-200',
+    primaryBorder: 'border-neutral-500/40',
+    badgeBg: 'bg-neutral-500/10 dark:bg-neutral-800/60',
+    badgeText: 'text-neutral-800 dark:text-neutral-200',
+    badgeBorder: 'border-neutral-500/30',
+    glowShadow: 'shadow-[0_0_20px_rgba(82,82,91,0.35)]',
+    accentHex: '#52525B'
   },
   amber: {
     id: 'amber',
