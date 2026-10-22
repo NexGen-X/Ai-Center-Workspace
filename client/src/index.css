@@ -4,6 +4,20 @@
 
 :root {
   color-scheme: dark;
+  --bg-primary: #0B0F17;
+  --bg-card: #0F172A;
+  --text-primary: #F1F5F9;
+  --border-color: #1E293B;
+  --accent-color: #06B6D4;
+}
+
+html.light {
+  color-scheme: light;
+  --bg-primary: #F8FAFC;
+  --bg-card: #FFFFFF;
+  --text-primary: #0F172A;
+  --border-color: #E2E8F0;
+  --accent-color: #0284C7;
 }
 
 * {
@@ -12,10 +26,11 @@
 
 body {
   margin: 0;
-  background-color: #0B0F17;
-  color: #F1F5F9;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* Custom In-App Selection Highlight */

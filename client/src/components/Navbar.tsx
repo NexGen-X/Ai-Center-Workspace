@@ -35,6 +35,7 @@ import {
   Compass
 } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown.js';
+import { ThemeSelector } from './ThemeSelector.js';
 import { OrchestratorStatus } from '../../../shared/types.js';
 
 interface NavbarProps {
@@ -283,6 +284,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Settings className="w-4 h-4 text-slate-400" />
             </button>
+
+            {/* Theme Selector */}
+            <ThemeSelector compact />
 
             {/* Notifications */}
             <NotificationDropdown />
@@ -587,6 +591,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className="text-[11px] font-mono">Console</span>
             </button>
           )}
+
+          {/* Theme Selector */}
+          <ThemeSelector compact />
 
           {/* Settings */}
           <button

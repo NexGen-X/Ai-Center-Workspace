@@ -45,9 +45,13 @@ import { useFeedback } from './components/common/FeedbackContext.js';
 import { ErrorBoundary } from './components/common/ErrorBoundary.js';
 import { api } from './services/api.js';
 import { AIAgent, Task, Activity, DashboardSummary, ServerMetrics, Project, OrchestratorStatus, ModelProviderConfig, AgentAction } from '../../shared/types.js';
-import { Bot, Plus, RefreshCw, Zap, Layers, Users } from 'lucide-react';
+import { Bot, Plus, RefreshCw, Zap, Layers, Users, CheckSquare, Clock } from 'lucide-react';
+import { ThemeProvider, useTheme } from './context/ThemeContext.js';
+import { useResponsive } from './hooks/useResponsive.js';
 
-export const App: React.FC = () => {
+export const AppContent: React.FC = () => {
+  const { isMobile } = useResponsive();
+  const { accent } = useTheme();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [agents, setAgents] = useState<AIAgent[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -885,6 +889,59 @@ export const App: React.FC = () => {
         onClose={() => setIsActionHistoryOpen(false)}
         onActionApprove={() => refreshAllData()}
       />
+
+      {/* Mobile Docked Bottom Navigation Bar (< 768px) */}
+      {isMobile && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 dark:bg-[#0B0F17]/95 backdrop-blur-md border-t border-slate-800 px-3 py-1.5 flex items-center justify-around shadow-2xl">
+          <button
+            onClick={() => setViewMode(viewMode === '3D' ? '2D' : '3D')}
+            className="flex flex-col items-center justify-center py-1 px-2.5 text-[10px] font-mono text-cyan-400"
+          >
+            <span className="font-bold text-xs">{viewMode}</span>
+            <span>Switch</span>
+          </button>
+
+          <button
+            onClick={() => setIsTasksModalOpen(true)}
+            className="flex flex-col items-center justify-center py-1 px-2.5 text-[10px] font-medium text-slate-300 hover:text-white"
+          >
+            <CheckSquare className="w-4 h-4 mb-0.5 text-blue-400" />
+            <span>Tugas</span>
+          </button>
+
+          <button
+            onClick={() => setIsManageTeamOpen(true)}
+            className="flex flex-col items-center justify-center py-1 px-2.5 text-[10px] font-medium text-slate-300 hover:text-white"
+          >
+            <Users className="w-4 h-4 mb-0.5 text-purple-400" />
+            <span>Tim AI</span>
+          </button>
+
+          <button
+            onClick={() => setIsDaemonsOpen(true)}
+            className="flex flex-col items-center justify-center py-1 px-2.5 text-[10px] font-medium text-slate-300 hover:text-white"
+          >
+            <Clock className="w-4 h-4 mb-0.5 text-amber-400" />
+            <span>Daemons</span>
+          </button>
+
+          <button
+            onClick={() => setIsSwarmModalOpen(true)}
+            className="flex flex-col items-center justify-center py-1 px-2.5 text-[10px] font-medium text-indigo-400"
+          >
+            <Zap className="w-4 h-4 mb-0.5 text-indigo-400" />
+            <span>Swarm</span>
+          </button>
+        </div>
+      )}
     </div>
+  );
+};
+
+export const App: React.FC = () => {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 };
