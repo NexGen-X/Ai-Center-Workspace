@@ -20,46 +20,23 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
       return res.status(401).json({ error: { message: 'Autentikasi diperlukan.' } });
     }
 
-    let query: string;
-    let params: any[] = [];
-
-    if (user.role === 'ADMIN') {
-      // System admin sees all workspaces with aggregate telemetry
-      query = `
-        SELECT 
-          w.id, w.name, w.created_at, w.updated_at,
-          COALESCE(wm.role, 'OWNER') as user_role,
-          COUNT(DISTINCT m.user_id)::int as member_count,
-          COUNT(DISTINCT a.id)::int as agent_count,
-          COUNT(DISTINCT t.id)::int as task_count
-        FROM workspaces w
-        LEFT JOIN workspace_members wm ON w.id = wm.workspace_id AND wm.user_id = $1
-        LEFT JOIN workspace_members m ON w.id = m.workspace_id
-        LEFT JOIN ai_agents a ON w.id = a.workspace_id
-        LEFT JOIN tasks t ON w.id = t.workspace_id
-        GROUP BY w.id, w.name, w.created_at, w.updated_at, wm.role
-        ORDER BY w.created_at ASC;
-      `;
-      params = [user.id];
-    } else {
-      // Standard users only see workspaces where they are members
-      query = `
-        SELECT 
-          w.id, w.name, w.created_at, w.updated_at,
-          wm.role as user_role,
-          COUNT(DISTINCT m.user_id)::int as member_count,
-          COUNT(DISTINCT a.id)::int as agent_count,
-          COUNT(DISTINCT t.id)::int as task_count
-        FROM workspaces w
-        JOIN workspace_members wm ON w.id = wm.workspace_id AND wm.user_id = $1
-        LEFT JOIN workspace_members m ON w.id = m.workspace_id
-        LEFT JOIN ai_agents a ON w.id = a.workspace_id
-        LEFT JOIN tasks t ON w.id = t.workspace_id
-        GROUP BY w.id, w.name, w.created_at, w.updated_at, wm.role
-        ORDER BY w.created_at ASC;
-      `;
-      params = [user.id];
-    }
+    // Tenant isolation: Users only see workspaces where they are active members
+    const query = `
+      SELECT 
+        w.id, w.name, w.created_at, w.updated_at,
+        wm.role as user_role,
+        COUNT(DISTINCT m.user_id)::int as member_count,
+        COUNT(DISTINCT a.id)::int as agent_count,
+        COUNT(DISTINCT t.id)::int as task_count
+      FROM workspaces w
+      JOIN workspace_members wm ON w.id = wm.workspace_id AND wm.user_id = $1
+      LEFT JOIN workspace_members m ON w.id = m.workspace_id
+      LEFT JOIN ai_agents a ON w.id = a.workspace_id
+      LEFT JOIN tasks t ON w.id = t.workspace_id
+      GROUP BY w.id, w.name, w.created_at, w.updated_at, wm.role
+      ORDER BY w.created_at ASC;
+    `;
+    const params = [user.id];
 
     const result = await pool.query(query, params);
     const workspaces: Workspace[] = result.rows.map(r => ({
@@ -132,6 +109,17 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
 router.get('/:id', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
+    const user = req.user;
+
+    // Tenant boundary: verify requester is a member of this workspace
+    const memberCheck = await pool.query(
+      `SELECT role FROM workspace_members WHERE workspace_id = $1 AND user_id = $2`,
+      [id, user?.id]
+    );
+    if (memberCheck.rows.length === 0) {
+      return res.status(403).json({ error: { message: 'Akses ditolak: Anda bukan anggota workspace ini.' } });
+    }
+
     const wsRes = await pool.query(`SELECT * FROM workspaces WHERE id = $1`, [id]);
     if (wsRes.rows.length === 0) {
       return res.status(404).json({ error: { message: 'Workspace tidak ditemukan.' } });
@@ -178,14 +166,12 @@ router.post('/:id/members', async (req: AuthenticatedRequest, res: Response) => 
     }
 
     // Check authorization: must be ADMIN or OWNER of this workspace
-    if (user?.role !== 'ADMIN') {
-      const authCheck = await pool.query(
-        `SELECT role FROM workspace_members WHERE workspace_id = $1 AND user_id = $2`,
-        [workspaceId, user?.id]
-      );
-      if (authCheck.rows.length === 0 || !['OWNER', 'ADMIN'].includes(authCheck.rows[0].role)) {
-        return res.status(403).json({ error: { message: 'Hanya OWNER atau ADMIN workspace yang dapat menambah anggota.' } });
-      }
+    const authCheck = await pool.query(
+      `SELECT role FROM workspace_members WHERE workspace_id = $1 AND user_id = $2`,
+      [workspaceId, user?.id]
+    );
+    if (authCheck.rows.length === 0 || !['OWNER', 'ADMIN'].includes(authCheck.rows[0].role)) {
+      return res.status(403).json({ error: { message: 'Hanya OWNER atau ADMIN workspace yang dapat menambah anggota.' } });
     }
 
     // Find target user
@@ -220,14 +206,12 @@ router.delete('/:id/members/:userId', async (req: AuthenticatedRequest, res: Res
     const user = req.user;
 
     // Check authorization: must be ADMIN or OWNER of this workspace
-    if (user?.role !== 'ADMIN') {
-      const authCheck = await pool.query(
-        `SELECT role FROM workspace_members WHERE workspace_id = $1 AND user_id = $2`,
-        [workspaceId, user?.id]
-      );
-      if (authCheck.rows.length === 0 || !['OWNER', 'ADMIN'].includes(authCheck.rows[0].role)) {
-        return res.status(403).json({ error: { message: 'Hanya OWNER atau ADMIN workspace yang dapat menghapus anggota.' } });
-      }
+    const authCheck = await pool.query(
+      `SELECT role FROM workspace_members WHERE workspace_id = $1 AND user_id = $2`,
+      [workspaceId, user?.id]
+    );
+    if (authCheck.rows.length === 0 || !['OWNER', 'ADMIN'].includes(authCheck.rows[0].role)) {
+      return res.status(403).json({ error: { message: 'Hanya OWNER atau ADMIN workspace yang dapat menghapus anggota.' } });
     }
 
     await pool.query(
@@ -245,9 +229,18 @@ router.delete('/:id/members/:userId', async (req: AuthenticatedRequest, res: Res
 router.patch('/:id', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
+    const user = req.user;
     const { name } = req.body;
     if (!name || !name.trim()) {
       return res.status(400).json({ error: { message: 'Nama workspace baru wajib diisi.' } });
+    }
+
+    const authCheck = await pool.query(
+      `SELECT role FROM workspace_members WHERE workspace_id = $1 AND user_id = $2`,
+      [id, user?.id]
+    );
+    if (authCheck.rows.length === 0 || !['OWNER', 'ADMIN'].includes(authCheck.rows[0].role)) {
+      return res.status(403).json({ error: { message: 'Hanya OWNER atau ADMIN workspace yang dapat mengubah nama workspace.' } });
     }
 
     await pool.query(`UPDATE workspaces SET name = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, [name.trim(), id]);
