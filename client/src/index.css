@@ -1,6 +1,11 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-dark-bg: #0B0F17;
+  --color-dark-surface: #111827;
+  --color-dark-border: #1F2937;
+  --color-dark-card: #161F30;
+}
 
 :root {
   color-scheme: dark;

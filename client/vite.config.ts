@@ -1,13 +1,14 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      '@shared': path.resolve(__dirname, '../shared'),
-      '@': path.resolve(__dirname, './src')
+      '@shared': path.resolve(import.meta.dirname, '../shared'),
+      '@': path.resolve(import.meta.dirname, './src')
     }
   },
   server: {
@@ -20,13 +21,13 @@ export default defineConfig({
     }
   },
   build: {
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 1200,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom'],
-          'vendor-icons': ['lucide-react'],
-          'vendor-three': ['three']
+        manualChunks(id: string) {
+          if (id.includes('node_modules/three')) return 'vendor-three';
+          if (id.includes('node_modules/lucide-react')) return 'vendor-icons';
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) return 'vendor-react';
         }
       }
     }
