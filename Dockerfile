@@ -6,7 +6,7 @@
 # --------------------------------------------------------------
 # Stage 1: Build Frontend (Vite/Three.js) & Backend (Express ESM)
 # --------------------------------------------------------------
-FROM node:20-bookworm-slim AS builder
+FROM node:22-bookworm-slim AS builder
 WORKDIR /app
 
 # Copy package manifests across monorepo workspaces
@@ -26,7 +26,7 @@ RUN npm run build
 # --------------------------------------------------------------
 # Stage 2: Hardened Production Runtime
 # --------------------------------------------------------------
-FROM node:20-bookworm-slim AS runner
+FROM node:22-bookworm-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
