@@ -388,6 +388,18 @@ export const api = {
     method: 'POST',
     body: JSON.stringify({ operatorId, reason })
   }),
+  runCodeInSandbox: (data: { language?: string; code: string; timeoutMs?: number }) => request<{
+    success: boolean;
+    exitCode: number;
+    stdout: string;
+    stderr: string;
+    durationMs: number;
+    language: string;
+    executedAt: string;
+  }>('/actions/sandbox/run-code', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
 
   // RAG & Semantic Vector Memory (pgvector)
   getRagStats: () => request<RagIndexStats>('/rag/stats'),

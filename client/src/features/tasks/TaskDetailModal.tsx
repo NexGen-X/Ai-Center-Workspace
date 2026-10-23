@@ -19,13 +19,17 @@ import {
   Sparkles,
   Copy,
   Download,
-  CheckCheck
+  CheckCheck,
+  ChevronDown,
+  ChevronRight,
+  Brain
 } from 'lucide-react';
 import { Task, TaskStatus, TaskPriority, AIAgent, Project, AgentRun } from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
 import { useFeedback } from '../../components/common/FeedbackContext.js';
 import { CustomSelect } from '../../components/common/CustomSelect.js';
 import { CustomDatePicker } from '../../components/common/CustomDatePicker.js';
+import { SandboxTerminalViewer, SandboxExecutionResult } from '../../components/common/SandboxTerminalViewer.js';
 
 interface TaskDetailModalProps {
   taskId: string | null;
@@ -74,6 +78,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   const [streamTokenCount, setStreamTokenCount] = useState(0);
   const [streamingAgentName, setStreamingAgentName] = useState('');
   const streamRef = useRef<HTMLDivElement>(null);
+  const [showHistoricalThoughts, setShowHistoricalThoughts] = useState(false);
 
   // Edit state
   const [isEditing, setIsEditing] = useState(false);
@@ -276,6 +281,47 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     toast.success('Deliverable berhasil diunduh sebagai file Markdown (.md).');
+  };
+
+  const [sandboxResult, setSandboxResult] = useState<SandboxExecutionResult | null>(null);
+  const [executingSandbox, setExecutingSandbox] = useState(false);
+  const [lastExecutedCode, setLastExecutedCode] = useState('');
+
+  const handleExecuteInSandbox = async (rawText: string) => {
+    if (!rawText.trim()) return;
+    setExecutingSandbox(true);
+    setSandboxResult(null);
+
+    // Extract code block or default to bash/node
+    const codeBlockRegex = /```([a-zA-Z0-9_\-+]+)?\s*\n([\s\S]*?)```/;
+    const match = rawText.match(codeBlockRegex);
+    let language = 'javascript';
+    let code = rawText.trim();
+
+    if (match) {
+      const rawLang = (match[1] || '').toLowerCase().trim();
+      code = match[2].trim();
+      if (rawLang === 'python' || rawLang === 'py') language = 'python';
+      else if (rawLang === 'typescript' || rawLang === 'ts') language = 'typescript';
+      else if (rawLang === 'bash' || rawLang === 'sh' || rawLang === 'shell') language = 'bash';
+      else if (rawLang === 'javascript' || rawLang === 'js' || rawLang === 'node') language = 'javascript';
+    }
+
+    setLastExecutedCode(code);
+
+    try {
+      const res = await api.runCodeInSandbox({ language, code, timeoutMs: 20000 });
+      setSandboxResult(res);
+      if (res.success) {
+        toast.success(`Sandbox eksekusi [${language}] sukses (Exit: 0, ${res.durationMs}ms)!`);
+      } else {
+        toast.error(`Sandbox selesai dengan error (Exit: ${res.exitCode}).`);
+      }
+    } catch (err: any) {
+      toast.error(`Gagal mengeksekusi di sandbox: ${err.message}`);
+    } finally {
+      setExecutingSandbox(false);
+    }
   };
 
   const handleTransition = async (newStatus: TaskStatus) => {
@@ -646,6 +692,16 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                   {(() => {
                     const r = lastRun || runs[0];
                     const outputText = r.outputResult || (r as any).output_result || '';
+                    const thinkStart = outputText.indexOf('<think>');
+                    const thinkEnd = outputText.indexOf('</think>');
+                    let historicalThoughts = '';
+                    let cleanOutput = outputText;
+
+                    if (thinkStart !== -1 && thinkEnd !== -1) {
+                      historicalThoughts = outputText.slice(thinkStart + 7, thinkEnd).trim();
+                      cleanOutput = (outputText.slice(0, thinkStart) + outputText.slice(thinkEnd + 8)).trim();
+                    }
+
                     return (
                       <>
                         <div className="flex items-center justify-between flex-wrap gap-2">
@@ -654,10 +710,10 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                             <span>Keluaran Eksekusi Terakhir</span>
                           </h3>
                           {outputText && (
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <button
                                 type="button"
-                                onClick={() => handleCopyOutput(outputText)}
+                                onClick={() => handleCopyOutput(cleanOutput)}
                                 className="flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] font-mono border border-slate-700 transition"
                                 title="Salin output ke clipboard"
                               >
@@ -666,16 +722,52 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handleDownloadDeliverable(task.title, outputText)}
+                                onClick={() => handleDownloadDeliverable(task.title, cleanOutput)}
                                 className="flex items-center gap-1 px-2.5 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 text-[11px] font-mono border border-blue-500/30 transition shadow-sm"
                                 title="Download output sebagai file Markdown (.md)"
                               >
                                 <Download className="w-3 h-3" />
                                 <span>Download .md</span>
                               </button>
+                              <button
+                                type="button"
+                                onClick={() => handleExecuteInSandbox(cleanOutput)}
+                                disabled={executingSandbox}
+                                className="flex items-center gap-1 px-2.5 py-0.5 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-300 text-[11px] font-mono border border-emerald-500/30 transition shadow-sm disabled:opacity-50"
+                                title="Eksekusi skrip kode di keluaran ini langsung di sandbox runtime"
+                              >
+                                <Play className={`w-3 h-3 ${executingSandbox ? 'animate-spin' : 'fill-emerald-400'}`} />
+                                <span>{executingSandbox ? 'Mengeksekusi...' : '⚡ Uji di Sandbox'}</span>
+                              </button>
                             </div>
                           )}
                         </div>
+
+                        {/* Collapsible Chain of Thought Accordion for Historical Reasoning */}
+                        {historicalThoughts && (
+                          <div className="rounded-xl border border-indigo-500/30 bg-indigo-950/20 overflow-hidden font-mono text-[11px]">
+                            <button
+                              type="button"
+                              onClick={() => setShowHistoricalThoughts(!showHistoricalThoughts)}
+                              className="w-full flex items-center justify-between p-2.5 bg-indigo-950/40 text-indigo-300 font-bold hover:bg-indigo-900/30 transition text-left"
+                            >
+                              <div className="flex items-center gap-2">
+                                <Brain className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
+                                <span>Alur Penalaran Model (Chain of Thought • Deep Reasoning)</span>
+                              </div>
+                              <div className="flex items-center gap-1 text-[10px] text-indigo-400">
+                                <span>{showHistoricalThoughts ? 'Sembunyikan' : 'Lihat Penalaran'}</span>
+                                {showHistoricalThoughts ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                              </div>
+                            </button>
+                            {showHistoricalThoughts && (
+                              <div className="p-3 text-indigo-200/90 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto italic border-t border-indigo-500/20 bg-black/40">
+                                {historicalThoughts}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-2">
                           <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono">
                             <span className={`px-2 py-0.5 rounded font-bold ${r.status === 'SUCCEEDED' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
@@ -684,9 +776,23 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                             <span>Durasi: {r.durationMs || 0} ms • Total Token: {r.tokensUsed?.totalTokens || (r as any).tokens_total || 0}</span>
                           </div>
                           <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 font-mono text-[11px] text-slate-200 whitespace-pre-wrap max-h-48 overflow-y-auto">
-                            {outputText || '(Tidak ada keluaran teks)'}
+                            {cleanOutput || '(Tidak ada keluaran teks)'}
                           </div>
                         </div>
+
+                        {/* Interactive Sandbox Terminal Output Drawer */}
+                        {(sandboxResult || executingSandbox) && (
+                          <div className="pt-2 animate-in fade-in">
+                            <SandboxTerminalViewer
+                              result={sandboxResult}
+                              loading={executingSandbox}
+                              title={`Task Sandbox • ${sandboxResult?.language || 'Code Execution'}`}
+                              onClose={() => setSandboxResult(null)}
+                              onReRun={() => handleExecuteInSandbox(outputText)}
+                              initialCode={lastExecutedCode}
+                            />
+                          </div>
+                        )}
                       </>
                     );
                   })()}
