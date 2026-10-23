@@ -354,11 +354,11 @@ export const AppContent: React.FC = () => {
 
   if (isAuthChecking) {
     return (
-      <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#070A0F] text-slate-100 font-sans">
-        <div className="relative flex items-center justify-center w-16 h-16 rounded-2xl bg-cyan-950/40 border border-cyan-500/30 shadow-[0_0_30px_rgba(6,182,212,0.3)]">
-          <div className="w-8 h-8 border-2 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin" />
+      <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#000000] text-zinc-100 font-sans">
+        <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center shadow-lg mb-3">
+          <div className="w-5 h-5 border-2 border-zinc-700 border-t-white rounded-full animate-spin" />
         </div>
-        <p className="mt-4 text-xs font-mono text-cyan-400 tracking-widest uppercase animate-pulse">
+        <p className="text-xs font-mono text-zinc-400 tracking-wider uppercase animate-pulse">
           Memverifikasi Sesi Otorisasi...
         </p>
       </div>
@@ -828,7 +828,7 @@ export const AppContent: React.FC = () => {
 
       {/* Mobile Docked Bottom Navigation Bar (< 768px) */}
       {isMobile && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 dark:bg-[#0B0F17]/95 backdrop-blur-md border-t border-slate-800 px-3 py-1.5 flex items-center justify-around shadow-2xl">
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#000000]/95 backdrop-blur-md border-t border-neutral-200 dark:border-zinc-800 px-3 py-1.5 flex items-center justify-around shadow-2xl">
           <button
             onClick={() => setViewMode(viewMode === '3D' ? '2D' : '3D')}
             className="flex flex-col items-center justify-center py-1 px-2.5 text-[10px] font-mono text-cyan-400"

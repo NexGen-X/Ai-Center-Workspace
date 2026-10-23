@@ -127,18 +127,18 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [themeMode, setThemeModeState] = useState<ThemeMode>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('idtech_app_theme_mode');
+      const saved = localStorage.getItem('idtech_theme_mode') || localStorage.getItem('idtech_app_theme_mode');
       if (saved === 'dark' || saved === 'light' || saved === 'system') return saved;
     }
-    return 'dark';
+    return 'dark'; // Vercel & Railway Pitch Black
   });
 
   const [accentColor, setAccentColorState] = useState<AccentColor>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('idtech_app_theme_accent');
+      const saved = localStorage.getItem('idtech_theme_accent') || localStorage.getItem('idtech_app_theme_accent');
       if (saved && ACCENT_THEMES[saved as AccentColor]) return saved as AccentColor;
     }
-    return 'cyan'; // Default to Electric Cyan for AI Center
+    return 'emerald'; // Default to Railway Cyber Emerald
   });
 
   const [resolvedMode, setResolvedMode] = useState<'dark' | 'light'>('dark');
@@ -178,6 +178,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const setThemeMode = (mode: ThemeMode) => {
     setThemeModeState(mode);
     if (typeof window !== 'undefined') {
+      localStorage.setItem('idtech_theme_mode', mode);
       localStorage.setItem('idtech_app_theme_mode', mode);
     }
   };
@@ -185,6 +186,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const setAccentColor = (accent: AccentColor) => {
     setAccentColorState(accent);
     if (typeof window !== 'undefined') {
+      localStorage.setItem('idtech_theme_accent', accent);
       localStorage.setItem('idtech_app_theme_accent', accent);
     }
   };
@@ -194,7 +196,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     else setThemeMode('dark');
   };
 
-  const accent = ACCENT_THEMES[accentColor] || ACCENT_THEMES.cyan;
+  const accent = ACCENT_THEMES[accentColor] || ACCENT_THEMES.emerald;
 
   return (
     <ThemeContext.Provider
