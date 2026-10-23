@@ -172,6 +172,7 @@ export const PipelineModal: React.FC<PipelineModalProps> = ({
   const [connectingSourceId, setConnectingSourceId] = useState<string | null>(null);
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
 
   // Execution States
   const [activeExecution, setActiveExecution] = useState<WorkflowExecution | null>(null);
@@ -661,60 +662,60 @@ export const PipelineModal: React.FC<PipelineModalProps> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-7xl h-[92vh] flex flex-col bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden"
+        className="relative w-full max-w-7xl h-[92vh] flex flex-col bg-[#09090b] border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden"
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-slate-800 bg-slate-900/90">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
-              <WorkflowIcon className="w-5 h-5" />
+        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between px-3.5 sm:px-6 py-2.5 sm:py-3 border-b border-zinc-800 bg-[#09090b] gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 shrink-0">
+              <WorkflowIcon className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h3 className="text-sm sm:text-base font-bold text-white">
-                  Visual Workflow & DAG Pipeline Studio
+                <h3 className="text-sm sm:text-base font-bold text-white truncate">
+                  Visual Workflow Studio
                 </h3>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30 uppercase tracking-wider font-mono">
+                <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30 uppercase tracking-wider font-mono">
                   No-Code DAG Engine
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-[11px] sm:text-xs text-zinc-400 truncate hidden sm:block">
                 Rancang alur kerja multi-agent, percabangan logika, integrasi RAG & MCP tool secara visual.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {/* Tab Switcher */}
-            <div className="flex p-0.5 rounded-lg bg-slate-800 border border-slate-700/80 text-xs font-semibold">
+            <div className="flex p-0.5 rounded-lg bg-zinc-900 border border-zinc-800 text-xs font-semibold">
               <button
                 type="button"
                 onClick={() => setActiveTab('DAG')}
-                className={`px-3 py-1.5 rounded-md transition ${
+                className={`px-2.5 sm:px-3 py-1 rounded-md transition text-xs ${
                   activeTab === 'DAG'
                     ? 'bg-purple-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-slate-200'
+                    : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                Visual DAG Canvas
+                DAG Canvas
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab('SEQUENTIAL')}
-                className={`px-3 py-1.5 rounded-md transition ${
+                className={`px-2.5 sm:px-3 py-1 rounded-md transition text-xs ${
                   activeTab === 'SEQUENTIAL'
                     ? 'bg-purple-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-slate-200'
+                    : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                Template Sekuensial
+                Sekuensial
               </button>
             </div>
 
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition"
               title="Tutup Modal"
             >
               <X className="w-5 h-5" />
@@ -726,9 +727,9 @@ export const PipelineModal: React.FC<PipelineModalProps> = ({
         {activeTab === 'DAG' && (
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Top Toolbar */}
-            <div className="flex items-center justify-between px-4 py-2 border-b border-slate-800 bg-slate-950/70 text-xs gap-3 flex-wrap">
-              <div className="flex items-center gap-2.5">
-                <span className="font-bold text-slate-400 text-[11px] uppercase tracking-wider">Workflow:</span>
+            <div className="flex items-center justify-between px-3 sm:px-4 py-2 border-b border-zinc-800 bg-[#09090b] text-xs gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-bold text-zinc-400 text-[11px] uppercase tracking-wider hidden sm:inline">Workflow:</span>
                 <select
                   value={selectedWorkflow?.id || ''}
                   onChange={(e) => {
@@ -738,7 +739,7 @@ export const PipelineModal: React.FC<PipelineModalProps> = ({
                       setSelectedNodeId(null);
                     }
                   }}
-                  className="px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-white font-semibold focus:outline-none focus:border-purple-500"
+                  className="px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-white font-semibold focus:outline-none focus:border-purple-500 max-w-[160px] sm:max-w-none truncate"
                 >
                   {workflows.map((w) => (
                     <option key={w.id} value={w.id}>
@@ -764,10 +765,20 @@ export const PipelineModal: React.FC<PipelineModalProps> = ({
                     setSelectedNodeId(null);
                     toast.success('Workflow baru dibuat!');
                   }}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition"
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 transition"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Baru</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsPaletteOpen(!isPaletteOpen)}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 transition text-xs font-semibold lg:hidden"
+                  title="Buka Node Palette"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>+ Node</span>
                 </button>
 
                 <select
@@ -777,7 +788,7 @@ export const PipelineModal: React.FC<PipelineModalProps> = ({
                       e.target.value = '';
                     }
                   }}
-                  className="px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-xs focus:outline-none"
+                  className="px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs focus:outline-none max-w-[140px] sm:max-w-none truncate hidden sm:block"
                   defaultValue=""
                 >
                   <option value="" disabled>✦ Muat Template Cepat...</option>
@@ -789,22 +800,22 @@ export const PipelineModal: React.FC<PipelineModalProps> = ({
               {/* Action Buttons & Zoom */}
               <div className="flex items-center gap-2">
                 {/* Zoom Controls */}
-                <div className="flex items-center bg-slate-800 rounded-lg border border-slate-700">
+                <div className="hidden sm:flex items-center bg-zinc-900 rounded-lg border border-zinc-800">
                   <button
                     type="button"
                     onClick={() => setCanvasZoom(Math.max(0.6, canvasZoom - 0.1))}
-                    className="p-1.5 hover:text-white text-slate-400"
+                    className="p-1.5 hover:text-white text-zinc-400"
                     title="Perkecil"
                   >
                     <ZoomOut className="w-3.5 h-3.5" />
                   </button>
-                  <span className="text-[10px] font-mono px-1.5 text-slate-300">
+                  <span className="text-[10px] font-mono px-1.5 text-zinc-300">
                     {Math.round(canvasZoom * 100)}%
                   </span>
                   <button
                     type="button"
                     onClick={() => setCanvasZoom(Math.min(1.4, canvasZoom + 0.1))}
-                    className="p-1.5 hover:text-white text-slate-400"
+                    className="p-1.5 hover:text-white text-zinc-400"
                     title="Perbesar"
                   >
                     <ZoomIn className="w-3.5 h-3.5" />
@@ -812,7 +823,7 @@ export const PipelineModal: React.FC<PipelineModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setCanvasZoom(1)}
-                    className="p-1.5 hover:text-white text-slate-400 border-l border-slate-700"
+                    className="p-1.5 hover:text-white text-zinc-400 border-l border-zinc-800"
                     title="Reset Zoom"
                   >
                     <RotateCcw className="w-3 h-3" />
@@ -822,39 +833,54 @@ export const PipelineModal: React.FC<PipelineModalProps> = ({
                 <button
                   type="button"
                   onClick={handleSaveWorkflow}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold transition"
+                  className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 font-semibold transition"
                 >
                   <Save className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Simpan</span>
+                  <span className="hidden sm:inline">Simpan</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={handleExecuteDag}
                   disabled={isExecutingDag}
-                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold shadow-lg shadow-purple-900/30 transition disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold shadow-lg shadow-purple-900/30 transition disabled:opacity-50 text-xs"
                 >
                   <Play className={`w-3.5 h-3.5 ${isExecutingDag ? 'animate-spin' : 'fill-white'}`} />
-                  <span>{isExecutingDag ? 'Mengeksekusi DAG...' : 'Jalankan DAG'}</span>
+                  <span>{isExecutingDag ? 'Mengeksekusi...' : 'Jalankan DAG'}</span>
                 </button>
               </div>
             </div>
 
             {/* Main Studio Area (Palette + Canvas + Inspector) */}
             <div className="flex-1 flex overflow-hidden relative">
-              {/* Left Sidebar: Node Palette */}
-              <div className="w-56 border-r border-slate-800 bg-slate-950/80 p-3 flex flex-col gap-2 overflow-y-auto shrink-0 z-20">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1 mb-1">
-                  Node Palette
-                </span>
+              {/* Left Sidebar: Node Palette - Responsive Drawer on Mobile */}
+              <div className={`
+                ${isPaletteOpen ? 'fixed inset-y-0 left-0 z-40 w-64 bg-[#09090b]/98 shadow-2xl border-r border-zinc-800' : 'hidden lg:flex'}
+                lg:static lg:w-56 lg:border-r lg:border-zinc-800 lg:bg-[#09090b] p-3 flex flex-col gap-2 overflow-y-auto shrink-0 z-20
+              `}>
+                <div className="flex items-center justify-between pb-1 border-b border-zinc-800 lg:border-none">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 px-1 mb-1">
+                    Node Palette
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsPaletteOpen(false)}
+                    className="p-1 rounded text-zinc-400 hover:text-white lg:hidden"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
                 {NODE_PALETTE.map((item) => {
                   const Icon = item.icon;
                   return (
                     <button
                       key={item.type}
                       type="button"
-                      onClick={() => handleAddNode(item.type)}
-                      className="flex items-center gap-2 p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-left transition group hover:scale-[1.02]"
+                      onClick={() => {
+                        handleAddNode(item.type);
+                        setIsPaletteOpen(false);
+                      }}
+                      className="flex items-center gap-2 p-2 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-left transition group hover:scale-[1.02]"
                     >
                       <div className={`p-1.5 rounded-lg ${item.badgeBg} border ${item.color} shrink-0`}>
                         <Icon className="w-4 h-4" />
@@ -863,7 +889,7 @@ export const PipelineModal: React.FC<PipelineModalProps> = ({
                         <span className="text-xs font-bold text-white block truncate group-hover:text-cyan-300">
                           {item.label}
                         </span>
-                        <span className="text-[10px] text-slate-500 block truncate">
+                        <span className="text-[10px] text-zinc-400 block truncate">
                           {item.description}
                         </span>
                       </div>
@@ -871,7 +897,7 @@ export const PipelineModal: React.FC<PipelineModalProps> = ({
                   );
                 })}
 
-                <div className="mt-auto p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80 text-[10px] text-slate-400 space-y-1">
+                <div className="mt-auto p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800 text-[10px] text-zinc-400 space-y-1">
                   <span className="font-bold text-slate-300 block">💡 Tips Studio:</span>
                   <p>• Klik & seret node untuk mengubah posisi.</p>
                   <p>• Klik port <strong>[+]</strong> pada node untuk menghubungkan garis alur.</p>
@@ -1087,9 +1113,9 @@ export const PipelineModal: React.FC<PipelineModalProps> = ({
                 )}
               </div>
 
-              {/* Right Sidebar: Node Config Inspector */}
+              {/* Right Sidebar: Node Config Inspector (Mobile Bottom Sheet / Desktop Sidebar) */}
               {selectedNode && (
-                <div className="w-80 border-l border-slate-800 bg-slate-950/90 p-4 flex flex-col justify-between gap-4 overflow-y-auto shrink-0 z-20 animate-in fade-in slide-in-from-right-2">
+                <div className="fixed inset-x-0 bottom-0 max-h-[75vh] md:static md:w-80 border-t md:border-t-0 md:border-l border-zinc-800 bg-[#09090b]/98 md:bg-[#09090b] p-4 rounded-t-2xl md:rounded-none flex flex-col justify-between gap-4 overflow-y-auto shrink-0 z-30 shadow-2xl md:shadow-none animate-in fade-in slide-in-from-bottom-2 md:slide-in-from-right-2">
                   <div className="space-y-4 text-xs">
                     <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                       <div className="flex items-center gap-2">

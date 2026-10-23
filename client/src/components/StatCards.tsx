@@ -19,9 +19,9 @@ export const StatCards: React.FC<StatCardsProps> = ({
 }) => {
   if (loading || !summary) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3 mb-6">
         {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="h-24 bg-slate-900/50 border border-slate-800/80 rounded-xl animate-pulse" />
+          <div key={i} className="h-24 bg-zinc-900/50 border border-zinc-800 rounded-xl animate-pulse" />
         ))}
       </div>
     );
@@ -30,14 +30,14 @@ export const StatCards: React.FC<StatCardsProps> = ({
   const { runningTasksCount, completedTasksCount, onlineAgentsCount, totalAgentsCount, activeProjectsCount } = summary;
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-6">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3 mb-6">
       {/* 1. Running Tasks */}
       <div
         onClick={onOpenTasks}
-        className="bg-[#111827]/80 border border-blue-500/20 rounded-xl p-3.5 relative overflow-hidden group hover:border-blue-500/50 cursor-pointer transition"
+        className="bg-[#09090b] border border-zinc-800 rounded-xl p-3.5 relative overflow-hidden group hover:border-blue-500/50 cursor-pointer transition"
       >
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-slate-400 group-hover:text-blue-300 transition">Tugas Berjalan</span>
+          <span className="text-xs font-medium text-zinc-400 group-hover:text-blue-300 transition">Tugas Berjalan</span>
           <div className="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
             <PlayCircle className="w-4 h-4" />
           </div>
@@ -52,10 +52,10 @@ export const StatCards: React.FC<StatCardsProps> = ({
       {/* 2. Completed Tasks */}
       <div
         onClick={onOpenTasks}
-        className="bg-[#111827]/80 border border-emerald-500/20 rounded-xl p-3.5 relative overflow-hidden group hover:border-emerald-500/50 cursor-pointer transition"
+        className="bg-[#09090b] border border-zinc-800 rounded-xl p-3.5 relative overflow-hidden group hover:border-emerald-500/50 cursor-pointer transition"
       >
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-slate-400 group-hover:text-emerald-300 transition">Tugas Selesai</span>
+          <span className="text-xs font-medium text-zinc-400 group-hover:text-emerald-300 transition">Tugas Selesai</span>
           <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
             <CheckCircle2 className="w-4 h-4" />
           </div>
@@ -70,17 +70,17 @@ export const StatCards: React.FC<StatCardsProps> = ({
       {/* 3. Active AI Agents */}
       <div
         onClick={onOpenManageTeam}
-        className="bg-[#111827]/80 border border-purple-500/20 rounded-xl p-3.5 relative overflow-hidden group hover:border-purple-500/50 cursor-pointer transition"
+        className="bg-[#09090b] border border-zinc-800 rounded-xl p-3.5 relative overflow-hidden group hover:border-purple-500/50 cursor-pointer transition"
       >
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-slate-400 group-hover:text-purple-300 transition">Tim AI Aktif</span>
+          <span className="text-xs font-medium text-zinc-400 group-hover:text-purple-300 transition">Tim AI Aktif</span>
           <div className="w-7 h-7 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400">
             <Users className="w-4 h-4" />
           </div>
         </div>
         <div className="flex items-baseline gap-2">
           <span className="text-2xl font-black text-white font-mono">{onlineAgentsCount}</span>
-          <span className="text-[11px] text-slate-400 font-mono">/ {totalAgentsCount} online</span>
+          <span className="text-[11px] text-zinc-400 font-mono">/ {totalAgentsCount} online</span>
         </div>
         <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-500 to-transparent" />
       </div>
@@ -88,10 +88,10 @@ export const StatCards: React.FC<StatCardsProps> = ({
       {/* 4. Active Projects */}
       <div
         onClick={onOpenProjects}
-        className="bg-[#111827]/80 border border-amber-500/20 rounded-xl p-3.5 relative overflow-hidden group hover:border-amber-500/50 cursor-pointer transition"
+        className="bg-[#09090b] border border-zinc-800 rounded-xl p-3.5 relative overflow-hidden group hover:border-amber-500/50 cursor-pointer transition"
       >
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-slate-400 group-hover:text-amber-300 transition">Proyek Aktif</span>
+          <span className="text-xs font-medium text-zinc-400 group-hover:text-amber-300 transition">Proyek Aktif</span>
           <div className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400">
             <Layers className="w-4 h-4" />
           </div>
@@ -104,9 +104,9 @@ export const StatCards: React.FC<StatCardsProps> = ({
       </div>
 
       {/* 5. AI Workspace SLA & Efficiency */}
-      <div className="col-span-2 md:col-span-4 lg:col-span-1 bg-[#111827]/80 border border-cyan-500/20 rounded-xl p-3.5 relative overflow-hidden group hover:border-cyan-500/40 transition">
+      <div className="col-span-2 sm:col-span-1 lg:col-span-1 bg-[#09090b] border border-zinc-800 rounded-xl p-3.5 relative overflow-hidden group hover:border-cyan-500/40 transition">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-slate-400">Efisiensi AI SLA</span>
+          <span className="text-xs font-medium text-zinc-400">Efisiensi AI SLA</span>
           <div className="w-7 h-7 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-400">
             <Sparkles className="w-4 h-4" />
           </div>
@@ -114,7 +114,7 @@ export const StatCards: React.FC<StatCardsProps> = ({
         <div className="flex items-center justify-between">
           <div>
             <span className="text-2xl font-black text-white font-mono">99.4%</span>
-            <span className="text-[10px] text-slate-400 block font-mono">Latensi Rendah</span>
+            <span className="text-[10px] text-zinc-400 block font-mono">Latensi Rendah</span>
           </div>
           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
             OPTIMAL

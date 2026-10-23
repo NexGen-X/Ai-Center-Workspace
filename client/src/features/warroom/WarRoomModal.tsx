@@ -15,7 +15,8 @@ import {
   Cpu,
   Layers,
   Flame,
-  ArrowRight
+  ArrowRight,
+  ArrowLeft
 } from 'lucide-react';
 import {
   AIAgent,
@@ -268,33 +269,36 @@ export const WarRoomModal: React.FC<WarRoomModalProps> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-6xl h-[90vh] flex flex-col bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden"
+        className="relative w-full max-w-6xl h-[90vh] flex flex-col bg-[#09090b] border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-slate-800 bg-slate-900/90">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400">
-              <Swords className="w-5 h-5" />
+        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between px-3.5 sm:px-6 py-2.5 sm:py-3.5 border-b border-zinc-800 bg-[#09090b] gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 shrink-0">
+              <Swords className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h3 className="text-sm sm:text-base font-bold text-white">
-                  Multi-Agent War Room & Live Debate Studio
+                <h3 className="text-sm sm:text-base font-bold text-white truncate">
+                  Multi-Agent War Room
                 </h3>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30 uppercase tracking-wider font-mono">
+                <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30 uppercase tracking-wider font-mono">
                   Autonomous Deliberation
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-[11px] sm:text-xs text-zinc-400 truncate hidden sm:block">
                 Debat arsitektur kolaboratif multi-agen untuk merumuskan konsensus teknis terbaik.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
-              onClick={() => setIsCreatingNew(true)}
+              onClick={() => {
+                setSelectedRoom(null);
+                setIsCreatingNew(true);
+              }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600/80 hover:bg-rose-500 text-white text-xs font-semibold shadow-md transition"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -303,7 +307,7 @@ export const WarRoomModal: React.FC<WarRoomModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition"
               title="Tutup Modal"
             >
               <X className="w-5 h-5" />
@@ -313,11 +317,14 @@ export const WarRoomModal: React.FC<WarRoomModalProps> = ({
 
         {/* Body Container */}
         <div className="flex-1 flex overflow-hidden">
-          {/* Left Sidebar: Session List */}
-          <div className="w-64 sm:w-72 border-r border-slate-800 bg-slate-950/50 flex flex-col shrink-0">
-            <div className="p-3 border-b border-slate-800 text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+          {/* Left Sidebar: Session List - hides on mobile if detail/create view is open */}
+          <div className={`
+            ${selectedRoom || isCreatingNew ? 'hidden md:flex' : 'flex'}
+            w-full md:w-72 border-r border-zinc-800 bg-[#09090b] flex-col shrink-0
+          `}>
+            <div className="p-3 border-b border-zinc-800 text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center justify-between">
               <span>Daftar Sesi War Room</span>
-              <span className="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] font-mono text-slate-300">
+              <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-[10px] font-mono text-zinc-300">
                 {rooms.length}
               </span>
             </div>
@@ -365,7 +372,24 @@ export const WarRoomModal: React.FC<WarRoomModalProps> = ({
           </div>
 
           {/* Right Area: Active Debate Canvas or Create New Form */}
-          <div className="flex-1 flex flex-col bg-slate-900 overflow-hidden">
+          <div className={`
+            ${selectedRoom || isCreatingNew ? 'flex' : 'hidden md:flex'}
+            flex-1 flex-col bg-[#09090b] overflow-hidden
+          `}>
+            {/* Mobile Back Button */}
+            <div className="flex items-center justify-between p-2.5 bg-zinc-950 border-b border-zinc-800 md:hidden">
+              <button
+                type="button"
+                onClick={() => { setSelectedRoom(null); setIsCreatingNew(false); }}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-rose-400 text-xs font-semibold"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>← Sesi Lain</span>
+              </button>
+              <span className="text-xs text-zinc-300 font-medium truncate max-w-[180px]">
+                {isCreatingNew ? 'Buat Sesi Baru' : selectedRoom?.title}
+              </span>
+            </div>
             {isCreatingNew ? (
               // Create New War Room Form
               <div className="flex-1 p-6 overflow-y-auto max-w-2xl mx-auto w-full">
@@ -666,19 +690,34 @@ export const WarRoomModal: React.FC<WarRoomModalProps> = ({
                   </form>
                 </div>
               </div>
-            ) : null}
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-zinc-500">
+                <Swords className="w-12 h-12 text-zinc-700 mb-3" />
+                <h4 className="text-sm font-bold text-zinc-300 mb-1">Pilih Sesi War Room</h4>
+                <p className="text-xs text-zinc-500 max-w-sm mb-4">
+                  Pilih salah satu sesi di sebelah kiri untuk melihat perdebatan multi-agent secara real-time, atau buat sesi baru.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingNew(true)}
+                  className="px-4 py-2 rounded-xl bg-rose-600/80 hover:bg-rose-500 text-white text-xs font-semibold shadow-md transition"
+                >
+                  + Mulai Sesi Baru
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-2.5 border-t border-slate-800 bg-slate-900/90 flex justify-between items-center text-xs">
-          <span className="text-slate-500 font-mono text-[11px]">
-            Collaborative Multi-Perspective Autonomous Consensus Engine
+        <div className="px-4 sm:px-6 py-2.5 border-t border-zinc-800 bg-[#09090b] flex justify-between items-center text-xs">
+          <span className="text-zinc-500 font-mono text-[10px] sm:text-[11px] truncate mr-2">
+            Multi-Perspective Autonomous Consensus Engine
           </span>
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold"
+            className="px-3.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-semibold shrink-0"
           >
             Tutup
           </button>

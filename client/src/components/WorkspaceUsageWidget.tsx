@@ -28,14 +28,14 @@ export const WorkspaceUsageWidget: React.FC<WorkspaceUsageWidgetProps> = ({
   const agentPercent = Math.min(100, Math.round((onlineAgentsCount / agentLimit) * 100));
 
   return (
-    <div className="bg-[#111827]/90 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-lg">
+    <div className="bg-[#09090b] border border-zinc-800 rounded-xl p-4 flex flex-col justify-between shadow-lg">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-cyan-400" />
           <h2 className="text-sm font-bold text-white">Kuota &amp; Kapasitas Workspace</h2>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {onOpenPricing && (
             <button
               type="button"

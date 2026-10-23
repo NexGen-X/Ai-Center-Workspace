@@ -917,22 +917,22 @@ export const AppContent: React.FC = () => {
           onClick={() => setIsMobileMoreOpen(false)}
         >
           <div 
-            className="w-full bg-white dark:bg-[#000000] rounded-t-3xl border-t border-neutral-200 dark:border-zinc-800 p-5 space-y-4 shadow-2xl max-h-[85vh] overflow-y-auto pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+            className="w-full bg-[#09090b] text-white rounded-t-3xl border-t border-zinc-800 p-5 space-y-4 shadow-2xl max-h-[85vh] overflow-y-auto pb-[max(1.5rem,env(safe-area-inset-bottom))]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Mobile Swipe Handle */}
-            <div className="w-12 h-1.5 bg-neutral-300 dark:bg-zinc-700 rounded-full mx-auto my-1 shrink-0" />
+            <div className="w-12 h-1.5 bg-zinc-700 rounded-full mx-auto my-1 shrink-0" />
 
-            <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-zinc-800">
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
               <div className="flex items-center gap-2">
                 <LayoutGrid className="w-4 h-4 text-cyan-400" />
-                <h3 className="font-bold text-sm text-neutral-900 dark:text-white">
+                <h3 className="font-bold text-sm text-white">
                   Seluruh Modul & Fitur AI Command Center
                 </h3>
               </div>
               <button
                 onClick={() => setIsMobileMoreOpen(false)}
-                className="p-1 rounded-full text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                className="p-1 rounded-full text-zinc-400 hover:text-white"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -942,134 +942,134 @@ export const AppContent: React.FC = () => {
             <div className="grid grid-cols-2 gap-2 text-xs">
               <button
                 onClick={() => { setIsMobileMoreOpen(false); setIsWarRoomOpen(true); }}
-                className="p-3 rounded-xl bg-neutral-50 dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
+                className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
               >
                 <div className="flex items-center gap-2 text-rose-400 font-bold">
                   <Swords className="w-4 h-4" />
                   <span>War Room</span>
                 </div>
-                <p className="text-[10px] text-neutral-500 dark:text-zinc-400">Kolaborasi multi-agen real-time</p>
+                <p className="text-[10px] text-zinc-400">Kolaborasi multi-agen real-time</p>
               </button>
 
               <button
                 onClick={() => { setIsMobileMoreOpen(false); setIsPlaygroundOpen(true); }}
-                className="p-3 rounded-xl bg-neutral-50 dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
+                className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
               >
                 <div className="flex items-center gap-2 text-amber-400 font-bold">
                   <FlaskConical className="w-4 h-4" />
                   <span>AI Playground</span>
                 </div>
-                <p className="text-[10px] text-neutral-500 dark:text-zinc-400">Uji prompt & benchmark model</p>
+                <p className="text-[10px] text-zinc-400">Uji prompt & benchmark model</p>
               </button>
 
               <button
                 onClick={() => { setIsMobileMoreOpen(false); setIsDataAnalystOpen(true); }}
-                className="p-3 rounded-xl bg-neutral-50 dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
+                className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
               >
                 <div className="flex items-center gap-2 text-blue-400 font-bold">
                   <LineChart className="w-4 h-4" />
                   <span>Data Analyst</span>
                 </div>
-                <p className="text-[10px] text-neutral-500 dark:text-zinc-400">Otomasi query & visualisasi</p>
+                <p className="text-[10px] text-zinc-400">Otomasi query & visualisasi</p>
               </button>
 
               <button
                 onClick={() => { setIsMobileMoreOpen(false); setIsMemoryGraphOpen(true); }}
-                className="p-3 rounded-xl bg-neutral-50 dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
+                className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
               >
                 <div className="flex items-center gap-2 text-purple-400 font-bold">
                   <Brain className="w-4 h-4" />
                   <span>Memory Graph</span>
                 </div>
-                <p className="text-[10px] text-neutral-500 dark:text-zinc-400">Peta memori semantik agen</p>
+                <p className="text-[10px] text-zinc-400">Peta memori semantik agen</p>
               </button>
 
               <button
                 onClick={() => { setIsMobileMoreOpen(false); setIsSkillsOpen(true); }}
-                className="p-3 rounded-xl bg-neutral-50 dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
+                className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
               >
                 <div className="flex items-center gap-2 text-emerald-400 font-bold">
                   <Wrench className="w-4 h-4" />
                   <span>Skill Studio</span>
                 </div>
-                <p className="text-[10px] text-neutral-500 dark:text-zinc-400">Kustomisasi function tools</p>
+                <p className="text-[10px] text-zinc-400">Kustomisasi function tools</p>
               </button>
 
               <button
                 onClick={() => { setIsMobileMoreOpen(false); setIsProjectsOpen(true); }}
-                className="p-3 rounded-xl bg-neutral-50 dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
+                className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
               >
                 <div className="flex items-center gap-2 text-cyan-400 font-bold">
                   <FolderKanban className="w-4 h-4" />
                   <span>Proyek</span>
                 </div>
-                <p className="text-[10px] text-neutral-500 dark:text-zinc-400">Kelola workspace & deliverables</p>
+                <p className="text-[10px] text-zinc-400">Kelola workspace & deliverables</p>
               </button>
 
               <button
                 onClick={() => { setIsMobileMoreOpen(false); setIsFinOpsOpen(true); }}
-                className="p-3 rounded-xl bg-neutral-50 dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
+                className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
               >
                 <div className="flex items-center gap-2 text-emerald-500 font-bold">
                   <DollarSign className="w-4 h-4" />
                   <span>FinOps & Quota</span>
                 </div>
-                <p className="text-[10px] text-neutral-500 dark:text-zinc-400">Efisiensi biaya token & task</p>
+                <p className="text-[10px] text-zinc-400">Efisiensi biaya token & task</p>
               </button>
 
               <button
                 onClick={() => { setIsMobileMoreOpen(false); setIsCalendarOpen(true); }}
-                className="p-3 rounded-xl bg-neutral-50 dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
+                className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
               >
                 <div className="flex items-center gap-2 text-sky-400 font-bold">
                   <CalendarIcon className="w-4 h-4" />
                   <span>Jadwal / Kalender</span>
                 </div>
-                <p className="text-[10px] text-neutral-500 dark:text-zinc-400">Cron jobs & trigger berkala</p>
+                <p className="text-[10px] text-zinc-400">Cron jobs & trigger berkala</p>
               </button>
 
               <button
                 onClick={() => { setIsMobileMoreOpen(false); setIsDocumentsOpen(true); }}
-                className="p-3 rounded-xl bg-neutral-50 dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
+                className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
               >
                 <div className="flex items-center gap-2 text-indigo-400 font-bold">
                   <FileText className="w-4 h-4" />
                   <span>Dokumen RAG</span>
                 </div>
-                <p className="text-[10px] text-neutral-500 dark:text-zinc-400">Basis data pengetahuan AI</p>
+                <p className="text-[10px] text-zinc-400">Basis data pengetahuan AI</p>
               </button>
 
               <button
                 onClick={() => { setIsMobileMoreOpen(false); setIsGitHubOpen(true); }}
-                className="p-3 rounded-xl bg-neutral-50 dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
+                className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
               >
                 <div className="flex items-center gap-2 text-violet-400 font-bold">
                   <GitPullRequest className="w-4 h-4" />
                   <span>GitHub Webhook</span>
                 </div>
-                <p className="text-[10px] text-neutral-500 dark:text-zinc-400">CI/CD & issue automation</p>
+                <p className="text-[10px] text-zinc-400">CI/CD & issue automation</p>
               </button>
 
               <button
                 onClick={() => { setIsMobileMoreOpen(false); setIsProvidersModalOpen(true); }}
-                className="p-3 rounded-xl bg-neutral-50 dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
+                className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
               >
                 <div className="flex items-center gap-2 text-pink-400 font-bold">
                   <Sliders className="w-4 h-4" />
                   <span>Model Providers</span>
                 </div>
-                <p className="text-[10px] text-neutral-500 dark:text-zinc-400">OpenAI, Anthropic, Gemini</p>
+                <p className="text-[10px] text-zinc-400">OpenAI, Anthropic, Gemini</p>
               </button>
 
               <button
                 onClick={() => { setIsMobileMoreOpen(false); setIsSettingsOpen(true); }}
-                className="p-3 rounded-xl bg-neutral-50 dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
+                className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
               >
                 <div className="flex items-center gap-2 text-zinc-400 font-bold">
                   <Settings className="w-4 h-4" />
                   <span>Pengaturan</span>
                 </div>
-                <p className="text-[10px] text-neutral-500 dark:text-zinc-400">Konfigurasi sistem & tenant</p>
+                <p className="text-[10px] text-zinc-400">Konfigurasi sistem & tenant</p>
               </button>
             </div>
           </div>

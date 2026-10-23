@@ -66,7 +66,12 @@ export const ManageTeamModal: React.FC<ManageTeamModalProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return 'grid';
+    }
+    return 'table';
+  });
   const [pingingAgentId, setPingingAgentId] = useState<string | null>(null);
   const [pingResults, setPingResults] = useState<Record<string, { success: boolean; latencyMs: number; message?: string }>>({});
   const [togglingAgentId, setTogglingAgentId] = useState<string | null>(null);
@@ -288,16 +293,16 @@ export const ManageTeamModal: React.FC<ManageTeamModalProps> = ({
         </div>
 
         {/* Filter and Control Bar */}
-        <div className="p-3 sm:p-4 px-3.5 sm:px-6 border-b border-slate-800/60 flex items-center justify-between flex-wrap gap-2.5 sm:gap-3">
-          <div className="flex items-center gap-2 flex-1 min-w-[200px] sm:min-w-[240px]">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
+        <div className="p-3 sm:p-4 px-3.5 sm:px-6 border-b border-zinc-800 flex items-center justify-between flex-wrap gap-2.5 sm:gap-3 bg-[#09090b]">
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 flex-1 min-w-0 w-full sm:w-auto">
+            <div className="relative flex-1 min-w-[140px] max-w-sm">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-zinc-500" />
               <input
                 type="text"
                 placeholder="Cari nama, peran, model..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500"
               />
             </div>
 
@@ -314,7 +319,7 @@ export const ManageTeamModal: React.FC<ManageTeamModalProps> = ({
                 { value: 'DevOps', label: 'DevOps' },
                 { value: 'Domain Specialist', label: 'Domain Specialist' },
               ]}
-              className="w-40 shrink-0"
+              className="w-full sm:w-40 shrink-0"
             />
           </div>
 
