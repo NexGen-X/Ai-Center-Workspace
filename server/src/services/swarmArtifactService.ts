@@ -276,8 +276,27 @@ export class SwarmArtifactService {
 
       const filesCommitted: string[] = [`docs/swarm-reports/${reportFileName}`];
 
-      // Stage and commit
+      // Stage report file
       await execFileAsync('git', ['add', `docs/swarm-reports/${reportFileName}`], { cwd: repoRoot });
+
+      // Write and stage all extracted deliverable code files safely
+      for (const file of bundle.extractedFiles) {
+        const normalized = path.normalize(file.filePath).replace(/^(\.\.(\/|\\|$))+/, '');
+        if (
+          normalized.startsWith('.git') ||
+          normalized.startsWith('node_modules') ||
+          normalized.startsWith('.env')
+        ) {
+          continue;
+        }
+
+        const fullFilePath = path.join(repoRoot, normalized);
+        const fileDir = path.dirname(fullFilePath);
+        fs.mkdirSync(fileDir, { recursive: true });
+        fs.writeFileSync(fullFilePath, file.content, 'utf8');
+        filesCommitted.push(normalized);
+        await execFileAsync('git', ['add', normalized], { cwd: repoRoot });
+      }
 
       const commitMsg = options?.commitMessage?.trim() ||
         `feat(swarm): automated deliverables for "${bundle.missionTitle}" [${missionId}]`;
