@@ -43,13 +43,16 @@ export const TasksModal: React.FC<TasksModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
-        className="bg-[#0B0F17] border border-slate-800 rounded-2xl w-full max-w-6xl max-h-[94vh] sm:max-h-[90vh] flex flex-col shadow-2xl shadow-blue-950/40 overflow-hidden"
+        className="bg-[#0B0F17] border border-slate-800 rounded-t-3xl sm:rounded-2xl w-full max-w-6xl max-h-[92vh] sm:max-h-[90vh] flex flex-col shadow-2xl shadow-blue-950/40 overflow-hidden pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:pb-0"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Mobile Swipe Handle */}
+        <div className="w-12 h-1.5 bg-zinc-700/80 rounded-full mx-auto my-2 sm:hidden shrink-0" />
+
         {/* Header */}
         <div className="flex items-center justify-between px-3.5 sm:px-6 py-3 sm:py-4 border-b border-slate-800 bg-slate-900/40 gap-2">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">

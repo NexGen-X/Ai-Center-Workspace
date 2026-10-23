@@ -279,8 +279,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Center: Sleek Pill Navigation Bar (Matching Screenshot & Swipeable on Mobile) */}
-        <nav className="flex items-center bg-slate-900/90 border border-slate-800/90 rounded-2xl p-1 shadow-inner gap-0.5 overflow-x-auto no-scrollbar scroll-smooth w-full lg:w-auto justify-start lg:justify-center">
+        {/* Center: Sleek Pill Navigation Bar (Visible on Desktop/Laptop >= lg, Repositioned to Bottom Dock on Mobile) */}
+        <nav className="hidden lg:flex items-center bg-slate-900/90 dark:bg-zinc-950/90 border border-slate-800/90 dark:border-zinc-800 rounded-2xl p-1 shadow-inner gap-0.5 overflow-x-auto no-scrollbar scroll-smooth w-full lg:w-auto justify-start lg:justify-center">
           {/* Beranda (Active Tab) */}
           <button
             className="flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold shadow-md shadow-blue-600/30 transition shrink-0 whitespace-nowrap"

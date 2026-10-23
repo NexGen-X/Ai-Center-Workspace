@@ -19,6 +19,7 @@ import { api } from '../../services/api.js';
 import { useFeedback } from '../../components/common/FeedbackContext.js';
 import { audioService } from '../../services/audio.js';
 import { CustomSelect } from '../../components/common/CustomSelect.js';
+import { useResponsive } from '../../hooks/useResponsive.js';
 
 interface TaskListProps {
   tasks: Task[];
@@ -60,7 +61,22 @@ export const TaskList: React.FC<TaskListProps> = ({
   onSelectTask
 }) => {
   const { toast } = useFeedback();
-  const [viewMode, setViewMode] = useState<'KANBAN' | 'LIST'>('KANBAN');
+  const { isMobile } = useResponsive();
+  // Auto-adapt view mode based on device: Mobile auto-switches to touch-optimized List view; Desktop defaults to Kanban
+  const [viewMode, setViewMode] = useState<'KANBAN' | 'LIST'>(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return 'LIST';
+    }
+    return 'KANBAN';
+  });
+  const [hasManuallyToggledMode, setHasManuallyToggledMode] = useState(false);
+
+  React.useEffect(() => {
+    if (!hasManuallyToggledMode) {
+      setViewMode(isMobile ? 'LIST' : 'KANBAN');
+    }
+  }, [isMobile, hasManuallyToggledMode]);
+
   const [filter, setFilter] = useState<string>('ALL');
   const [projectFilter, setProjectFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -191,7 +207,10 @@ export const TaskList: React.FC<TaskListProps> = ({
             {/* View Mode Toggle */}
             <div className="flex items-center bg-slate-900 border border-slate-800 p-0.5 rounded-lg text-xs">
               <button
-                onClick={() => setViewMode('KANBAN')}
+                onClick={() => {
+                  setHasManuallyToggledMode(true);
+                  setViewMode('KANBAN');
+                }}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md font-semibold transition ${
                   viewMode === 'KANBAN'
                     ? 'bg-blue-600 text-white shadow-sm'
@@ -202,7 +221,10 @@ export const TaskList: React.FC<TaskListProps> = ({
                 <span>Kanban</span>
               </button>
               <button
-                onClick={() => setViewMode('LIST')}
+                onClick={() => {
+                  setHasManuallyToggledMode(true);
+                  setViewMode('LIST');
+                }}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md font-semibold transition ${
                   viewMode === 'LIST'
                     ? 'bg-blue-600 text-white shadow-sm'

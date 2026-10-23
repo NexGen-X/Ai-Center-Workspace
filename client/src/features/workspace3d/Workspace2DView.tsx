@@ -1,6 +1,6 @@
 import React from 'react';
 import { AIAgent } from '../../../../shared/types.js';
-import { Monitor, Bot, ArrowRight, Eye, Shield, Cpu } from 'lucide-react';
+import { Monitor, Bot, ArrowRight, Eye, Shield, Cpu, Sparkles, Box } from 'lucide-react';
 
 interface Workspace2DViewProps {
   agents: AIAgent[];
@@ -19,23 +19,29 @@ const ROLE_BORDER_COLORS: Record<string, string> = {
 
 export const Workspace2DView: React.FC<Workspace2DViewProps> = ({ agents, onSelectAgent, onSwitchTo3D }) => {
   return (
-    <div className="bg-[#111827]/90 border border-slate-800 rounded-2xl p-6 shadow-2xl">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-white/90 dark:bg-[#000000]/90 border border-neutral-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-2xl backdrop-blur-md">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-neutral-100 dark:border-zinc-800/80">
         <div>
-          <h2 className="text-sm font-bold text-white flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <Monitor className="w-4 h-4 text-cyan-400" />
-            <span>Ruang Kerja Stasiun AI (Tampilan Aksesibilitas 2D)</span>
-          </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Tampilan matriks workstation 2D hemat daya untuk perangkat mobile dan pengguna preferensi reduksi gerak.
+            <h2 className="text-sm font-bold text-neutral-900 dark:text-white">
+              Ruang Kerja Stasiun AI (Tampilan Adaptif 2D)
+            </h2>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
+              Mobile Touch Mode
+            </span>
+          </div>
+          <p className="text-xs text-neutral-500 dark:text-zinc-400 mt-0.5">
+            Tampilan workstation 2D hemat baterai dan responsif sentuhan, otomatis diaktifkan untuk perangkat mobile.
           </p>
         </div>
 
         <button
           onClick={onSwitchTo3D}
-          className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition shadow-lg shadow-blue-600/20"
+          className="self-start sm:self-auto px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold transition shadow-lg shadow-blue-600/20 flex items-center gap-1.5 cursor-pointer active:scale-95"
         >
-          Beralih ke Tampilan 3D
+          <Box className="w-3.5 h-3.5" />
+          <span>Buka 3D Cockpit</span>
         </button>
       </div>
 
@@ -44,10 +50,10 @@ export const Workspace2DView: React.FC<Workspace2DViewProps> = ({ agents, onSele
           <div
             key={agent.id}
             onClick={() => onSelectAgent(agent)}
-            className={`p-4 rounded-xl bg-slate-950/80 border ${ROLE_BORDER_COLORS[agent.role] || 'border-slate-800'} cursor-pointer transition group`}
+            className={`p-4 rounded-xl bg-neutral-50/80 dark:bg-zinc-950/80 border ${ROLE_BORDER_COLORS[agent.role] || 'border-neutral-200 dark:border-zinc-800'} cursor-pointer transition hover:scale-[1.01] active:scale-[0.99] group shadow-sm`}
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-slate-400">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-neutral-200 dark:bg-zinc-900 border border-neutral-300 dark:border-zinc-800 text-neutral-600 dark:text-zinc-400">
                 Stasiun #{agent.id.slice(-4)}
               </span>
               <span className={`w-2 h-2 rounded-full ${
@@ -56,22 +62,22 @@ export const Workspace2DView: React.FC<Workspace2DViewProps> = ({ agents, onSele
             </div>
 
             <div className="flex items-center gap-2.5 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-blue-400 group-hover:scale-110 transition">
+              <div className="w-8 h-8 rounded-lg bg-neutral-200 dark:bg-zinc-900 flex items-center justify-center text-blue-400 group-hover:scale-110 transition">
                 <Bot className="w-4 h-4" />
               </div>
-              <div className="min-w-0">
-                <h4 className="font-bold text-xs text-white truncate group-hover:text-blue-400 transition">
+              <div className="min-w-0 flex-1">
+                <h4 className="font-bold text-xs text-neutral-900 dark:text-white truncate group-hover:text-blue-400 transition">
                   {agent.name}
                 </h4>
-                <p className="text-[10px] text-slate-400">{agent.role}</p>
+                <p className="text-[10px] text-neutral-500 dark:text-zinc-400">{agent.role}</p>
               </div>
             </div>
 
-            <div className="text-[11px] font-mono text-slate-400 bg-slate-900/50 p-2 rounded border border-slate-800/80 truncate mb-2">
+            <div className="text-[11px] font-mono text-neutral-600 dark:text-zinc-400 bg-neutral-100 dark:bg-zinc-900/60 p-2 rounded border border-neutral-200 dark:border-zinc-800/80 truncate mb-2">
               Model: {agent.modelId}
             </div>
 
-            <div className="flex items-center justify-between text-[11px] text-blue-400 font-semibold group-hover:translate-x-0.5 transition">
+            <div className="flex items-center justify-between text-[11px] text-blue-500 dark:text-blue-400 font-semibold group-hover:translate-x-0.5 transition">
               <span>Buka Instruksi</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </div>

@@ -42,12 +42,17 @@ import { useFeedback } from './components/common/FeedbackContext.js';
 import { ErrorBoundary } from './components/common/ErrorBoundary.js';
 import { api } from './services/api.js';
 import { AIAgent, Task, Activity, DashboardSummary, Project, ModelProviderConfig, AgentAction } from '../../shared/types.js';
-import { Bot, Plus, RefreshCw, Zap, Layers, Users, CheckSquare, Workflow } from 'lucide-react';
+import { 
+  Bot, Plus, RefreshCw, Zap, Layers, Users, CheckSquare, Workflow,
+  Menu, X, Swords, FlaskConical, LineChart, Brain, Wrench, FolderKanban,
+  Calendar as CalendarIcon, FileText, Sliders, DollarSign, GitPullRequest,
+  Settings, Building2, Sparkles, Box, LayoutGrid
+} from 'lucide-react';
 import { ThemeProvider, useTheme } from './context/ThemeContext.js';
 import { useResponsive } from './hooks/useResponsive.js';
 
 export const AppContent: React.FC = () => {
-  const { isMobile } = useResponsive();
+  const { isMobile, isTablet, isDesktop } = useResponsive();
   const { accent } = useTheme();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [agents, setAgents] = useState<AIAgent[]>([]);
@@ -60,7 +65,29 @@ export const AppContent: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
-  const [viewMode, setViewMode] = useState<'3D' | '2D'>('3D');
+
+  // Auto-adapt 2D vs 3D based on device: Mobile auto-switches to 2D touch mode for performance & smooth scrolling; Desktop uses 3D
+  const [viewMode, setViewMode] = useState<'3D' | '2D'>(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return '2D';
+    }
+    return '3D';
+  });
+  const [hasUserToggledView, setHasUserToggledView] = useState(false);
+
+  useEffect(() => {
+    if (!hasUserToggledView) {
+      setViewMode(isMobile ? '2D' : '3D');
+    }
+  }, [isMobile, hasUserToggledView]);
+
+  const toggleViewMode = () => {
+    setHasUserToggledView(true);
+    setViewMode((prev) => (prev === '3D' ? '2D' : '3D'));
+  };
+
+  // Mobile Drawer & Launcher Sheet
+  const [isMobileMoreOpen, setIsMobileMoreOpen] = useState(false);
 
   // Modals state
   const [isTasksModalOpen, setIsTasksModalOpen] = useState(false);
@@ -437,8 +464,8 @@ export const AppContent: React.FC = () => {
         onOpenGitHub={() => setIsGitHubOpen(true)}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-[1720px] w-full mx-auto px-3 lg:px-6 py-4 space-y-6">
+      {/* Main Content Area - Responsive padding to prevent mobile dock occlusion */}
+      <main className="flex-1 max-w-[1720px] w-full mx-auto px-3 lg:px-6 py-4 space-y-6 pb-24 lg:pb-8">
         {/* 3D Virtual Workspace Cockpit & 2D Fallback */}
         <section aria-label="Virtual Workspace">
           {viewMode === '3D' ? (
@@ -826,48 +853,224 @@ export const AppContent: React.FC = () => {
         onActionApprove={() => refreshAllData()}
       />
 
-      {/* Mobile Docked Bottom Navigation Bar (< 768px) */}
+      {/* Mobile Docked Bottom Navigation Bar (< 768px) with iOS/Android Safe Area Support */}
       {isMobile && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#000000]/95 backdrop-blur-md border-t border-neutral-200 dark:border-zinc-800 px-3 py-1.5 flex items-center justify-around shadow-2xl">
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#000000]/95 backdrop-blur-md border-t border-neutral-200 dark:border-zinc-800 px-2 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))] flex items-center justify-around shadow-2xl transition-all">
           <button
-            onClick={() => setViewMode(viewMode === '3D' ? '2D' : '3D')}
-            className="flex flex-col items-center justify-center py-1 px-2.5 text-[10px] font-mono text-cyan-400"
+            onClick={toggleViewMode}
+            className="flex flex-col items-center justify-center py-1 px-2 rounded-xl text-[10px] font-mono text-cyan-500 dark:text-cyan-400 hover:bg-cyan-500/10 active:scale-95 transition"
+            title="Alihkan Tampilan Ruang Kerja 2D / 3D"
           >
-            <span className="font-bold text-xs">{viewMode}</span>
-            <span>Switch</span>
+            <Box className="w-4 h-4 mb-0.5" />
+            <span className="font-bold">{viewMode} Mode</span>
           </button>
 
           <button
             onClick={() => setIsTasksModalOpen(true)}
-            className="flex flex-col items-center justify-center py-1 px-2.5 text-[10px] font-medium text-slate-300 hover:text-white"
+            className="flex flex-col items-center justify-center py-1 px-2 rounded-xl text-[10px] font-medium text-neutral-600 dark:text-slate-300 hover:text-blue-500 active:scale-95 transition"
           >
-            <CheckSquare className="w-4 h-4 mb-0.5 text-blue-400" />
+            <CheckSquare className="w-4 h-4 mb-0.5 text-blue-500" />
             <span>Tugas</span>
           </button>
 
           <button
             onClick={() => setIsManageTeamOpen(true)}
-            className="flex flex-col items-center justify-center py-1 px-2.5 text-[10px] font-medium text-slate-300 hover:text-white"
+            className="flex flex-col items-center justify-center py-1 px-2 rounded-xl text-[10px] font-medium text-neutral-600 dark:text-slate-300 hover:text-purple-500 active:scale-95 transition"
           >
-            <Users className="w-4 h-4 mb-0.5 text-purple-400" />
+            <Users className="w-4 h-4 mb-0.5 text-purple-500" />
             <span>Tim AI</span>
           </button>
 
           <button
             onClick={() => setIsPipelineOpen(true)}
-            className="flex flex-col items-center justify-center py-1 px-2.5 text-[10px] font-medium text-slate-300 hover:text-white"
+            className="flex flex-col items-center justify-center py-1 px-2 rounded-xl text-[10px] font-medium text-neutral-600 dark:text-slate-300 hover:text-amber-500 active:scale-95 transition"
           >
-            <Workflow className="w-4 h-4 mb-0.5 text-amber-400" />
+            <Workflow className="w-4 h-4 mb-0.5 text-amber-500" />
             <span>Pipeline</span>
           </button>
 
           <button
             onClick={() => setIsSwarmModalOpen(true)}
-            className="flex flex-col items-center justify-center py-1 px-2.5 text-[10px] font-medium text-indigo-400"
+            className="flex flex-col items-center justify-center py-1 px-2 rounded-xl text-[10px] font-medium text-indigo-500 dark:text-indigo-400 hover:text-indigo-300 active:scale-95 transition"
           >
-            <Zap className="w-4 h-4 mb-0.5 text-indigo-400" />
+            <Zap className="w-4 h-4 mb-0.5 text-indigo-500" />
             <span>Swarm</span>
           </button>
+
+          <button
+            onClick={() => setIsMobileMoreOpen(true)}
+            className="flex flex-col items-center justify-center py-1 px-2 rounded-xl text-[10px] font-medium text-emerald-500 dark:text-emerald-400 hover:text-emerald-300 active:scale-95 transition"
+            title="Buka Seluruh Modul Command Center"
+          >
+            <Menu className="w-4 h-4 mb-0.5 text-emerald-500" />
+            <span>Modul</span>
+          </button>
+        </div>
+      )}
+
+      {/* Mobile Drawer (Native Bottom Sheet) for All Additional Modules */}
+      {isMobileMoreOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex flex-col justify-end bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setIsMobileMoreOpen(false)}
+        >
+          <div 
+            className="w-full bg-white dark:bg-[#000000] rounded-t-3xl border-t border-neutral-200 dark:border-zinc-800 p-5 space-y-4 shadow-2xl max-h-[85vh] overflow-y-auto pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Mobile Swipe Handle */}
+            <div className="w-12 h-1.5 bg-neutral-300 dark:bg-zinc-700 rounded-full mx-auto my-1 shrink-0" />
+
+            <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-zinc-800">
+              <div className="flex items-center gap-2">
+                <LayoutGrid className="w-4 h-4 text-cyan-400" />
+                <h3 className="font-bold text-sm text-neutral-900 dark:text-white">
+                  Seluruh Modul & Fitur AI Command Center
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsMobileMoreOpen(false)}
+                className="p-1 rounded-full text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Grid of Launcher Tiles */}
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <button
+                onClick={() => { setIsMobileMoreOpen(false); setIsWarRoomOpen(true); }}
+                className="p-3 rounded-xl bg-neutral-50 dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
+              >
+                <div className="flex items-center gap-2 text-rose-400 font-bold">
+                  <Swords className="w-4 h-4" />
+                  <span>War Room</span>
+                </div>
+                <p className="text-[10px] text-neutral-500 dark:text-zinc-400">Kolaborasi multi-agen real-time</p>
+              </button>
+
+              <button
+                onClick={() => { setIsMobileMoreOpen(false); setIsPlaygroundOpen(true); }}
+                className="p-3 rounded-xl bg-neutral-50 dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
+              >
+                <div className="flex items-center gap-2 text-amber-400 font-bold">
+                  <FlaskConical className="w-4 h-4" />
+                  <span>AI Playground</span>
+                </div>
+                <p className="text-[10px] text-neutral-500 dark:text-zinc-400">Uji prompt & benchmark model</p>
+              </button>
+
+              <button
+                onClick={() => { setIsMobileMoreOpen(false); setIsDataAnalystOpen(true); }}
+                className="p-3 rounded-xl bg-neutral-50 dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
+              >
+                <div className="flex items-center gap-2 text-blue-400 font-bold">
+                  <LineChart className="w-4 h-4" />
+                  <span>Data Analyst</span>
+                </div>
+                <p className="text-[10px] text-neutral-500 dark:text-zinc-400">Otomasi query & visualisasi</p>
+              </button>
+
+              <button
+                onClick={() => { setIsMobileMoreOpen(false); setIsMemoryGraphOpen(true); }}
+                className="p-3 rounded-xl bg-neutral-50 dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
+              >
+                <div className="flex items-center gap-2 text-purple-400 font-bold">
+                  <Brain className="w-4 h-4" />
+                  <span>Memory Graph</span>
+                </div>
+                <p className="text-[10px] text-neutral-500 dark:text-zinc-400">Peta memori semantik agen</p>
+              </button>
+
+              <button
+                onClick={() => { setIsMobileMoreOpen(false); setIsSkillsOpen(true); }}
+                className="p-3 rounded-xl bg-neutral-50 dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
+              >
+                <div className="flex items-center gap-2 text-emerald-400 font-bold">
+                  <Wrench className="w-4 h-4" />
+                  <span>Skill Studio</span>
+                </div>
+                <p className="text-[10px] text-neutral-500 dark:text-zinc-400">Kustomisasi function tools</p>
+              </button>
+
+              <button
+                onClick={() => { setIsMobileMoreOpen(false); setIsProjectsOpen(true); }}
+                className="p-3 rounded-xl bg-neutral-50 dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
+              >
+                <div className="flex items-center gap-2 text-cyan-400 font-bold">
+                  <FolderKanban className="w-4 h-4" />
+                  <span>Proyek</span>
+                </div>
+                <p className="text-[10px] text-neutral-500 dark:text-zinc-400">Kelola workspace & deliverables</p>
+              </button>
+
+              <button
+                onClick={() => { setIsMobileMoreOpen(false); setIsFinOpsOpen(true); }}
+                className="p-3 rounded-xl bg-neutral-50 dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
+              >
+                <div className="flex items-center gap-2 text-emerald-500 font-bold">
+                  <DollarSign className="w-4 h-4" />
+                  <span>FinOps & Quota</span>
+                </div>
+                <p className="text-[10px] text-neutral-500 dark:text-zinc-400">Efisiensi biaya token & task</p>
+              </button>
+
+              <button
+                onClick={() => { setIsMobileMoreOpen(false); setIsCalendarOpen(true); }}
+                className="p-3 rounded-xl bg-neutral-50 dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
+              >
+                <div className="flex items-center gap-2 text-sky-400 font-bold">
+                  <CalendarIcon className="w-4 h-4" />
+                  <span>Jadwal / Kalender</span>
+                </div>
+                <p className="text-[10px] text-neutral-500 dark:text-zinc-400">Cron jobs & trigger berkala</p>
+              </button>
+
+              <button
+                onClick={() => { setIsMobileMoreOpen(false); setIsDocumentsOpen(true); }}
+                className="p-3 rounded-xl bg-neutral-50 dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
+              >
+                <div className="flex items-center gap-2 text-indigo-400 font-bold">
+                  <FileText className="w-4 h-4" />
+                  <span>Dokumen RAG</span>
+                </div>
+                <p className="text-[10px] text-neutral-500 dark:text-zinc-400">Basis data pengetahuan AI</p>
+              </button>
+
+              <button
+                onClick={() => { setIsMobileMoreOpen(false); setIsGitHubOpen(true); }}
+                className="p-3 rounded-xl bg-neutral-50 dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
+              >
+                <div className="flex items-center gap-2 text-violet-400 font-bold">
+                  <GitPullRequest className="w-4 h-4" />
+                  <span>GitHub Webhook</span>
+                </div>
+                <p className="text-[10px] text-neutral-500 dark:text-zinc-400">CI/CD & issue automation</p>
+              </button>
+
+              <button
+                onClick={() => { setIsMobileMoreOpen(false); setIsProvidersModalOpen(true); }}
+                className="p-3 rounded-xl bg-neutral-50 dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
+              >
+                <div className="flex items-center gap-2 text-pink-400 font-bold">
+                  <Sliders className="w-4 h-4" />
+                  <span>Model Providers</span>
+                </div>
+                <p className="text-[10px] text-neutral-500 dark:text-zinc-400">OpenAI, Anthropic, Gemini</p>
+              </button>
+
+              <button
+                onClick={() => { setIsMobileMoreOpen(false); setIsSettingsOpen(true); }}
+                className="p-3 rounded-xl bg-neutral-50 dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 text-left space-y-1 hover:border-cyan-500/50 transition"
+              >
+                <div className="flex items-center gap-2 text-zinc-400 font-bold">
+                  <Settings className="w-4 h-4" />
+                  <span>Pengaturan</span>
+                </div>
+                <p className="text-[10px] text-neutral-500 dark:text-zinc-400">Konfigurasi sistem & tenant</p>
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
