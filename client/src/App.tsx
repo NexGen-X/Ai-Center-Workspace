@@ -38,6 +38,7 @@ const PricingModal = React.lazy(() => import('./features/billing/PricingModal.js
 const GuidedTourModal = React.lazy(() => import('./features/demo-tour/GuidedTourModal.js').then(m => ({ default: m.GuidedTourModal })));
 const FinOpsModal = React.lazy(() => import('./features/finops/FinOpsModal.js').then(m => ({ default: m.FinOpsModal })));
 const GitHubConnectorModal = React.lazy(() => import('./features/integrations/GitHubConnectorModal.js').then(m => ({ default: m.GitHubConnectorModal })));
+const McpMarketplaceModal = React.lazy(() => import('./features/mcp/McpMarketplaceModal.js').then(m => ({ default: m.McpMarketplaceModal })));
 import { useFeedback } from './components/common/FeedbackContext.js';
 import { ErrorBoundary } from './components/common/ErrorBoundary.js';
 import { api } from './services/api.js';
@@ -46,7 +47,7 @@ import {
   Bot, Plus, RefreshCw, Zap, Layers, Users, CheckSquare, Workflow,
   Menu, X, Swords, FlaskConical, LineChart, Brain, Wrench, FolderKanban,
   Calendar as CalendarIcon, FileText, Sliders, DollarSign, GitPullRequest,
-  Settings, Building2, Sparkles, Box, LayoutGrid
+  Settings, Building2, Sparkles, Box, LayoutGrid, Boxes
 } from 'lucide-react';
 import { ThemeProvider, useTheme } from './context/ThemeContext.js';
 import { useResponsive } from './hooks/useResponsive.js';
@@ -132,6 +133,7 @@ export const AppContent: React.FC = () => {
   const [isGuidedTourOpen, setIsGuidedTourOpen] = useState(false);
   const [isFinOpsOpen, setIsFinOpsOpen] = useState(false);
   const [isGitHubOpen, setIsGitHubOpen] = useState(false);
+  const [isMcpModalOpen, setIsMcpModalOpen] = useState(false);
 
   const { toast } = useFeedback();
 
@@ -464,6 +466,7 @@ export const AppContent: React.FC = () => {
         onOpenGuidedTour={() => setIsGuidedTourOpen(true)}
         onOpenFinOps={() => setIsFinOpsOpen(true)}
         onOpenGitHub={() => setIsGitHubOpen(true)}
+        onOpenMcpMarketplace={() => setIsMcpModalOpen(true)}
       />
 
       {/* Main Content Area - Responsive padding to prevent mobile dock occlusion */}
@@ -838,6 +841,13 @@ export const AppContent: React.FC = () => {
             onTestTriggered={refreshAllData}
           />
         )}
+
+        {isMcpModalOpen && (
+          <McpMarketplaceModal
+            isOpen={isMcpModalOpen}
+            onClose={() => setIsMcpModalOpen(false)}
+          />
+        )}
       </Suspense>
 
       <ActionApprovalModal
@@ -1048,6 +1058,17 @@ export const AppContent: React.FC = () => {
                   <span>GitHub Webhook</span>
                 </div>
                 <p className="text-[10px] text-zinc-400">CI/CD & issue automation</p>
+              </button>
+
+              <button
+                onClick={() => { setIsMobileMoreOpen(false); setIsMcpModalOpen(true); }}
+                className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-left space-y-1 hover:border-teal-500/50 transition"
+              >
+                <div className="flex items-center gap-2 text-teal-400 font-bold">
+                  <Boxes className="w-4 h-4" />
+                  <span>MCP Tools Store</span>
+                </div>
+                <p className="text-[10px] text-zinc-400">Postgres, Fetch, Filesystem, SQLite</p>
               </button>
 
               <button

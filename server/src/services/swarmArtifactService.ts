@@ -15,7 +15,9 @@ import {
   SwarmSubtask,
   SwarmArtifactBundle,
   SwarmExtractedFile,
-  CreateGitBranchResponse
+  CreateGitBranchResponse,
+  CreateGitHubPRRequest,
+  CreateGitHubPRResponse
 } from '../../../shared/types.js';
 
 const execFileAsync = promisify(execFile);
@@ -335,5 +337,168 @@ export class SwarmArtifactService {
       systemLogger.error('SYSTEM', `[Git Exporter Error]: ${err.message}`);
       throw new Error(`Gagal membuat branch Git: ${err.message}`);
     }
+  }
+
+  /**
+   * Creates an automated Pull Request on GitHub with mission deliverables
+   */
+  static async createGitHubPullRequest(
+    missionId: string,
+    options: CreateGitHubPRRequest
+  ): Promise<CreateGitHubPRResponse> {
+    const bundle = await this.generateArtifactBundle(missionId);
+    const repoOwner = (options.repoOwner || 'NexGen-X').trim();
+    const repoName = (options.repoName || 'Ai-Center-Workspace').trim();
+    const baseBranch = (options.baseBranch || 'main').trim();
+    const prTitle = (options.prTitle || `feat(swarm): ${bundle.missionTitle}`).trim();
+
+    const sanitizedTitle = bundle.missionTitle
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 30);
+    const branchName = options.branchName?.trim() || `feature/swarm-${sanitizedTitle || missionId.slice(0, 8)}`;
+    const token = options.githubToken?.trim() || process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+
+    const prBody = options.prBody?.trim() || `## 🤖 Automated Deliverables from AI Center Swarm
+**Mission ID**: \`${missionId}\`  
+**Mission Title**: **${bundle.missionTitle}**  
+**Generated At**: ${new Date().toISOString()}  
+
+### 📋 Objective:
+> ${bundle.objective}
+
+---
+
+### 📦 Deliverables Summary:
+- **Extracted Code Files**: ${bundle.extractedFiles.length} file(s)
+${bundle.extractedFiles.map((f, i) => `${i + 1}. \`${f.filePath}\` (${f.language} by ${f.sourceAgentRole})`).join('\n')}
+
+---
+*Created automatically by AI Agent Command Center Swarm OS.*`;
+
+    // 1. If GitHub Token is provided, execute full GitHub REST API flow
+    if (token) {
+      try {
+        systemLogger.info('ORCHESTRATOR', `[GitHub PR Bot] Membuka Pull Request via GitHub REST API untuk ${repoOwner}/${repoName}...`);
+
+        const headers = {
+          'Authorization': `token ${token}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'AI-Center-Workspace-PR-Bot'
+        };
+
+        // A. Get Base Branch SHA
+        const baseRefRes = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/git/ref/heads/${baseBranch}`, { headers });
+        if (!baseRefRes.ok) {
+          const errData: any = await baseRefRes.json().catch(() => ({}));
+          throw new Error(`Gagal mengambil ref base branch "${baseBranch}": ${errData.message || baseRefRes.statusText}`);
+        }
+        const baseRefData: any = await baseRefRes.json();
+        const baseSha = baseRefData.object.sha;
+
+        // B. Create New Branch Ref
+        const createRefRes = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/git/refs`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            ref: `refs/heads/${branchName}`,
+            sha: baseSha
+          })
+        });
+
+        if (!createRefRes.ok && createRefRes.status !== 422) {
+          const errData: any = await createRefRes.json().catch(() => ({}));
+          throw new Error(`Gagal membuat branch "${branchName}": ${errData.message || createRefRes.statusText}`);
+        }
+
+        // C. Commit extracted code files via Contents API
+        for (const file of bundle.extractedFiles) {
+          const contentBase64 = Buffer.from(file.content, 'utf8').toString('base64');
+          let existingSha: string | undefined;
+          try {
+            const checkFile = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${encodeURIComponent(file.filePath)}?ref=${branchName}`, { headers });
+            if (checkFile.ok) {
+              const fileData: any = await checkFile.json();
+              existingSha = fileData.sha;
+            }
+          } catch {}
+
+          await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${encodeURIComponent(file.filePath)}`, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify({
+              message: `feat(swarm): automated deliverable for ${file.filePath}`,
+              content: contentBase64,
+              branch: branchName,
+              sha: existingSha
+            })
+          });
+        }
+
+        // Also commit the mission report
+        const reportBase64 = Buffer.from(bundle.markdownReport, 'utf8').toString('base64');
+        const reportPath = `docs/swarm-reports/mission-${missionId}.md`;
+        await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${encodeURIComponent(reportPath)}`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify({
+            message: `docs(swarm): mission report for ${bundle.missionTitle}`,
+            content: reportBase64,
+            branch: branchName
+          })
+        });
+
+        // D. Create Pull Request
+        const createPrRes = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/pulls`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            title: prTitle,
+            head: branchName,
+            base: baseBranch,
+            body: prBody
+          })
+        });
+
+        if (!createPrRes.ok) {
+          const prErrData: any = await createPrRes.json().catch(() => ({}));
+          throw new Error(`Gagal membuka Pull Request: ${prErrData.message || createPrRes.statusText}`);
+        }
+
+        const prData: any = await createPrRes.json();
+
+        systemLogger.info('ORCHESTRATOR', `[GitHub PR Bot] Berhasil membuka PR #${prData.number}: ${prData.html_url}`);
+
+        return {
+          success: true,
+          prUrl: prData.html_url,
+          prNumber: prData.number,
+          branchName,
+          title: prTitle,
+          isSimulated: false,
+          message: `Pull Request #${prData.number} berhasil dibuka di GitHub!`
+        };
+      } catch (err: any) {
+        systemLogger.warn('ORCHESTRATOR', `[GitHub PR Bot Warning]: ${err.message}. Menggunakan fallback local branch & compare link.`);
+      }
+    }
+
+    // 2. Fallback / Direct Compare Mode
+    await this.createGitBranch(missionId, { branchName, commitMessage: prTitle });
+
+    const encodedTitle = encodeURIComponent(prTitle);
+    const encodedBody = encodeURIComponent(prBody);
+    const compareUrl = `https://github.com/${repoOwner}/${repoName}/compare/${baseBranch}...${branchName}?expand=1&title=${encodedTitle}&body=${encodedBody}`;
+
+    return {
+      success: true,
+      prUrl: compareUrl,
+      prNumber: 0,
+      branchName,
+      title: prTitle,
+      isSimulated: true,
+      message: `Branch Git "${branchName}" siap di-commit! Buka tautan perbandingan untuk meluncurkan Pull Request di GitHub.`
+    };
   }
 }

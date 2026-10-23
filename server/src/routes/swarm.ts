@@ -169,5 +169,30 @@ router.post('/missions/:id/artifacts/git-branch', async (req: Request, res: Resp
   }
 });
 
+/**
+ * POST /api/swarm/missions/:id/artifacts/github-pr
+ * Open automated Pull Request on GitHub with mission deliverables
+ */
+router.post('/missions/:id/artifacts/github-pr', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { repoOwner, repoName, baseBranch, branchName, prTitle, prBody, githubToken } = req.body || {};
+    const { SwarmArtifactService } = await import('../services/swarmArtifactService.js');
+    const result = await SwarmArtifactService.createGitHubPullRequest(id, {
+      repoOwner,
+      repoName,
+      baseBranch,
+      branchName,
+      prTitle,
+      prBody,
+      githubToken
+    });
+    return res.json(result);
+  } catch (err: any) {
+    systemLogger.error('API', `Gagal membuat GitHub PR untuk misi [${req.params.id}]: ${err.message}`);
+    return res.status(500).json({ error: { message: err.message || 'Gagal membuka GitHub Pull Request.' } });
+  }
+});
+
 export default router;
 

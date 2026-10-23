@@ -43,6 +43,8 @@ import {
   SwarmArtifactBundle,
   CreateGitBranchRequest,
   CreateGitBranchResponse,
+  CreateGitHubPRRequest,
+  CreateGitHubPRResponse,
   AlertWebhookItem,
   CreateAlertWebhookRequest,
   UpdateAlertWebhookRequest,
@@ -449,6 +451,10 @@ export const api = {
   createSwarmGitBranch: (id: string, data?: CreateGitBranchRequest) => request<CreateGitBranchResponse>(`/swarm/missions/${id}/artifacts/git-branch`, {
     method: 'POST',
     body: JSON.stringify(data || {})
+  }),
+  createSwarmGitHubPR: (id: string, data: CreateGitHubPRRequest) => request<CreateGitHubPRResponse>(`/swarm/missions/${id}/artifacts/github-pr`, {
+    method: 'POST',
+    body: JSON.stringify(data)
   }),
 
   // Proactive Autonomous Routines & Cron Schedules

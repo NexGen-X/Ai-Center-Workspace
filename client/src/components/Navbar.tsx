@@ -31,7 +31,8 @@ import {
   Sparkles,
   GitPullRequest,
   DollarSign,
-  Compass
+  Compass,
+  Boxes
 } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown.js';
 import { ThemeSelector } from './ThemeSelector.js';
@@ -69,6 +70,7 @@ interface NavbarProps {
   onOpenGuidedTour?: () => void;
   onOpenFinOps?: () => void;
   onOpenGitHub?: () => void;
+  onOpenMcpMarketplace?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -103,7 +105,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenPricing,
   onOpenGuidedTour,
   onOpenFinOps,
-  onOpenGitHub
+  onOpenGitHub,
+  onOpenMcpMarketplace
 }) => {
   const [dateStr, setDateStr] = useState<string>('');
 
@@ -436,6 +439,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <GitPullRequest className="w-3.5 h-3.5 text-purple-400 shrink-0" />
               <span>GitHub PR</span>
+            </button>
+          )}
+
+          {/* Model Context Protocol (MCP) App Store */}
+          {onOpenMcpMarketplace && (
+            <button
+              type="button"
+              onClick={onOpenMcpMarketplace}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 text-xs font-semibold shadow-sm transition shrink-0 whitespace-nowrap"
+              title="Model Context Protocol (MCP) Tools & App Store Marketplace"
+            >
+              <Boxes className="w-3.5 h-3.5 text-teal-400 shrink-0" />
+              <span>MCP Tools</span>
             </button>
           )}
         </nav>

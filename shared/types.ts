@@ -785,6 +785,26 @@ export interface CreateGitBranchResponse {
   message: string;
 }
 
+export interface CreateGitHubPRRequest {
+  repoOwner: string;
+  repoName: string;
+  baseBranch?: string;
+  branchName?: string;
+  prTitle: string;
+  prBody?: string;
+  githubToken?: string;
+}
+
+export interface CreateGitHubPRResponse {
+  success: boolean;
+  prUrl: string;
+  prNumber: number;
+  branchName: string;
+  title: string;
+  isSimulated?: boolean;
+  message: string;
+}
+
 // Outbound Alerting & Webhook Incident Dispatcher Types
 export type AlertPlatform = 'DISCORD' | 'SLACK' | 'TELEGRAM' | 'GENERIC';
 

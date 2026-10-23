@@ -28,7 +28,8 @@ import {
   Download,
   GitPullRequest,
   FileCode,
-  Terminal
+  Terminal,
+  ExternalLink
 } from 'lucide-react';
 import {
   AIAgent,
@@ -37,7 +38,8 @@ import {
   SwarmMessage,
   SwarmMissionStatus,
   SwarmArtifactBundle,
-  CreateGitBranchResponse
+  CreateGitBranchResponse,
+  CreateGitHubPRResponse
 } from '../../../../shared/types.js';
 import { api } from '../../services/api.js';
 import { useFeedback } from '../../components/common/FeedbackContext.js';
@@ -360,6 +362,16 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
   const [customCommitMessage, setCustomCommitMessage] = useState('');
   const [isBranchModalOpen, setIsBranchModalOpen] = useState(false);
 
+  // GitHub PR Bot State
+  const [isPRModalOpen, setIsPRModalOpen] = useState(false);
+  const [isCreatingPR, setIsCreatingPR] = useState(false);
+  const [gitPRResult, setGitPRResult] = useState<CreateGitHubPRResponse | null>(null);
+  const [githubRepoOwner, setGithubRepoOwner] = useState(() => localStorage.getItem('swarm_gh_owner') || 'NexGen-X');
+  const [githubRepoName, setGithubRepoName] = useState(() => localStorage.getItem('swarm_gh_repo') || 'Ai-Center-Workspace');
+  const [githubBaseBranch, setGithubBaseBranch] = useState('main');
+  const [githubPRTitle, setGithubPRTitle] = useState('');
+  const [githubToken, setGithubToken] = useState(() => localStorage.getItem('swarm_gh_token') || '');
+
   // Sandbox Runner for extracted code files
   const [sandboxResults, setSandboxResults] = useState<Record<number, SandboxExecutionResult>>({});
   const [executingSandboxIndex, setExecutingSandboxIndex] = useState<number | null>(null);
@@ -432,6 +444,32 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
       toast.error(`Gagal membuat branch Git: ${err.message || err}`);
     } finally {
       setIsCreatingBranch(false);
+    }
+  };
+
+  const handleCreateGitHubPR = async () => {
+    if (!activeMission) return;
+    try {
+      setIsCreatingPR(true);
+      localStorage.setItem('swarm_gh_owner', githubRepoOwner.trim());
+      localStorage.setItem('swarm_gh_repo', githubRepoName.trim());
+      if (githubToken.trim()) {
+        localStorage.setItem('swarm_gh_token', githubToken.trim());
+      }
+      const res = await api.createSwarmGitHubPR(activeMission.id, {
+        repoOwner: githubRepoOwner.trim(),
+        repoName: githubRepoName.trim(),
+        baseBranch: githubBaseBranch.trim() || 'main',
+        prTitle: githubPRTitle.trim() || `feat(swarm): ${activeMission.title}`,
+        githubToken: githubToken.trim() || undefined
+      });
+      setGitPRResult(res);
+      setIsPRModalOpen(false);
+      toast.success(res.message);
+    } catch (err: any) {
+      toast.error(`Gagal membuka GitHub PR: ${err.message || err}`);
+    } finally {
+      setIsCreatingPR(false);
     }
   };
 
@@ -1455,22 +1493,64 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
                           setCustomCommitMessage(`feat(swarm): automated deliverables for "${activeMission.title}"`);
                           setIsBranchModalOpen(true);
                         }}
-                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-semibold transition shadow-md"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition shadow-sm"
+                        title="Buat Git branch dan commit file secara lokal di server"
+                      >
+                        <GitBranch className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>Commit ke Branch</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setGithubPRTitle(`feat(swarm): ${activeMission.title}`);
+                          setIsPRModalOpen(true);
+                        }}
+                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold transition shadow-md"
+                        title="Buka automated GitHub Pull Request dengan seluruh artefak kode misi ini"
                       >
                         <GitPullRequest className="w-3.5 h-3.5" />
-                        <span>Commit ke Git Branch</span>
+                        <span>⚡ Buka GitHub PR</span>
                       </button>
                     </div>
                   </div>
 
+                  {/* GitHub PR Created Callout */}
+                  {gitPRResult && (
+                    <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/50 text-emerald-300 text-xs space-y-2 animate-in fade-in">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-2 font-bold text-white">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                          <span>{gitPRResult.isSimulated ? 'Tautan Perbandingan GitHub Siap!' : `Pull Request #${gitPRResult.prNumber} Berhasil Dibuka!`}</span>
+                        </div>
+                        <a
+                          href={gitPRResult.prUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow"
+                        >
+                          <span>Buka di GitHub</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
+                      <div className="text-[11px] text-slate-300">
+                        {gitPRResult.message}
+                      </div>
+                      <div className="flex items-center gap-3 text-[10px] font-mono text-emerald-400/80 flex-wrap">
+                        <span>Branch: <code className="bg-black/50 px-1 py-0.5 rounded text-white">{gitPRResult.branchName}</code></span>
+                        <span>Target: <code className="bg-black/50 px-1 py-0.5 rounded text-white">{githubBaseBranch}</code></span>
+                        <span>Repo: <code className="bg-black/50 px-1 py-0.5 rounded text-white">{githubRepoOwner}/{githubRepoName}</code></span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Git Branch Created Callout */}
                   {gitBranchResult && (
-                    <div className="p-3.5 rounded-xl bg-emerald-950/30 border border-emerald-500/40 text-emerald-300 text-xs space-y-1.5 animate-in fade-in">
+                    <div className="p-3.5 rounded-xl bg-indigo-950/30 border border-indigo-500/40 text-indigo-300 text-xs space-y-1.5 animate-in fade-in">
                       <div className="flex items-center gap-2 font-bold text-white">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        <CheckCircle2 className="w-4 h-4 text-indigo-400" />
                         <span>Branch Git Berhasil Dibuat & Di-commit!</span>
                       </div>
-                      <div className="flex items-center justify-between text-[11px] font-mono text-emerald-300/90">
+                      <div className="flex items-center justify-between text-[11px] font-mono text-indigo-300/90">
                         <span>Branch: <code className="bg-black/40 px-1.5 py-0.5 rounded text-white">{gitBranchResult.branchName}</code></span>
                         <span>Commit: <code className="bg-black/40 px-1.5 py-0.5 rounded text-white">{gitBranchResult.commitHash.slice(0, 7)}</code></span>
                       </div>
@@ -1794,6 +1874,130 @@ export const SwarmMissionModal: React.FC<SwarmMissionModalProps> = ({
                 >
                   {isCreatingBranch && <RotateCw className="w-3.5 h-3.5 animate-spin" />}
                   <span>Buat Branch & Commit</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal: GitHub Pull Request Bot Dialog */}
+        {isPRModalOpen && (
+          <div
+            onClick={() => setIsPRModalOpen(false)}
+            className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in"
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#0b0f17] border border-zinc-800 rounded-2xl w-full max-w-lg p-5 space-y-4 shadow-2xl text-slate-200"
+            >
+              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                    <GitPullRequest className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">Buka Automated GitHub Pull Request</h3>
+                    <p className="text-[11px] text-slate-400">Ekspor deliverable hasil kerja agent swarm ke remote GitHub repository</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsPRModalOpen(false)}
+                  className="p-1 rounded-lg hover:bg-zinc-800 text-slate-400 hover:text-white transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3.5 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-slate-300 font-semibold block mb-1">GitHub Owner / Org</label>
+                    <input
+                      type="text"
+                      value={githubRepoOwner}
+                      onChange={(e) => setGithubRepoOwner(e.target.value)}
+                      placeholder="e.g. NexGen-X"
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-slate-300 font-semibold block mb-1">Repository Name</label>
+                    <input
+                      type="text"
+                      value={githubRepoName}
+                      onChange={(e) => setGithubRepoName(e.target.value)}
+                      placeholder="e.g. Ai-Center-Workspace"
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-1">
+                    <label className="text-slate-300 font-semibold block mb-1">Target Base</label>
+                    <input
+                      type="text"
+                      value={githubBaseBranch}
+                      onChange={(e) => setGithubBaseBranch(e.target.value)}
+                      placeholder="main"
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-slate-300 font-semibold block mb-1">Judul Pull Request</label>
+                    <input
+                      type="text"
+                      value={githubPRTitle}
+                      onChange={(e) => setGithubPRTitle(e.target.value)}
+                      placeholder="feat(swarm): automated deliverables"
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-white text-xs focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-slate-300 font-semibold">GitHub Personal Access Token (Opsional)</label>
+                    <span className="text-[10px] text-zinc-500">repo scope</span>
+                  </div>
+                  <input
+                    type="password"
+                    value={githubToken}
+                    onChange={(e) => setGithubToken(e.target.value)}
+                    placeholder="ghp_xxxxxxxxxxxxxxxxxxxx (opsional)"
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                  />
+                  <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                    💡 <strong className="text-slate-300">Tips:</strong> Jika token diisi, bot akan langsung membuka PR melalui REST API. Jika dikosongkan, branch lokal akan di-commit dan tautan perbandingan (GitHub Compare & PR) otomatis disiapkan untuk Anda buka dengan 1 klik!
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setIsPRModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-slate-300 text-xs font-semibold transition"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  disabled={isCreatingPR || !githubRepoOwner.trim() || !githubRepoName.trim()}
+                  onClick={handleCreateGitHubPR}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold shadow-lg shadow-emerald-950/40 flex items-center gap-2 disabled:opacity-50 transition"
+                >
+                  {isCreatingPR ? (
+                    <>
+                      <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Menghubungi GitHub...</span>
+                    </>
+                  ) : (
+                    <>
+                      <GitPullRequest className="w-3.5 h-3.5" />
+                      <span>Luncurkan Pull Request</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>

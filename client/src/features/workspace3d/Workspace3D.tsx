@@ -24,6 +24,7 @@ import {
   MicOff
 } from 'lucide-react';
 import { audioService } from '../../services/audio.js';
+import { api } from '../../services/api.js';
 
 interface Workspace3DProps {
   agents: AIAgent[];
@@ -95,7 +96,7 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
   const [voiceHUD, setVoiceHUD] = useState<{
     text: string;
     actionLabel: string;
-    status: 'listening' | 'matched' | 'unrecognized';
+    status: 'listening' | 'matched' | 'unrecognized' | 'jarvis_dispatching' | 'jarvis_completed';
   } | null>(null);
   const recognitionRef = useRef<any>(null);
   const voiceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -1600,11 +1601,42 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
             status: 'matched'
           });
         } else {
+          // DUPLEX VOICE CHIEF-OF-STAFF (JARVIS MODE)
+          // Open natural language command automatically dispatched to Agent Swarm Orchestrator
+          audioService.playBeam();
+          audioService.speak('Siap Komandan, mendisposisikan tugas ke agen orchestrator.');
           setVoiceHUD({
             text: `"${transcript}"`,
-            actionLabel: 'Perintah tidak dikenali. Coba: "Buka Swarm", "Kamera Server", "Dokumen", dll.',
-            status: 'unrecognized'
+            actionLabel: '⚡ Jarvis Chief-of-Staff: Menugaskan ke Agen AI...',
+            status: 'jarvis_dispatching'
           });
+
+          // Asynchronously dispatch task to Orchestrator Agent
+          (async () => {
+            try {
+              const targetAgent = agents.find(a => a.role === 'Orchestrator') || agents[0];
+              const createdTask = await api.createTask({
+                title: `[Jarvis Voice]: ${transcript.length > 50 ? transcript.slice(0, 47) + '...' : transcript}`,
+                description: `Instruksi komando suara operator via 3D Cockpit:\n\n"${transcript}"`,
+                assignedAgentId: targetAgent?.id || '',
+                priority: 'HIGH',
+                status: 'TODO'
+              });
+
+              audioService.speak(`Tugas telah didelegasikan ke ${targetAgent?.name || 'Agen'}. Berjalan dalam antrean prioritas.`);
+              setVoiceHUD({
+                text: `"${transcript}"`,
+                actionLabel: `✓ Jarvis: Ditugaskan ke ${targetAgent?.name || 'Agen'} (#${createdTask.id.slice(0, 8)})`,
+                status: 'jarvis_completed'
+              });
+            } catch (err: any) {
+              setVoiceHUD({
+                text: `"${transcript}"`,
+                actionLabel: `Gagal delegasi tugas: ${err.message || 'Error'}`,
+                status: 'unrecognized'
+              });
+            }
+          })();
         }
 
         if (voiceTimeoutRef.current) clearTimeout(voiceTimeoutRef.current);
@@ -1762,7 +1794,11 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
           <div className="space-y-1">
             <div className="text-[11px] font-mono font-semibold text-slate-100 flex items-center gap-1.5">
               {voiceHUD?.status === 'matched' ? (
-                <span className="text-emerald-400 font-bold">🎤 Terdeteksi:</span>
+                <span className="text-emerald-400 font-bold">🎤 Navigasi:</span>
+              ) : voiceHUD?.status === 'jarvis_dispatching' ? (
+                <span className="text-teal-400 font-bold animate-pulse">🤖 Jarvis Delegating:</span>
+              ) : voiceHUD?.status === 'jarvis_completed' ? (
+                <span className="text-emerald-300 font-bold">⚡ Jarvis Deployed:</span>
               ) : voiceHUD?.status === 'unrecognized' ? (
                 <span className="text-amber-400 font-bold">❓ Belum Cocok:</span>
               ) : (
