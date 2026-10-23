@@ -1728,7 +1728,7 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
 
       {/* Floating Holographic Voice Command & Speech Feedback HUD */}
       {(isListeningVoice || voiceHUD) && (
-        <div className="absolute bottom-16 sm:bottom-20 left-1/2 -translate-x-1/2 z-30 max-w-lg w-[calc(100%-24px)] sm:w-auto min-w-[320px] p-2.5 sm:p-3 rounded-2xl bg-slate-950/95 backdrop-blur-md border border-cyan-500/50 shadow-2xl shadow-cyan-950/70 pointer-events-auto animate-in fade-in slide-in-from-bottom-2">
+        <div className="absolute bottom-16 sm:bottom-20 left-1/2 -translate-x-1/2 z-30 max-w-lg w-[calc(100%-20px)] sm:w-auto min-w-0 p-2.5 sm:p-3 rounded-2xl bg-slate-950/95 backdrop-blur-md border border-cyan-500/50 shadow-2xl shadow-cyan-950/70 pointer-events-auto animate-in fade-in slide-in-from-bottom-2">
           <div className="flex items-center justify-between pb-1.5 border-b border-slate-800/80 mb-1.5 gap-2">
             <div className="flex items-center gap-2 min-w-0">
               <span className="relative flex h-2.5 w-2.5 shrink-0">
@@ -1949,7 +1949,7 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
       )}
 
       {/* Floating Bottom Toolbar */}
-      <div className="absolute bottom-2.5 inset-x-2 sm:bottom-4 sm:inset-x-4 z-20 flex items-center justify-between gap-1.5 sm:gap-3 pointer-events-auto">
+      <div className="absolute bottom-2.5 inset-x-2 sm:bottom-4 sm:inset-x-4 z-20 flex items-center justify-between gap-1.5 sm:gap-3 pointer-events-auto max-w-[calc(100%-16px)] mx-auto overflow-hidden">
         {/* Left Action: + Titip tugas baru */}
         <button
           onClick={onOpenCreateTask}
@@ -1961,7 +1961,7 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
         </button>
 
         {/* Center: Camera Director Pills */}
-        <div className="flex items-center bg-slate-900/90 backdrop-blur-md border border-slate-800 p-1 sm:p-1.5 rounded-xl sm:rounded-2xl shadow-xl gap-1 overflow-x-auto no-scrollbar max-w-full">
+        <div className="flex items-center bg-slate-900/90 backdrop-blur-md border border-slate-800 p-1 sm:p-1.5 rounded-xl sm:rounded-2xl shadow-xl gap-1 overflow-x-auto no-scrollbar max-w-full min-w-0">
           <button
             onClick={handleCamOverview}
             className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold transition flex items-center gap-1 shrink-0 whitespace-nowrap ${
@@ -2010,12 +2010,12 @@ export const Workspace3D: React.FC<Workspace3DProps> = ({
             <span>📐 Isometrik</span>
           </button>
 
-          {/* Quick Agent Pills */}
+          {/* Quick Agent Pills (hidden on mobile, visible on desktop) */}
           {agents.slice(0, 3).map((agent) => (
             <button
               key={agent.id}
               onClick={() => handleCamFocusAgent(agent)}
-              className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold transition flex items-center gap-1 shrink-0 whitespace-nowrap ${
+              className={`hidden md:flex px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold transition items-center gap-1 shrink-0 whitespace-nowrap ${
                 selectedAgentId === agent.id && activeCamView === 'agent'
                   ? 'bg-blue-600 text-white shadow-md'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'

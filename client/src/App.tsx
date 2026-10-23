@@ -417,13 +417,15 @@ export const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-[#000000] text-neutral-900 dark:text-neutral-100 flex flex-col font-sans select-none antialiased transition-colors duration-200 relative">
-      {/* Vercel / Railway Minimal Dot Matrix Background */}
-      <div className="fixed inset-0 bg-[radial-gradient(#d4d4d8_1px,transparent_1px)] dark:bg-[radial-gradient(#1f1f1f_1px,transparent_1px)] bg-[size:1.75rem_1.75rem] pointer-events-none opacity-80 z-0" />
-      <div 
-        className="fixed top-0 left-1/2 -translate-x-1/2 w-[50rem] h-[15rem] rounded-full blur-3xl pointer-events-none opacity-30 z-0" 
-        style={{ background: `radial-gradient(ellipse at top, ${accent.hex}30, transparent 70%)` }}
-      />
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#000000] text-neutral-100 flex flex-col font-sans select-none antialiased relative">
+      {/* Vercel / Railway Pitch-Black Charcoal Dot Matrix Background (Contained strictly to viewport) */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute inset-0 bg-[radial-gradient(#1f1f1f_1px,transparent_1px)] bg-[size:1.75rem_1.75rem] opacity-80" />
+        <div 
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[min(50rem,100vw)] h-[15rem] rounded-full blur-3xl opacity-30" 
+          style={{ background: `radial-gradient(ellipse at top, ${accent.hex}30, transparent 70%)` }}
+        />
+      </div>
 
       {/* Top Navigation */}
       <Navbar
@@ -465,7 +467,7 @@ export const AppContent: React.FC = () => {
       />
 
       {/* Main Content Area - Responsive padding to prevent mobile dock occlusion */}
-      <main className="flex-1 max-w-[1720px] w-full mx-auto px-3 lg:px-6 py-4 space-y-6 pb-24 lg:pb-8">
+      <main className="flex-1 max-w-[1720px] w-full mx-auto px-3 sm:px-4 lg:px-6 py-4 space-y-6 pb-24 lg:pb-8 min-w-0 overflow-x-hidden">
         {/* 3D Virtual Workspace Cockpit & 2D Fallback */}
         <section aria-label="Virtual Workspace">
           {viewMode === '3D' ? (
@@ -560,7 +562,7 @@ export const AppContent: React.FC = () => {
           </div>
 
           {/* Agents Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5 w-full min-w-0">
             {agents.map((agent) => (
               <AgentCard
                 key={agent.id}
@@ -573,8 +575,8 @@ export const AppContent: React.FC = () => {
         </section>
 
         {/* Split Section: Tasks on Left, Server Monitoring & Activity Feed on Right */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full min-w-0">
+          <div className="lg:col-span-2 w-full min-w-0 overflow-hidden">
             <TaskList
               tasks={tasks}
               agents={agents}
@@ -588,7 +590,7 @@ export const AppContent: React.FC = () => {
             />
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-6 w-full min-w-0 overflow-hidden">
             <ServerMonitoringWidget
               runningTasksCount={summary?.runningTasksCount || tasks.filter((t) => t.status === 'IN_PROGRESS').length}
               completedTasksCount={summary?.completedTasksCount || tasks.filter((t) => t.status === 'DONE').length}

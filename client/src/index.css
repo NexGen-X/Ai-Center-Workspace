@@ -29,15 +29,39 @@ html.light {
   -webkit-tap-highlight-color: transparent;
 }
 
+html {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+*, *:before, *:after {
+  box-sizing: border-box;
+}
+
 body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
   margin: 0;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  overflow-x: hidden;
   background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
   background-size: 28px 28px;
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+canvas {
+  max-width: 100% !important;
 }
 
 html.light body {

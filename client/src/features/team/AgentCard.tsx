@@ -31,36 +31,36 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onQuickRun, onSelec
   const statusStyle = STATUS_CONFIG[agent.status] || STATUS_CONFIG.READY;
 
   return (
-    <div className={`bg-[#111827]/90 border ${agent.enabled ? 'border-slate-800' : 'border-slate-800/40 opacity-75'} rounded-xl p-4 flex flex-col justify-between hover:border-slate-700 hover:shadow-xl hover:shadow-blue-950/20 transition group`}>
-      <div>
+    <div className={`w-full min-w-0 bg-[#09090b]/95 dark:bg-[#0c0c0e] border ${agent.enabled ? 'border-zinc-800' : 'border-zinc-800/40 opacity-75'} rounded-xl p-3.5 sm:p-4 flex flex-col justify-between hover:border-zinc-700 hover:shadow-xl transition group`}>
+      <div className="w-full min-w-0">
         {/* Header: Status, Role & Provider */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between mb-3 gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <span className={`w-2 h-2 rounded-full ${statusStyle.dot}`} />
             <span className={`text-[11px] font-bold ${statusStyle.text}`}>{statusStyle.label}</span>
           </div>
-          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${roleStyle.bg} ${roleStyle.text} ${roleStyle.border}`}>
+          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border truncate ${roleStyle.bg} ${roleStyle.text} ${roleStyle.border}`}>
             {agent.role}
           </span>
         </div>
 
         {/* Agent Name & Model Info */}
-        <div className="flex items-start gap-3 mb-2.5">
+        <div className="flex items-start gap-2.5 sm:gap-3 mb-2.5 min-w-0">
           <div
-            className="w-9 h-9 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 text-slate-300 group-hover:text-blue-400 transition cursor-pointer"
+            className="w-9 h-9 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0 text-slate-300 group-hover:text-blue-400 transition cursor-pointer"
             onClick={() => onSelect(agent)}
           >
             <Bot className="w-5 h-5" />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h3 className="font-bold text-sm text-white truncate cursor-pointer hover:text-blue-400 transition" onClick={() => onSelect(agent)}>
               {agent.name}
             </h3>
-            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300 truncate max-w-[140px]">
+            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap min-w-0">
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300 truncate max-w-full">
                 {agent.modelId}
               </span>
-              <span className="text-[10px] text-slate-500">
+              <span className="text-[10px] text-zinc-500 truncate">
                 via {agent.providerName || agent.providerType || 'Custom'}
               </span>
             </div>
@@ -68,7 +68,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onQuickRun, onSelec
         </div>
 
         {/* Description */}
-        <p className="text-xs text-slate-400 line-clamp-2 mb-3 leading-relaxed">
+        <p className="text-xs text-zinc-400 line-clamp-2 mb-3 leading-relaxed break-words">
           {agent.description || 'Tidak ada deskripsi spesifik.'}
         </p>
 
@@ -76,13 +76,13 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onQuickRun, onSelec
         <div className="mb-3">
           <button
             onClick={() => setShowPrompt(!showPrompt)}
-            className="text-[11px] text-slate-500 hover:text-slate-300 flex items-center gap-1 transition"
+            className="text-[11px] text-zinc-500 hover:text-zinc-300 flex items-center gap-1 transition"
           >
             <span>Instruksi Sistem</span>
             {showPrompt ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </button>
           {showPrompt && (
-            <div className="mt-1.5 p-2 rounded bg-slate-950/80 border border-slate-800 text-[11px] font-mono text-slate-300 max-h-24 overflow-y-auto leading-relaxed">
+            <div className="mt-1.5 p-2 rounded-lg bg-black border border-zinc-800 text-[11px] font-mono text-zinc-300 max-h-24 overflow-y-auto leading-relaxed break-words">
               {agent.systemPrompt}
             </div>
           )}
@@ -90,17 +90,17 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onQuickRun, onSelec
       </div>
 
       {/* Footer: Capabilities, Tasks Count & Quick Action */}
-      <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <div className="flex items-center gap-1">
+      <div className="pt-3 border-t border-zinc-800/80 flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+          <div className="flex items-center gap-1 flex-wrap">
             {agent.capabilities?.slice(0, 2).map((cap, i) => (
-              <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800/70 text-slate-400 font-mono">
+              <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-400 font-mono border border-zinc-800">
                 {cap.replace(/_/g, ' ')}
               </span>
             ))}
           </div>
           {agent.totalTasks !== undefined && agent.totalTasks > 0 && (
-            <span className="text-[9px] text-slate-400 font-mono px-1 py-0.5 rounded bg-slate-900 border border-slate-800">
+            <span className="text-[9px] text-zinc-400 font-mono px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800">
               {agent.completedTasks || 0}/{agent.totalTasks}
             </span>
           )}
@@ -109,7 +109,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onQuickRun, onSelec
         <button
           onClick={() => onQuickRun(agent)}
           disabled={agent.status === 'UNAVAILABLE' || agent.status === 'BUSY'}
-          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 hover:text-blue-300 border border-blue-500/30 text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition"
+          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 hover:text-blue-300 border border-blue-500/30 text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition shrink-0"
         >
           <Play className="w-3 h-3" />
           <span>Jalankan</span>

@@ -130,47 +130,45 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header className="sticky top-0 z-40 w-full bg-white/85 dark:bg-[#000000]/85 backdrop-blur-md border-b border-neutral-200 dark:border-[#1f1f1f] px-3 lg:px-6 py-2 sm:py-2.5 transition-colors">
       <div className="max-w-[1720px] mx-auto flex flex-col lg:flex-row lg:items-center justify-between gap-2 lg:gap-3">
         {/* Top Row for Mobile / Left Brand for Desktop */}
-        <div className="flex items-center justify-between w-full lg:w-auto gap-2 shrink-0">
+        <div className="flex items-center justify-between w-full lg:w-auto gap-2 shrink-0 min-w-0">
           {/* Brand: [M] Command Center & Workspace Selector */}
-          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
-            <div className="flex items-center gap-2 sm:gap-2.5">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-400 p-0.5 shadow-md shadow-blue-500/20 flex items-center justify-center">
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-400 p-0.5 shadow-md shadow-blue-500/20 flex items-center justify-center shrink-0">
                 <div className="w-full h-full bg-white dark:bg-[#0a0a0a] rounded-[10px] flex items-center justify-center">
                   <span className="font-black text-sm text-cyan-500">M</span>
                 </div>
               </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-extrabold text-sm tracking-tight text-neutral-900 dark:text-white hidden sm:inline">
-                    Command Center
-                  </span>
-                  <span className={`w-2 h-2 rounded-full ${isRealtimeConnected ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="font-extrabold text-sm tracking-tight text-neutral-900 dark:text-white hidden sm:inline">
+                  Command Center
+                </span>
+                <span className={`w-2 h-2 rounded-full shrink-0 ${isRealtimeConnected ? 'bg-emerald-400' : 'bg-amber-400'}`} />
               </div>
             </div>
 
-            {/* Workspace Selector Badge */}
+            {/* Workspace Selector Badge - shown on sm+ screens */}
             {onOpenWorkspaces && (
               <button
                 type="button"
                 onClick={onOpenWorkspaces}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/60 hover:border-cyan-500/50 text-xs text-slate-300 hover:text-white transition group shadow-sm"
+                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/60 hover:border-cyan-500/50 text-xs text-slate-300 hover:text-white transition group shadow-sm shrink-0"
                 title="Ganti atau Kelola Organisasi / Workspace"
               >
                 <Building2 className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition-transform shrink-0" />
-                <span className="max-w-[100px] sm:max-w-[140px] truncate font-semibold text-slate-200">
+                <span className="max-w-[100px] md:max-w-[140px] truncate font-semibold text-slate-200">
                   {activeWorkspaceName}
                 </span>
                 <ChevronDown className="w-3 h-3 text-slate-500 group-hover:text-cyan-400 transition-colors shrink-0" />
               </button>
             )}
 
-            {/* SaaS Plan Badge & Upgrade Button */}
+            {/* SaaS Plan Badge & Upgrade Button - shown on desktop lg */}
             {onOpenPricing && (
               <button
                 type="button"
                 onClick={onOpenPricing}
-                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 hover:from-amber-500/20 hover:to-orange-500/20 border border-amber-500/30 text-xs text-amber-300 font-semibold transition shadow-sm group shrink-0"
+                className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 hover:from-amber-500/20 hover:to-orange-500/20 border border-amber-500/30 text-xs text-amber-300 font-semibold transition shadow-sm group shrink-0"
                 title="Kelola Paket Langganan & Kuota AI"
               >
                 <Sparkles className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform shrink-0" />
@@ -181,12 +179,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             )}
 
-            {/* 1-Click Guided Demo Tour Button */}
+            {/* 1-Click Guided Demo Tour Button - shown on desktop lg */}
             {onOpenGuidedTour && (
               <button
                 type="button"
                 onClick={onOpenGuidedTour}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold text-xs shadow-md shadow-blue-500/25 hover:shadow-blue-500/40 transition hover:scale-[1.02] active:scale-[0.98] shrink-0"
+                className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold text-xs shadow-md shadow-blue-500/25 hover:shadow-blue-500/40 transition hover:scale-[1.02] active:scale-[0.98] shrink-0"
                 title="Jalankan Simulasi Demo Swarm & Panduan Interaktif"
               >
                 <Zap className="w-3.5 h-3.5 fill-white text-white" />
@@ -196,50 +194,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Mobile Right Quick Action Icons (Visible only on < lg) */}
-          <div className="flex lg:hidden items-center gap-1.5 shrink-0">
-            {/* Mobile Demo Swarm */}
-            {onOpenGuidedTour && (
-              <button
-                onClick={onOpenGuidedTour}
-                className="p-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-sm transition"
-                title="Demo Swarm"
-              >
-                <Zap className="w-4 h-4 fill-white" />
-              </button>
-            )}
-
-            {/* Mobile Pricing / Upgrade */}
-            {onOpenPricing && (
-              <button
-                onClick={onOpenPricing}
-                className="p-1.5 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 text-amber-400 hover:text-amber-300 transition"
-                title="Paket Langganan & Kuota AI"
-                aria-label="Pricing"
-              >
-                <Sparkles className="w-4 h-4" />
-              </button>
-            )}
-
-            {/* Mobile Playground */}
-            <button
-              onClick={onOpenPlayground}
-              className="p-1.5 rounded-xl bg-slate-900 border border-slate-800 text-amber-400 hover:text-amber-300 transition"
-              title="AI Playground & Benchmark"
-              aria-label="AI Playground"
-            >
-              <FlaskConical className="w-4 h-4" />
-            </button>
-
-            {/* Settings */}
-            <button
-              onClick={onOpenSettings}
-              className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/60 transition"
-              title="Pengaturan Workspace"
-              aria-label="Pengaturan"
-            >
-              <Settings className="w-4 h-4 text-slate-400" />
-            </button>
-
+          <div className="flex lg:hidden items-center gap-1 sm:gap-1.5 shrink-0">
             {/* Theme Selector */}
             <ThemeSelector compact />
 
@@ -248,9 +203,9 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* User Profile Avatar */}
             {currentUser ? (
-              <div className="flex items-center gap-1 pl-1">
+              <div className="flex items-center gap-1 pl-0.5 shrink-0">
                 <div
-                  className="w-7 h-7 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center"
+                  className="w-7 h-7 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0"
                   title={`${operatorName} (Online)`}
                 >
                   <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-500 to-rose-400 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
@@ -259,7 +214,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
                 <button
                   onClick={onLogout}
-                  className="p-1.5 rounded-xl bg-slate-900 hover:bg-red-500/20 hover:text-red-400 text-slate-400 border border-slate-800 transition"
+                  className="p-1.5 rounded-xl bg-slate-900 hover:bg-red-500/20 hover:text-red-400 text-slate-400 border border-slate-800 transition shrink-0"
                   title="Keluar"
                 >
                   <LogOut className="w-3.5 h-3.5" />
@@ -268,7 +223,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             ) : (
               <div
                 onClick={onOpenLogin}
-                className="w-7 h-7 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center cursor-pointer hover:border-slate-700 transition"
+                className="w-7 h-7 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center cursor-pointer hover:border-slate-700 transition shrink-0"
                 title="Masuk sebagai Operator"
               >
                 <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-500 to-rose-400 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
