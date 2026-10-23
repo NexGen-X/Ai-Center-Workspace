@@ -111,8 +111,8 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     <FeedbackContext.Provider value={{ toast, confirm }}>
       {children}
 
-      {/* Floating In-App Toast Container */}
-      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[9999] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-3 sm:px-0">
+      {/* Floating In-App Toast Container - Positioned above mobile dock (bottom-20) on mobile and bottom-6 on desktop */}
+      <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-[9999] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-3 sm:px-0">
         {toasts.map((t) => {
           let bgClass = 'bg-[#0E1524] border-slate-700 text-slate-100 shadow-xl shadow-black/60';
           let icon = <Info className="w-4 h-4 text-cyan-400 shrink-0" />;
