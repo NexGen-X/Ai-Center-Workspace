@@ -855,7 +855,7 @@ export const AppContent: React.FC = () => {
 
       {/* Mobile Docked Bottom Navigation Bar (< 768px) with iOS/Android Safe Area Support */}
       {isMobile && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#000000]/95 backdrop-blur-md border-t border-neutral-200 dark:border-zinc-800 px-2 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))] flex items-center justify-around shadow-2xl transition-all">
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-[#000000]/95 backdrop-blur-md border-t border-neutral-200 dark:border-zinc-800 px-2 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))] flex items-center justify-around shadow-2xl transition-all">
           <button
             onClick={toggleViewMode}
             className="flex flex-col items-center justify-center py-1 px-2 rounded-xl text-[10px] font-mono text-cyan-500 dark:text-cyan-400 hover:bg-cyan-500/10 active:scale-95 transition"
